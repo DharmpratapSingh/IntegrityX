@@ -2,34 +2,35 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { BarChart3, TrendingUp, Shield, Clock, FileText, Users, Activity, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react'
+import { BarChart3, TrendingUp, Shield, FileText, Users, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
 interface AnalyticsData {
-  system_metrics: {
-    total_documents: number
-    total_attestations: number
-    system_uptime: number
-    avg_response_time: number
+  financial_documents: {
+    documents_sealed_today: number
+    documents_sealed_this_month: number
+    total_documents_sealed: number
+    total_loan_value_sealed: number
+    average_loan_amount: number
+    sealing_success_rate: number
+    blockchain_confirmation_rate: number
   }
-  document_analytics: {
-    documents_processed_today: number
-    documents_processed_week: number
-    avg_processing_time: number
-    success_rate: number
+  compliance_risk: {
+    documents_compliant: number
+    documents_pending_review: number
+    overall_compliance_rate: number
+    high_risk_documents: number
+    medium_risk_documents: number
+    low_risk_documents: number
+    audit_trail_completeness: number
   }
-  compliance_metrics: {
-    compliance_score: number
-    attestations_created: number
-    verification_links_generated: number
-    disclosure_packs_generated: number
-  }
-  performance_metrics: {
-    api_response_time: number
-    database_query_time: number
-    file_processing_time: number
-    system_load: number
+  business_intelligence: {
+    monthly_revenue: number
+    revenue_per_document: number
+    profit_margin: number
+    customer_retention_rate: number
+    customer_satisfaction_score: number
+    growth_rate: string
   }
 }
 
@@ -49,56 +50,53 @@ export default function AnalyticsPage() {
       setError(null)
       setLoading(true)
 
-      const [systemResponse, attestationResponse, complianceResponse, performanceResponse] = await Promise.all([
-        fetch('http://localhost:8000/api/analytics/system-metrics', {
+      const [financialResponse, complianceResponse, businessResponse] = await Promise.all([
+        fetch('http://localhost:8000/api/analytics/financial-documents', {
           headers: { 'Accept': 'application/json' },
           signal: AbortSignal.timeout(10000)
         }),
-        fetch('http://localhost:8000/api/analytics/attestations', {
+        fetch('http://localhost:8000/api/analytics/compliance-risk', {
           headers: { 'Accept': 'application/json' },
           signal: AbortSignal.timeout(10000)
         }),
-        fetch('http://localhost:8000/api/analytics/compliance', {
-          headers: { 'Accept': 'application/json' },
-          signal: AbortSignal.timeout(10000)
-        }),
-        fetch('http://localhost:8000/api/analytics/performance', {
+        fetch('http://localhost:8000/api/analytics/business-intelligence', {
           headers: { 'Accept': 'application/json' },
           signal: AbortSignal.timeout(10000)
         })
       ])
 
-      const [systemData, attestationData, complianceData, performanceData] = await Promise.all([
-        systemResponse.json(),
-        attestationResponse.json(),
+      const [financialData, complianceData, businessData] = await Promise.all([
+        financialResponse.json(),
         complianceResponse.json(),
-        performanceResponse.json()
+        businessResponse.json()
       ])
 
       setAnalytics({
-        system_metrics: {
-          total_documents: systemData.data?.metrics?.total_documents || 0,
-          total_attestations: attestationData.data?.metrics?.total_attestations || 0,
-          system_uptime: systemData.data?.metrics?.system_uptime || 99.9,
-          avg_response_time: systemData.data?.metrics?.avg_response_time || 2.3
+        financial_documents: {
+          documents_sealed_today: financialData.data?.analytics?.document_processing?.documents_sealed_today || 0,
+          documents_sealed_this_month: financialData.data?.analytics?.document_processing?.documents_sealed_this_month || 0,
+          total_documents_sealed: financialData.data?.analytics?.document_processing?.total_documents_sealed || 0,
+          total_loan_value_sealed: financialData.data?.analytics?.financial_metrics?.total_loan_value_sealed || 0,
+          average_loan_amount: financialData.data?.analytics?.financial_metrics?.average_loan_amount || 0,
+          sealing_success_rate: financialData.data?.analytics?.document_processing?.sealing_success_rate || 0,
+          blockchain_confirmation_rate: financialData.data?.analytics?.blockchain_activity?.blockchain_confirmation_rate || 0
         },
-        document_analytics: {
-          documents_processed_today: systemData.data?.metrics?.documents_processed_today || 23,
-          documents_processed_week: systemData.data?.metrics?.documents_processed_week || 156,
-          avg_processing_time: systemData.data?.metrics?.avg_processing_time || 1.2,
-          success_rate: systemData.data?.metrics?.success_rate || 98.5
+        compliance_risk: {
+          documents_compliant: complianceData.data?.analytics?.compliance_status?.documents_compliant || 0,
+          documents_pending_review: complianceData.data?.analytics?.compliance_status?.documents_pending_review || 0,
+          overall_compliance_rate: complianceData.data?.analytics?.compliance_status?.overall_compliance_rate || 0,
+          high_risk_documents: complianceData.data?.analytics?.risk_assessment?.high_risk_documents || 0,
+          medium_risk_documents: complianceData.data?.analytics?.risk_assessment?.medium_risk_documents || 0,
+          low_risk_documents: complianceData.data?.analytics?.risk_assessment?.low_risk_documents || 0,
+          audit_trail_completeness: complianceData.data?.analytics?.compliance_status?.audit_trail_completeness || 0
         },
-        compliance_metrics: {
-          compliance_score: complianceData.data?.metrics?.compliance_score || 94.5,
-          attestations_created: attestationData.data?.metrics?.attestations_created || 15,
-          verification_links_generated: complianceData.data?.metrics?.verification_links_generated || 8,
-          disclosure_packs_generated: complianceData.data?.metrics?.disclosure_packs_generated || 3
-        },
-        performance_metrics: {
-          api_response_time: performanceData.data?.metrics?.api_response_time || 150,
-          database_query_time: performanceData.data?.metrics?.database_query_time || 45,
-          file_processing_time: performanceData.data?.metrics?.file_processing_time || 800,
-          system_load: performanceData.data?.metrics?.system_load || 25
+        business_intelligence: {
+          monthly_revenue: businessData.data?.analytics?.revenue_metrics?.monthly_revenue || 0,
+          revenue_per_document: businessData.data?.analytics?.revenue_metrics?.revenue_per_document || 0,
+          profit_margin: businessData.data?.analytics?.revenue_metrics?.profit_margin || 0,
+          customer_retention_rate: businessData.data?.analytics?.customer_analytics?.customer_retention_rate || 0,
+          customer_satisfaction_score: businessData.data?.analytics?.customer_analytics?.customer_satisfaction_score || 0,
+          growth_rate: businessData.data?.analytics?.market_insights?.growth_rate || "0%"
         }
       })
     } catch (error) {
@@ -126,9 +124,9 @@ export default function AnalyticsPage() {
 
   const tabs = [
     { id: 'overview', name: 'Overview', icon: BarChart3 },
-    { id: 'documents', name: 'Documents', icon: FileText },
-    { id: 'compliance', name: 'Compliance', icon: Shield },
-    { id: 'performance', name: 'Performance', icon: TrendingUp }
+    { id: 'documents', name: 'Document Processing', icon: FileText },
+    { id: 'compliance', name: 'Compliance & Risk', icon: Shield },
+    { id: 'business', name: 'Business Intelligence', icon: TrendingUp }
   ]
 
   if (loading) {
@@ -229,9 +227,9 @@ export default function AnalyticsPage() {
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Financial Document Analytics</h1>
         <p className="text-gray-600">
-          Monitor system performance, document processing, and compliance metrics
+          Monitor document processing, compliance, and business performance metrics
         </p>
       </div>
 
@@ -243,8 +241,8 @@ export default function AnalyticsPage() {
               <FileText className="h-6 w-6 text-blue-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Documents</p>
-              <p className="text-2xl font-bold text-gray-900">{analytics?.system_metrics.total_documents || 0}</p>
+              <p className="text-sm font-medium text-gray-600">Documents Sealed Today</p>
+              <p className="text-2xl font-bold text-gray-900">{analytics?.financial_documents.documents_sealed_today || 0}</p>
             </div>
           </div>
         </div>
@@ -255,8 +253,8 @@ export default function AnalyticsPage() {
               <Shield className="h-6 w-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Compliance Score</p>
-              <p className="text-2xl font-bold text-gray-900">{analytics?.compliance_metrics.compliance_score || 0}%</p>
+              <p className="text-sm font-medium text-gray-600">Compliance Rate</p>
+              <p className="text-2xl font-bold text-gray-900">{analytics?.compliance_risk.overall_compliance_rate || 0}%</p>
             </div>
           </div>
         </div>
@@ -264,11 +262,11 @@ export default function AnalyticsPage() {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center">
             <div className="p-2 bg-purple-100 rounded-lg">
-              <Activity className="h-6 w-6 text-purple-600" />
+              <TrendingUp className="h-6 w-6 text-purple-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">System Uptime</p>
-              <p className="text-2xl font-bold text-gray-900">{analytics?.system_metrics.system_uptime || 0}%</p>
+              <p className="text-sm font-medium text-gray-600">Total Loan Value</p>
+              <p className="text-2xl font-bold text-gray-900">${(analytics?.financial_documents.total_loan_value_sealed || 0).toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -276,11 +274,11 @@ export default function AnalyticsPage() {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center">
             <div className="p-2 bg-orange-100 rounded-lg">
-              <Clock className="h-6 w-6 text-orange-600" />
+              <BarChart3 className="h-6 w-6 text-orange-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Avg Response</p>
-              <p className="text-2xl font-bold text-gray-900">{analytics?.system_metrics.avg_response_time || 0}s</p>
+              <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
+              <p className="text-2xl font-bold text-gray-900">${analytics?.business_intelligence.monthly_revenue || 0}</p>
             </div>
           </div>
         </div>
@@ -314,66 +312,66 @@ export default function AnalyticsPage() {
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Today's Activity</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Document Processing</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <FileText className="h-5 w-5 text-blue-600" />
-                      <span className="font-medium">Documents Processed</span>
+                      <span className="font-medium">Documents Sealed Today</span>
                     </div>
                     <span className="text-2xl font-bold text-gray-900">
-                      {analytics?.document_analytics.documents_processed_today || 0}
+                      {analytics?.financial_documents.documents_sealed_today || 0}
                     </span>
                   </div>
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <Shield className="h-5 w-5 text-green-600" />
-                      <span className="font-medium">Attestations Created</span>
+                      <span className="font-medium">Sealing Success Rate</span>
                     </div>
                     <span className="text-2xl font-bold text-gray-900">
-                      {analytics?.compliance_metrics.attestations_created || 0}
+                      {analytics?.financial_documents.sealing_success_rate || 0}%
                     </span>
                   </div>
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
-                      <Users className="h-5 w-5 text-purple-600" />
-                      <span className="font-medium">Verifications Completed</span>
+                      <TrendingUp className="h-5 w-5 text-purple-600" />
+                      <span className="font-medium">Blockchain Confirmation</span>
                     </div>
                     <span className="text-2xl font-bold text-gray-900">
-                      {analytics?.compliance_metrics.verification_links_generated || 0}
+                      {analytics?.financial_documents.blockchain_confirmation_rate || 0}%
                     </span>
                   </div>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">This Week's Summary</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Financial Metrics</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
-                      <FileText className="h-5 w-5 text-blue-600" />
-                      <span className="font-medium">Documents Processed</span>
+                      <BarChart3 className="h-5 w-5 text-blue-600" />
+                      <span className="font-medium">Total Loan Value</span>
                     </div>
                     <span className="text-2xl font-bold text-gray-900">
-                      {analytics?.document_analytics.documents_processed_week || 0}
+                      ${(analytics?.financial_documents.total_loan_value_sealed || 0).toLocaleString()}
                     </span>
                   </div>
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <Shield className="h-5 w-5 text-green-600" />
-                      <span className="font-medium">Attestations Created</span>
+                      <span className="font-medium">Average Loan Amount</span>
                     </div>
                     <span className="text-2xl font-bold text-gray-900">
-                      {analytics?.compliance_metrics.attestations_created || 0}
+                      ${(analytics?.financial_documents.average_loan_amount || 0).toLocaleString()}
                     </span>
                   </div>
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <Users className="h-5 w-5 text-purple-600" />
-                      <span className="font-medium">Verifications Completed</span>
+                      <span className="font-medium">Total Documents Sealed</span>
                     </div>
                     <span className="text-2xl font-bold text-gray-900">
-                      {analytics?.compliance_metrics.verification_links_generated || 0}
+                      {analytics?.financial_documents.total_documents_sealed || 0}
                     </span>
                   </div>
                 </div>
@@ -384,32 +382,36 @@ export default function AnalyticsPage() {
           {activeTab === 'documents' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Processing Performance</h4>
+                <h4 className="font-medium text-gray-900 mb-2">Document Processing</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Average Processing Time</span>
-                    <span className="text-sm font-medium">{analytics?.document_analytics.avg_processing_time || 0}s</span>
+                    <span className="text-sm text-gray-600">Documents Sealed This Month</span>
+                    <span className="text-sm font-medium">{analytics?.financial_documents.documents_sealed_this_month || 0}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Success Rate</span>
-                    <span className="text-sm font-medium">{analytics?.document_analytics.success_rate || 0}%</span>
+                    <span className="text-sm text-gray-600">Sealing Success Rate</span>
+                    <span className="text-sm font-medium">{analytics?.financial_documents.sealing_success_rate || 0}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Average Processing Time</span>
+                    <span className="text-sm font-medium">2.3 minutes</span>
                   </div>
                 </div>
               </div>
               <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Document Types</h4>
+                <h4 className="font-medium text-gray-900 mb-2">Blockchain Activity</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">JSON Documents</span>
-                    <span className="text-sm font-medium">45%</span>
+                    <span className="text-sm text-gray-600">Blockchain Confirmation Rate</span>
+                    <span className="text-sm font-medium">{analytics?.financial_documents.blockchain_confirmation_rate || 0}%</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">File Packets</span>
-                    <span className="text-sm font-medium">35%</span>
+                    <span className="text-sm text-gray-600">Average Seal Time</span>
+                    <span className="text-sm font-medium">45 seconds</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Manifests</span>
-                    <span className="text-sm font-medium">20%</span>
+                    <span className="text-sm text-gray-600">Total Documents Sealed</span>
+                    <span className="text-sm font-medium">{analytics?.financial_documents.total_documents_sealed || 0}</span>
                   </div>
                 </div>
               </div>
@@ -419,75 +421,75 @@ export default function AnalyticsPage() {
           {activeTab === 'compliance' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Compliance Metrics</h4>
+                <h4 className="font-medium text-gray-900 mb-2">Compliance Status</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Overall Score</span>
-                    <span className="text-sm font-medium">{analytics?.compliance_metrics.compliance_score || 0}%</span>
+                    <span className="text-sm text-gray-600">Overall Compliance Rate</span>
+                    <span className="text-sm font-medium">{analytics?.compliance_risk.overall_compliance_rate || 0}%</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Attestations Created</span>
-                    <span className="text-sm font-medium">{analytics?.compliance_metrics.attestations_created || 0}</span>
+                    <span className="text-sm text-gray-600">Documents Compliant</span>
+                    <span className="text-sm font-medium">{analytics?.compliance_risk.documents_compliant || 0}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Disclosure Packs</span>
-                    <span className="text-sm font-medium">{analytics?.compliance_metrics.disclosure_packs_generated || 0}</span>
+                    <span className="text-sm text-gray-600">Pending Review</span>
+                    <span className="text-sm font-medium">{analytics?.compliance_risk.documents_pending_review || 0}</span>
                   </div>
                 </div>
               </div>
               <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Verification Activity</h4>
+                <h4 className="font-medium text-gray-900 mb-2">Risk Assessment</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Links Generated</span>
-                    <span className="text-sm font-medium">{analytics?.compliance_metrics.verification_links_generated || 0}</span>
+                    <span className="text-sm text-gray-600">High Risk Documents</span>
+                    <span className="text-sm font-medium text-red-600">{analytics?.compliance_risk.high_risk_documents || 0}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Active Verifications</span>
-                    <span className="text-sm font-medium">12</span>
+                    <span className="text-sm text-gray-600">Medium Risk Documents</span>
+                    <span className="text-sm font-medium text-yellow-600">{analytics?.compliance_risk.medium_risk_documents || 0}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Completed Today</span>
-                    <span className="text-sm font-medium">8</span>
+                    <span className="text-sm text-gray-600">Low Risk Documents</span>
+                    <span className="text-sm font-medium text-green-600">{analytics?.compliance_risk.low_risk_documents || 0}</span>
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {activeTab === 'performance' && (
+          {activeTab === 'business' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Response Times</h4>
+                <h4 className="font-medium text-gray-900 mb-2">Revenue Metrics</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">API Response</span>
-                    <span className="text-sm font-medium">{analytics?.performance_metrics.api_response_time || 0}ms</span>
+                    <span className="text-sm text-gray-600">Monthly Revenue</span>
+                    <span className="text-sm font-medium">${analytics?.business_intelligence.monthly_revenue || 0}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Database Queries</span>
-                    <span className="text-sm font-medium">{analytics?.performance_metrics.database_query_time || 0}ms</span>
+                    <span className="text-sm text-gray-600">Revenue Per Document</span>
+                    <span className="text-sm font-medium">${analytics?.business_intelligence.revenue_per_document || 0}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">File Processing</span>
-                    <span className="text-sm font-medium">{analytics?.performance_metrics.file_processing_time || 0}ms</span>
+                    <span className="text-sm text-gray-600">Profit Margin</span>
+                    <span className="text-sm font-medium">{analytics?.business_intelligence.profit_margin || 0}%</span>
                   </div>
                 </div>
               </div>
               <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">System Health</h4>
+                <h4 className="font-medium text-gray-900 mb-2">Customer Analytics</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">System Load</span>
-                    <span className="text-sm font-medium">{analytics?.performance_metrics.system_load || 0}%</span>
+                    <span className="text-sm text-gray-600">Retention Rate</span>
+                    <span className="text-sm font-medium">{analytics?.business_intelligence.customer_retention_rate || 0}%</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Memory Usage</span>
-                    <span className="text-sm font-medium">68%</span>
+                    <span className="text-sm text-gray-600">Satisfaction Score</span>
+                    <span className="text-sm font-medium">{analytics?.business_intelligence.customer_satisfaction_score || 0}/5.0</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">CPU Usage</span>
-                    <span className="text-sm font-medium">42%</span>
+                    <span className="text-sm text-gray-600">Growth Rate</span>
+                    <span className="text-sm font-medium">{analytics?.business_intelligence.growth_rate || "0%"}</span>
                   </div>
                 </div>
               </div>
@@ -496,20 +498,20 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Advanced Analytics Link */}
+      {/* Business Intelligence Tools */}
       <div className="bg-white rounded-lg shadow-sm border p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Predictive Analytics</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Business Intelligence Tools</h3>
             <p className="text-gray-600 mt-1">
-              Access AI-powered risk prediction and compliance forecasting
+              Advanced risk assessment, compliance forecasting, and loan performance analytics
             </p>
           </div>
           <Link
             href="/analytics/predictive"
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            <span>View Predictive Analytics</span>
+            <span>View BI Tools</span>
             <ArrowRight className="h-4 w-4 ml-2" />
           </Link>
         </div>

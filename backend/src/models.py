@@ -63,6 +63,7 @@ class Artifact(Base):
     # Hybrid approach fields
     blockchain_seal = Column(String(255), nullable=True)  # Blockchain seal information
     local_metadata = Column(JSON, nullable=True)  # All local metadata (file_size, file_path, etc.)
+    borrower_info = Column(JSON, nullable=True)  # Borrower information for loan documents
     
     # Relationships
     files = relationship("ArtifactFile", back_populates="artifact", cascade="all, delete-orphan")
@@ -94,6 +95,7 @@ class Artifact(Base):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'blockchain_seal': self.blockchain_seal,
             'local_metadata': self.local_metadata,
+            'borrower_info': self.borrower_info,
             'files_count': len(self.files) if self.files else 0,
             'events_count': len(self.events) if self.events else 0
         }

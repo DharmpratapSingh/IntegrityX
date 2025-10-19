@@ -167,7 +167,8 @@ class Database:
         created_by: str,
         manifest_sha256: Optional[str] = None,
         blockchain_seal: Optional[str] = None,
-        local_metadata: Optional[dict] = None
+        local_metadata: Optional[dict] = None,
+        borrower_info: Optional[dict] = None
     ) -> str:
         """
         Insert a new artifact into the database.
@@ -180,6 +181,9 @@ class Database:
             walacor_tx_id: Walacor transaction ID
             created_by: User or system that created the artifact
             manifest_sha256: SHA-256 hash of the manifest (optional)
+            blockchain_seal: Blockchain seal information (optional)
+            local_metadata: Local metadata dictionary (optional)
+            borrower_info: Borrower information dictionary (optional)
         
         Returns:
             str: The ID of the created artifact
@@ -209,6 +213,17 @@ class Database:
             
             if existing_artifact:
                 logger.info(f"Artifact already exists: {existing_artifact.id} for loan {loan_id}")
+                
+                # Update the existing artifact with new comprehensive document data if provided
+                if local_metadata and local_metadata.get('comprehensive_document'):
+                    existing_artifact.local_metadata = local_metadata
+                    existing_artifact.walacor_tx_id = walacor_tx_id
+                    existing_artifact.blockchain_seal = blockchain_seal
+                    if borrower_info:
+                        existing_artifact.borrower_info = borrower_info
+                    session.commit()
+                    logger.info(f"Updated existing artifact {existing_artifact.id} with comprehensive document data")
+                
                 return existing_artifact.id
             
             artifact = Artifact(
@@ -221,7 +236,8 @@ class Database:
                 walacor_tx_id=walacor_tx_id,
                 created_by=created_by,
                 blockchain_seal=blockchain_seal,
-                local_metadata=local_metadata
+                local_metadata=local_metadata,
+                borrower_info=borrower_info
             )
             
             session.add(artifact)
@@ -585,6 +601,34 @@ class Database:
             logger.error(f"Database error retrieving artifact {artifact_id}: {e}")
             raise
     
+    def get_all_artifacts(self) -> List[Artifact]:
+        """
+        Get all artifacts from the database with eager loading of related files and events.
+        
+        Returns:
+            List[Artifact]: List of all artifacts with loaded relationships
+        
+        Raises:
+            SQLAlchemyError: If database operation fails
+        """
+        try:
+            session = self._ensure_session()
+            
+            artifacts = session.query(Artifact)\
+                .options(
+                    joinedload(Artifact.files),
+                    joinedload(Artifact.events)
+                )\
+                .order_by(Artifact.created_at.desc())\
+                .all()
+            
+            logger.debug(f"Retrieved {len(artifacts)} artifacts")
+            return artifacts
+            
+        except SQLAlchemyError as e:
+            logger.error(f"Database error retrieving all artifacts: {e}")
+            raise
+
     def get_artifact_by_loan_id(self, loan_id: str) -> List[Artifact]:
         """
         Get all artifacts for a specific loan ID.
@@ -743,6 +787,272 @@ class Database:
                 'database_url': self._mask_url(self.db_url),
                 'error': str(e)
             }
+
+    # ============================================================================
+    # COMPLIANCE AUDIT LOGGING METHODS
+    # ============================================================================
+    
+    def log_document_upload(self, artifact_id: str, user_id: str, borrower_name: str, 
+                           loan_id: str, ip_address: Optional[str] = None, 
+                           user_agent: Optional[str] = None) -> str:
+        """
+        Log a document upload event for compliance auditing.
+        
+        Args:
+            artifact_id: ID of the uploaded artifact
+            user_id: ID of the user who uploaded the document
+            borrower_name: Name of the borrower (for audit trail)
+            loan_id: ID of the loan document
+            ip_address: IP address of the uploader (optional)
+            user_agent: User agent string (optional)
+        
+        Returns:
+            str: ID of the created audit event
+        """
+        import json
+        from datetime import datetime, timezone
+        
+        payload = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "user_id": user_id,
+            "borrower_name": borrower_name,
+            "loan_id": loan_id,
+            "ip_address": ip_address,
+            "user_agent": user_agent,
+            "action_details": {
+                "action": "document_upload",
+                "document_type": "loan_document",
+                "contains_borrower_data": True
+            }
+        }
+        
+        return self.insert_event(
+            artifact_id=artifact_id,
+            event_type="borrower_data_submitted",
+            created_by=user_id,
+            payload_json=json.dumps(payload, separators=(',', ':'))
+        )
+    
+    def log_borrower_data_access(self, artifact_id: str, accessed_by: str, 
+                                access_reason: str, ip_address: Optional[str] = None) -> str:
+        """
+        Log access to borrower data for compliance auditing.
+        
+        Args:
+            artifact_id: ID of the artifact containing borrower data
+            accessed_by: ID or email of the person accessing the data
+            access_reason: Reason for accessing the data (e.g., 'verification', 'audit')
+            ip_address: IP address of the requester (optional)
+        
+        Returns:
+            str: ID of the created audit event
+        """
+        import json
+        from datetime import datetime, timezone
+        
+        payload = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "accessed_by": accessed_by,
+            "access_reason": access_reason,
+            "ip_address": ip_address,
+            "action_details": {
+                "action": "borrower_data_access",
+                "data_types_accessed": ["personal_info", "contact_info", "identity_info"],
+                "compliance_purpose": access_reason
+            }
+        }
+        
+        return self.insert_event(
+            artifact_id=artifact_id,
+            event_type="borrower_data_accessed",
+            created_by=accessed_by,
+            payload_json=json.dumps(payload, separators=(',', ':'))
+        )
+    
+    def log_verification_attempt(self, artifact_id: str, verifier_email: str, 
+                                result: str, ip_address: Optional[str] = None) -> str:
+        """
+        Log a document verification attempt for compliance auditing.
+        
+        Args:
+            artifact_id: ID of the artifact being verified
+            verifier_email: Email of the person performing verification
+            result: Result of verification ('success', 'failed', 'error')
+            ip_address: IP address of the verifier (optional)
+        
+        Returns:
+            str: ID of the created audit event
+        """
+        import json
+        from datetime import datetime, timezone
+        
+        payload = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "verifier_email": verifier_email,
+            "verification_result": result,
+            "ip_address": ip_address,
+            "action_details": {
+                "action": "document_verification",
+                "verification_type": "blockchain_integrity_check",
+                "compliance_requirement": "document_authenticity"
+            }
+        }
+        
+        return self.insert_event(
+            artifact_id=artifact_id,
+            event_type="document_verified",
+            created_by=verifier_email,
+            payload_json=json.dumps(payload, separators=(',', ':'))
+        )
+    
+    def log_data_modification(self, artifact_id: str, field_changed: str, 
+                             old_value_hash: str, new_value_hash: str, 
+                             modified_by: str) -> str:
+        """
+        Log data modification for compliance auditing.
+        
+        Args:
+            artifact_id: ID of the artifact being modified
+            field_changed: Name of the field that was changed
+            old_value_hash: SHA-256 hash of the old value
+            new_value_hash: SHA-256 hash of the new value
+            modified_by: ID of the user who made the modification
+        
+        Returns:
+            str: ID of the created audit event
+        """
+        import json
+        from datetime import datetime, timezone
+        
+        payload = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "modified_by": modified_by,
+            "field_changed": field_changed,
+            "old_value_hash": old_value_hash,
+            "new_value_hash": new_value_hash,
+            "action_details": {
+                "action": "data_modification",
+                "change_type": "field_update",
+                "compliance_impact": "audit_trail_required"
+            }
+        }
+        
+        return self.insert_event(
+            artifact_id=artifact_id,
+            event_type="data_modification",
+            created_by=modified_by,
+            payload_json=json.dumps(payload, separators=(',', ':'))
+        )
+    
+    def log_blockchain_seal(self, artifact_id: str, walacor_tx_id: str, 
+                           data_hash: str, sealed_by: str) -> str:
+        """
+        Log blockchain sealing for compliance auditing.
+        
+        Args:
+            artifact_id: ID of the artifact being sealed
+            walacor_tx_id: Walacor transaction ID
+            data_hash: SHA-256 hash of the sealed data
+            sealed_by: ID of the user who initiated the sealing
+        
+        Returns:
+            str: ID of the created audit event
+        """
+        import json
+        from datetime import datetime, timezone
+        
+        payload = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "sealed_by": sealed_by,
+            "walacor_tx_id": walacor_tx_id,
+            "data_hash": data_hash,
+            "action_details": {
+                "action": "blockchain_sealing",
+                "blockchain_network": "walacor",
+                "immutability_established": True,
+                "compliance_requirement": "document_integrity"
+            }
+        }
+        
+        return self.insert_event(
+            artifact_id=artifact_id,
+            event_type="blockchain_sealed",
+            created_by=sealed_by,
+            payload_json=json.dumps(payload, separators=(',', ':')),
+            walacor_tx_id=walacor_tx_id
+        )
+    
+    def log_sensitive_data_viewed(self, artifact_id: str, viewer_id: str, 
+                                 data_types: List[str], ip_address: Optional[str] = None) -> str:
+        """
+        Log viewing of sensitive data for compliance auditing.
+        
+        Args:
+            artifact_id: ID of the artifact containing sensitive data
+            viewer_id: ID of the person viewing the data
+            data_types: List of sensitive data types viewed (e.g., ['ssn', 'email', 'phone'])
+            ip_address: IP address of the viewer (optional)
+        
+        Returns:
+            str: ID of the created audit event
+        """
+        import json
+        from datetime import datetime, timezone
+        
+        payload = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "viewer_id": viewer_id,
+            "data_types_viewed": data_types,
+            "ip_address": ip_address,
+            "action_details": {
+                "action": "sensitive_data_view",
+                "privacy_impact": "high",
+                "compliance_requirement": "data_access_logging"
+            }
+        }
+        
+        return self.insert_event(
+            artifact_id=artifact_id,
+            event_type="sensitive_data_viewed",
+            created_by=viewer_id,
+            payload_json=json.dumps(payload, separators=(',', ':'))
+        )
+    
+    def log_audit_trail_export(self, artifact_id: str, exported_by: str, 
+                              export_format: str, ip_address: Optional[str] = None) -> str:
+        """
+        Log audit trail export for compliance auditing.
+        
+        Args:
+            artifact_id: ID of the artifact whose audit trail was exported
+            exported_by: ID of the person who exported the audit trail
+            export_format: Format of the export (e.g., 'pdf', 'json', 'csv')
+            ip_address: IP address of the exporter (optional)
+        
+        Returns:
+            str: ID of the created audit event
+        """
+        import json
+        from datetime import datetime, timezone
+        
+        payload = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "exported_by": exported_by,
+            "export_format": export_format,
+            "ip_address": ip_address,
+            "action_details": {
+                "action": "audit_trail_export",
+                "compliance_purpose": "regulatory_reporting",
+                "data_retention": "permanent"
+            }
+        }
+        
+        return self.insert_event(
+            artifact_id=artifact_id,
+            event_type="audit_trail_exported",
+            created_by=exported_by,
+            payload_json=json.dumps(payload, separators=(',', ':'))
+        )
 
 
 # Example usage and testing

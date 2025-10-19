@@ -25,3 +25,6 @@ export function EmptyState({
     </div>
   )
 }
+
+// Alias for backward compatibility
+export const NoResultsEmptyState = EmptyState;

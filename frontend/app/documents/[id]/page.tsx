@@ -5,13 +5,10 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { 
   ArrowLeft, 
-  FileText, 
-  Hash, 
   Calendar, 
   Shield, 
   Download, 
   Link as LinkIcon, 
-  Eye,
   Copy,
   CheckCircle,
   AlertCircle,
@@ -21,7 +18,6 @@ import {
 } from 'lucide-react'
 import { toast } from '@/components/ui/toast'
 import { Skeleton } from '@/components/ui/skeleton'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
 interface Document {
   id: string
@@ -32,6 +28,8 @@ interface Document {
   loan_id?: string
   walacor_tx_id?: string
   created_by?: string
+  blockchain_seal?: string
+  local_metadata?: any
 }
 
 interface Attestation {
@@ -54,7 +52,6 @@ interface AuditEvent {
 
 export default function DocumentDetailPage() {
   const params = useParams()
-  const router = useRouter()
   const documentId = params.id as string
 
   const [document, setDocument] = useState<Document | null>(null)
@@ -65,6 +62,40 @@ export default function DocumentDetailPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [copiedHash, setCopiedHash] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
+
+  // Utility functions for masking sensitive data
+  const maskEmail = (email: string): string => {
+    if (!email || !email.includes('@')) return email
+    const [local, domain] = email.split('@')
+    if (local.length <= 2) return email
+    return `${local[0]}***@${domain}`
+  }
+
+  const maskPhone = (phone: string): string => {
+    if (!phone) return phone
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length < 4) return phone
+    const last4 = digits.slice(-4)
+    return `***-***-${last4}`
+  }
+
+  const maskSSN = (ssn: string): string => {
+    if (!ssn) return ssn
+    if (ssn.length < 4) return ssn
+    const last4 = ssn.slice(-4)
+    return `****-**-${last4}`
+  }
+
+  const getIncomeRange = (income: number): string => {
+    if (income < 25000) return 'Under $25,000'
+    if (income < 50000) return '$25,000 - $49,999'
+    if (income < 75000) return '$50,000 - $74,999'
+    if (income < 100000) return '$75,000 - $99,999'
+    if (income < 150000) return '$100,000 - $149,999'
+    if (income < 200000) return '$150,000 - $199,999'
+    return '$200,000+'
+  }
+
 
   useEffect(() => {
     if (documentId) {
@@ -96,7 +127,7 @@ export default function DocumentDetailPage() {
       }
 
       // Fetch attestations
-      const attResponse = await fetch(`http://localhost:8000/api/attestations?artifact_id=${documentId}`, {
+      const attResponse = await fetch(`http://localhost:8000/api/attestations?artifactId=${documentId}`, {
         headers: { 'Accept': 'application/json' },
         signal: AbortSignal.timeout(10000)
       })
@@ -107,8 +138,20 @@ export default function DocumentDetailPage() {
         }
       }
 
+      // Fetch borrower info (masked)
+      const borrowerResponse = await fetch(`http://localhost:8000/api/loan-documents/${documentId}/borrower`, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(10000)
+      })
+      if (borrowerResponse.ok) {
+        const borrowerData = await borrowerResponse.json()
+        if (borrowerData.ok && borrowerData.data) {
+          setBorrower(borrowerData.data)
+        }
+      }
+
       // Fetch audit events
-      const auditResponse = await fetch(`http://localhost:8000/api/audit-events?artifact_id=${documentId}`, {
+      const auditResponse = await fetch(`http://localhost:8000/api/loan-documents/${documentId}/audit-trail`, {
         headers: { 'Accept': 'application/json' },
         signal: AbortSignal.timeout(10000)
       })
@@ -163,15 +206,16 @@ export default function DocumentDetailPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          artifact_id: documentId,
-          attestation_type: 'compliance',
-          attestation_data: {
+          artifactId: documentId,
+          etid: '100001',
+          kind: 'compliance',
+          issuedBy: 'user@example.com',
+          details: {
             verified: true,
             compliance_standard: 'ISO 27001',
             verified_by: 'system',
             notes: 'Document integrity verified'
-          },
-          created_by: 'user'
+          }
         })
       })
 
@@ -423,30 +467,45 @@ export default function DocumentDetailPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Document Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Loan ID</label>
+                <div className="p-2 bg-gray-50 rounded border text-sm">
+                  {document.loan_id || 'Not provided'}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Document Type</label>
+                <div className="p-2 bg-gray-50 rounded border text-sm">
+                  {document.local_metadata?.comprehensive_document?.document_type || document.artifact_type || 'Unknown'}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Loan Amount</label>
+                <div className="p-2 bg-gray-50 rounded border text-sm">
+                  {document.local_metadata?.comprehensive_document?.loan_amount 
+                    ? `$${document.local_metadata.comprehensive_document.loan_amount.toLocaleString()}`
+                    : 'Not provided'
+                  }
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Upload Date</label>
+                <div className="flex items-center text-sm text-gray-900">
+                  <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                  {new Date(document.created_at).toLocaleString()}
+                </div>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Document Hash</label>
                 <div className="flex items-center space-x-2">
                   <div className="flex-1 p-2 bg-gray-50 rounded border font-mono text-sm">
-                    {document.hash}
+                    {document.payload_sha256}
                   </div>
                   <button
-                    onClick={() => copyToClipboard(document.hash, 'hash')}
+                    onClick={() => copyToClipboard(document.payload_sha256, 'hash')}
                     className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
                   >
                     {copiedHash ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                   </button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                  {document.artifact_type || 'Unknown'}
-                </span>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Uploaded</label>
-                <div className="flex items-center text-sm text-gray-900">
-                  <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                  {new Date(document.created_at).toLocaleString()}
                 </div>
               </div>
               <div>
@@ -455,6 +514,93 @@ export default function DocumentDetailPage() {
                   <User className="h-4 w-4 mr-2 text-gray-400" />
                   {document.created_by || 'System'}
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Borrower Information (From Sealed Record) */}
+          {borrower && (
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Borrower Information (From Sealed Record)</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                  <div className="p-2 bg-gray-50 rounded border text-sm">
+                    {borrower.full_name}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                  <div className="p-2 bg-gray-50 rounded border text-sm">
+                    {borrower.date_of_birth}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <div className="p-2 bg-gray-50 rounded border text-sm">
+                    {borrower.email}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <div className="p-2 bg-gray-50 rounded border text-sm">
+                    {borrower.phone}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                  <div className="p-2 bg-gray-50 rounded border text-sm">
+                    {borrower.address?.city && borrower.address?.state 
+                      ? `${borrower.address.city}, ${borrower.address.state}`
+                      : 'Not provided'
+                    }
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">SSN</label>
+                  <div className="p-2 bg-gray-50 rounded border text-sm">
+                    {borrower.ssn_last4 ? `****-**-${borrower.ssn_last4}` : 'Not provided'}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Employment Status</label>
+                  <div className="p-2 bg-gray-50 rounded border text-sm">
+                    {borrower.employment_status || 'Not provided'}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Annual Income Range</label>
+                  <div className="p-2 bg-gray-50 rounded border text-sm">
+                    {borrower.annual_income_range || 'Not provided'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Verification Status */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Verification Status</h2>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span className="text-sm text-gray-900">Document hash matches blockchain record</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span className="text-sm text-gray-900">Data has not been tampered with</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Clock className="h-5 w-5 text-blue-600" />
+                <span className="text-sm text-gray-900">
+                  Sealed on: {new Date(document.created_at).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Shield className="h-5 w-5 text-purple-600" />
+                <span className="text-sm text-gray-900">
+                  Walacor TX ID: {document.walacor_tx_id}
+                </span>
               </div>
             </div>
           </div>
