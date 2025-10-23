@@ -519,11 +519,6 @@ This project is part of the **Walacor Financial Integrity Challenge**.
 - ✅ **Modification**: Open source with attribution
 - ❌ **Redistribution**: Requires permission
 
-### Contact
-- **Email**: [Your Email]
-- **GitHub**: [@DharmpratapSingh](https://github.com/DharmpratapSingh)
-- **LinkedIn**: [Your LinkedIn Profile]
-
 ---
 
 ## 🙏 Acknowledgments
