@@ -1,0 +1,243 @@
+{
+  "test_scenarios": [
+    {
+      "name": "Complete Document Lifecycle Test",
+      "description": "Test the complete document lifecycle from upload to signing",
+      "steps": [
+        {
+          "step": 1,
+          "action": "Upload Document",
+          "endpoint": "POST /api/artifacts",
+          "payload": {
+            "loan_id": "LOAN_TEST_001",
+            "borrower_name": "John Doe",
+            "loan_amount": 250000,
+            "interest_rate": 6.5,
+            "loan_term": 360,
+            "property_address": "123 Main St, Anytown, ST 12345",
+            "credit_score": 750,
+            "annual_income": 85000,
+            "employment_status": "Employed",
+            "document_type": "loan_application",
+            "submission_date": "2025-10-23T01:00:00.000Z"
+          }
+        },
+        {
+          "step": 2,
+          "action": "AI Document Analysis",
+          "endpoint": "POST /api/ai/analyze-document-json",
+          "payload": {
+            "filename": "loan_application.json",
+            "content_type": "application/json",
+            "file_content": "ewogICJsb2FuX2lkIjogIkxPQU5fVEVTVF8wMDEiLAogICJib3Jyb3dlcl9uYW1lIjogIkpvaG4gRG9lIiwKICAibG9hbl9hbW91bnQiOiAyNTAwMDAsCiAgImludGVyZXN0X3JhdGUiOiA2LjUsCiAgImxvYW5fdGVybSI6IDM2MCwKICAicHJvcGVydHlfYWRkcmVzcyI6ICIxMjMgTWFpbiBTdCwgQW55dG93biwgU1QgMTIzNDUiLAogICJjcmVkaXRfc2NvcmUiOiA3NTAsCiAgImFubnVhbF9pbmNvbWUiOiA4NTAwMCwKICAiZW1wbG95bWVudF9zdGF0dXMiOiAiRW1wbG95ZWQiLAogICJkb2N1bWVudF90eXBlIjogImxvYW5fYXBwbGljYXRpb24iLAogICJzdWJtaXNzaW9uX2RhdGUiOiAiMjAyNS0xMC0yM1QwMTowMDowMC4wMDBaIgp9"
+          }
+        },
+        {
+          "step": 3,
+          "action": "Create Signing Envelope",
+          "endpoint": "POST /api/signing/create-envelope",
+          "payload": {
+            "document_id": "DOC_TEST_001",
+            "document_name": "Test Loan Application",
+            "signers": [
+              {
+                "email": "borrower@example.com",
+                "name": "John Borrower",
+                "role": "signer",
+                "order": 1
+              }
+            ],
+            "signing_fields": [
+              {
+                "field_type": "signature",
+                "page_number": 1,
+                "x_position": 100.0,
+                "y_position": 200.0,
+                "width": 150.0,
+                "height": 50.0,
+                "recipient_id": "1",
+                "required": true,
+                "tab_label": "Borrower Signature"
+              }
+            ],
+            "template_type": "loan_application",
+            "provider": "docusign"
+          }
+        },
+        {
+          "step": 4,
+          "action": "Get Analytics",
+          "endpoint": "GET /api/analytics/system-metrics",
+          "payload": {}
+        },
+        {
+          "step": 5,
+          "action": "Bulk Document Processing",
+          "endpoint": "POST /api/ai/analyze-batch",
+          "payload": {
+            "documents": [
+              {
+                "filename": "test_doc_1.json",
+                "content_type": "application/json",
+                "file_content": "ewogICJ0ZXN0IjogImRvY3VtZW50XzEiCn0="
+              },
+              {
+                "filename": "test_doc_2.json",
+                "content_type": "application/json",
+                "file_content": "ewogICJ0ZXN0IjogImRvY3VtZW50XzIiCn0="
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Document Signing Workflow Test",
+      "description": "Test the complete document signing workflow",
+      "steps": [
+        {
+          "step": 1,
+          "action": "Get Signing Providers",
+          "endpoint": "GET /api/signing/providers",
+          "payload": {}
+        },
+        {
+          "step": 2,
+          "action": "Get Signing Templates",
+          "endpoint": "GET /api/signing/templates",
+          "payload": {}
+        },
+        {
+          "step": 3,
+          "action": "Create Envelope",
+          "endpoint": "POST /api/signing/create-envelope",
+          "payload": {
+            "document_id": "SIGNING_TEST_001",
+            "document_name": "Test Document for Signing",
+            "signers": [
+              {
+                "email": "signer1@example.com",
+                "name": "Signer One",
+                "role": "signer",
+                "order": 1
+              },
+              {
+                "email": "signer2@example.com",
+                "name": "Signer Two",
+                "role": "signer",
+                "order": 2
+              }
+            ],
+            "signing_fields": [
+              {
+                "field_type": "signature",
+                "page_number": 1,
+                "x_position": 100.0,
+                "y_position": 200.0,
+                "width": 150.0,
+                "height": 50.0,
+                "recipient_id": "1",
+                "required": true,
+                "tab_label": "First Signature"
+              },
+              {
+                "field_type": "signature",
+                "page_number": 1,
+                "x_position": 100.0,
+                "y_position": 300.0,
+                "width": 150.0,
+                "height": 50.0,
+                "recipient_id": "2",
+                "required": true,
+                "tab_label": "Second Signature"
+              }
+            ],
+            "template_type": "loan_application",
+            "provider": "docusign"
+          }
+        },
+        {
+          "step": 4,
+          "action": "Send Envelope",
+          "endpoint": "POST /api/signing/send-envelope",
+          "payload": {
+            "envelope_id": "ENV_FROM_STEP_3",
+            "provider": "docusign"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Document Processing Test",
+      "description": "Test AI-powered document processing capabilities",
+      "steps": [
+        {
+          "step": 1,
+          "action": "Get AI Capabilities",
+          "endpoint": "GET /api/ai/ai-capabilities",
+          "payload": {}
+        },
+        {
+          "step": 2,
+          "action": "Get Document Types",
+          "endpoint": "GET /api/ai/document-types",
+          "payload": {}
+        },
+        {
+          "step": 3,
+          "action": "Analyze Document",
+          "endpoint": "POST /api/ai/analyze-document-json",
+          "payload": {
+            "filename": "complex_loan_document.json",
+            "content_type": "application/json",
+            "file_content": "ewogICJsb2FuX2FwcGxpY2F0aW9uIjogewogICAgImxvYW5faWQiOiAiTE9BTl9BUFBfMDAxIiwKICAgICJib3Jyb3dlciI6IHsKICAgICAgIm5hbWUiOiAiSm9obiBEb2UiLAogICAgICAiZW1haWwiOiAiam9obi5kb2VAZXhhbXBsZS5jb20iLAogICAgICAicGhvbmUiOiAiKzEtNTU1LTEyMy00NTY3IiwKICAgICAgImFkZHJlc3MiOiAiMTIzIE1haW4gU3QsIEFueXRvd24sIFNUIDEyMzQ1IgogICAgfSwKICAgICJsb2FuX2RldGFpbHMiOiB7CiAgICAgICJhbW91bnQiOiAyNTAwMDAsCiAgICAgICJpbnRlcmVzdF9yYXRlIjogNi41LAogICAgICAidGVybSI6IDM2MCwKICAgICAgInB1cnBvc2UiOiAiaG9tZSBwdXJjaGFzZSIKICAgIH0sCiAgICAiZmluYW5jaWFsX2luZm8iOiB7CiAgICAgICJhbm51YWxfaW5jb21lIjogODUwMDAsCiAgICAgICJjcmVkaXRfc2NvcmUiOiA3NTAsCiAgICAgICJlbXBsb3ltZW50X3N0YXR1cyI6ICJFbXBsb3llZCIsCiAgICAgICJlbXBsb3llciI6ICJUZXN0IENvbXBhbnkgSW5jLiIKICAgIH0sCiAgICAicHJvcGVydHkiOiB7CiAgICAgICJhZGRyZXNzIjogIjQ1NiBPYWsgU3QsIEhvbWV0b3duLCBTVCA1NDMyMSIsCiAgICAgICJ2YWx1ZSI6IDMwMDAwMCwKICAgICAgInR5cGUiOiAic2luZ2xlIGZhbWlseSBob21lIgogICAgfQogIH0KfQ=="
+          }
+        },
+        {
+          "step": 4,
+          "action": "Batch Analysis",
+          "endpoint": "POST /api/ai/analyze-batch",
+          "payload": {
+            "documents": [
+              {
+                "filename": "doc1.json",
+                "content_type": "application/json",
+                "file_content": "ewogICJ0eXBlIjogImxvYW5fYXBwbGljYXRpb24iLAogICJkYXRhIjogInRlc3QgZGF0YSBmb3IgZG9jIDEiCn0="
+              },
+              {
+                "filename": "doc2.json",
+                "content_type": "application/json",
+                "file_content": "ewogICJ0eXBlIjogImNyZWRpdF9hZ3JlZW1lbnQiLAogICJkYXRhIjogInRlc3QgZGF0YSBmb3IgZG9jIDIiCn0="
+              },
+              {
+                "filename": "doc3.json",
+                "content_type": "application/json",
+                "file_content": "ewogICJ0eXBlIjogImNsb3NpbmdfZG9jdW1lbnQiLAogICJkYXRhIjogInRlc3QgZGF0YSBmb3IgZG9jIDMiCn0="
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "server_info": {
+    "base_url": "http://localhost:8000",
+    "status_endpoint": "/api/health",
+    "documentation": "Available at http://localhost:8000/docs",
+    "features": [
+      "Document Upload and Management",
+      "AI-Powered Document Processing",
+      "Document Signing Integration",
+      "Advanced Analytics",
+      "Bulk Operations",
+      "Multi-Provider Support"
+    ]
+  },
+  "usage_instructions": {
+    "1": "Start the server: python start_server.py",
+    "2": "Test individual endpoints using the examples above",
+    "3": "Use curl, Postman, or any HTTP client to make requests",
+    "4": "Check server status at http://localhost:8000/api/health",
+    "5": "View API documentation at http://localhost:8000/docs"
+  }
+}
