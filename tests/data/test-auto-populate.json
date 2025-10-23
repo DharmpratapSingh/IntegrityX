@@ -1,0 +1,25 @@
+{
+  "loanId": "TEST_LOAN_001",
+  "documentType": "loan_application",
+  "amount": 150000,
+  "borrower": {
+    "full_name": "Test User",
+    "date_of_birth": "1990-01-01",
+    "email": "test@example.com",
+    "phone": "+1-555-0123",
+    "address": {
+      "street": "123 Test Street",
+      "city": "Test City",
+      "state": "CA",
+      "zip_code": "90210",
+      "country": "US"
+    },
+    "ssn_last4": "1234",
+    "employment_status": "employed",
+    "annual_income": 50000
+  },
+  "additional_notes": "Test loan for auto-populate feature"
+}
+
+
+

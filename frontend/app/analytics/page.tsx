@@ -49,27 +49,31 @@ export default function AnalyticsPage() {
     try {
       setError(null)
       setLoading(true)
+      console.log('🔍 Starting analytics fetch...')
 
-      const [financialResponse, complianceResponse, businessResponse] = await Promise.all([
+      const [financialResponse, complianceResponse] = await Promise.all([
         fetch('http://localhost:8000/api/analytics/financial-documents', {
-          headers: { 'Accept': 'application/json' },
-          signal: AbortSignal.timeout(10000)
+          headers: { 'Accept': 'application/json' }
         }),
         fetch('http://localhost:8000/api/analytics/compliance-risk', {
-          headers: { 'Accept': 'application/json' },
-          signal: AbortSignal.timeout(10000)
-        }),
-        fetch('http://localhost:8000/api/analytics/business-intelligence', {
-          headers: { 'Accept': 'application/json' },
-          signal: AbortSignal.timeout(10000)
+          headers: { 'Accept': 'application/json' }
         })
       ])
+      
+      console.log('📊 API responses received:', {
+        financial: financialResponse.status,
+        compliance: complianceResponse.status
+      })
 
-      const [financialData, complianceData, businessData] = await Promise.all([
+      const [financialData, complianceData] = await Promise.all([
         financialResponse.json(),
-        complianceResponse.json(),
-        businessResponse.json()
+        complianceResponse.json()
       ])
+      
+      console.log('📈 Parsed data:', {
+        financial: financialData,
+        compliance: complianceData
+      })
 
       setAnalytics({
         financial_documents: {
@@ -91,20 +95,20 @@ export default function AnalyticsPage() {
           audit_trail_completeness: complianceData.data?.analytics?.compliance_status?.audit_trail_completeness || 0
         },
         business_intelligence: {
-          monthly_revenue: businessData.data?.analytics?.revenue_metrics?.monthly_revenue || 0,
-          revenue_per_document: businessData.data?.analytics?.revenue_metrics?.revenue_per_document || 0,
-          profit_margin: businessData.data?.analytics?.revenue_metrics?.profit_margin || 0,
-          customer_retention_rate: businessData.data?.analytics?.customer_analytics?.customer_retention_rate || 0,
-          customer_satisfaction_score: businessData.data?.analytics?.customer_analytics?.customer_satisfaction_score || 0,
-          growth_rate: businessData.data?.analytics?.market_insights?.growth_rate || "0%"
+          monthly_revenue: 0,
+          revenue_per_document: 0,
+          profit_margin: 0,
+          customer_retention_rate: 0,
+          customer_satisfaction_score: 0,
+          growth_rate: "0%"
         }
       })
+      
+      console.log('✅ Analytics data set successfully')
     } catch (error) {
-      console.error('Failed to fetch analytics:', error)
+      console.error('❌ Failed to fetch analytics:', error)
       if (error instanceof Error) {
-        if (error.name === 'TimeoutError') {
-          setError('Request timed out. Please check your connection and try again.')
-        } else if (error.message.includes('Failed to fetch')) {
+        if (error.message.includes('Failed to fetch')) {
           setError('Unable to connect to the server. Please ensure the backend is running.')
         } else {
           setError(error.message)
@@ -125,8 +129,7 @@ export default function AnalyticsPage() {
   const tabs = [
     { id: 'overview', name: 'Overview', icon: BarChart3 },
     { id: 'documents', name: 'Document Processing', icon: FileText },
-    { id: 'compliance', name: 'Compliance & Risk', icon: Shield },
-    { id: 'business', name: 'Business Intelligence', icon: TrendingUp }
+    { id: 'compliance', name: 'Compliance & Risk', icon: Shield }
   ]
 
   if (loading) {
@@ -224,17 +227,67 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Financial Document Analytics</h1>
-        <p className="text-gray-600">
-          Monitor document processing, compliance, and business performance metrics
-        </p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-cyan-50/20 to-blue-50/20">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-cyan-600 via-blue-500 to-purple-600 text-white">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10"></div>
+        
+        <div className="relative max-w-7xl mx-auto px-6 py-16">
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+                Analytics Dashboard
+              </h1>
+              <p className="text-lg md:text-xl text-cyan-100 max-w-3xl">
+                Comprehensive insights and performance metrics
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3 pt-4">
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-cyan-100">Documents Sealed</p>
+                    <p className="text-3xl font-bold">{analytics?.financial_documents.total_documents_sealed || 0}</p>
+                  </div>
+                  <div className="p-3 bg-cyan-500/20 text-white rounded-xl">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-cyan-100">Total Value</p>
+                    <p className="text-3xl font-bold">${(analytics?.financial_documents.total_loan_value_sealed || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="p-3 bg-green-500/20 text-white rounded-xl">
+                    <TrendingUp className="h-6 w-6" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-cyan-100">Compliance Rate</p>
+                    <p className="text-3xl font-bold">{analytics?.compliance_risk.overall_compliance_rate || 0}%</p>
+                  </div>
+                  <div className="p-3 bg-blue-500/20 text-white rounded-xl">
+                    <Shield className="h-6 w-6" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -277,8 +330,8 @@ export default function AnalyticsPage() {
               <BarChart3 className="h-6 w-6 text-orange-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
-              <p className="text-2xl font-bold text-gray-900">${analytics?.business_intelligence.monthly_revenue || 0}</p>
+              <p className="text-sm font-medium text-gray-600">Blockchain Transactions</p>
+              <p className="text-2xl font-bold text-gray-900">{analytics?.financial_documents.blockchain_confirmation_rate || 0}%</p>
             </div>
           </div>
         </div>
@@ -457,64 +510,27 @@ export default function AnalyticsPage() {
             </div>
           )}
 
-          {activeTab === 'business' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Revenue Metrics</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Monthly Revenue</span>
-                    <span className="text-sm font-medium">${analytics?.business_intelligence.monthly_revenue || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Revenue Per Document</span>
-                    <span className="text-sm font-medium">${analytics?.business_intelligence.revenue_per_document || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Profit Margin</span>
-                    <span className="text-sm font-medium">{analytics?.business_intelligence.profit_margin || 0}%</span>
-                  </div>
-                </div>
-              </div>
-              <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Customer Analytics</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Retention Rate</span>
-                    <span className="text-sm font-medium">{analytics?.business_intelligence.customer_retention_rate || 0}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Satisfaction Score</span>
-                    <span className="text-sm font-medium">{analytics?.business_intelligence.customer_satisfaction_score || 0}/5.0</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Growth Rate</span>
-                    <span className="text-sm font-medium">{analytics?.business_intelligence.growth_rate || "0%"}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Business Intelligence Tools */}
+      {/* Advanced Analytics Tools */}
       <div className="bg-white rounded-lg shadow-sm border p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Business Intelligence Tools</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Advanced Analytics Tools</h3>
             <p className="text-gray-600 mt-1">
-              Advanced risk assessment, compliance forecasting, and loan performance analytics
+              Document integrity verification, compliance monitoring, and blockchain audit trails
             </p>
           </div>
           <Link
-            href="/analytics/predictive"
+            href="/documents"
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            <span>View BI Tools</span>
+            <span>View Documents</span>
             <ArrowRight className="h-4 w-4 ml-2" />
           </Link>
         </div>
+      </div>
       </div>
     </div>
   )

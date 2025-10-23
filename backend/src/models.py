@@ -9,6 +9,7 @@ Models:
 - Artifact: Main entity representing a loan document or packet
 - ArtifactFile: Individual files within an artifact
 - ArtifactEvent: Audit trail and event tracking for artifacts
+- DeletedDocument: Tracking model for deleted documents with metadata preservation
 """
 
 from sqlalchemy import create_engine, Column, String, Integer, DateTime, Text, ForeignKey, Index, JSON, UniqueConstraint
@@ -331,6 +332,120 @@ class ProvenanceLink(Base):
         }
 
 
+class DeletedDocument(Base):
+    """
+    Model representing deleted documents with metadata preservation.
+    
+    This model tracks documents that have been deleted but preserves their
+    essential metadata for verification and audit purposes. This ensures
+    that even deleted documents can be verified and their history can be
+    traced for compliance and legal requirements.
+    
+    Attributes:
+        id: Unique identifier (UUID4)
+        original_artifact_id: ID of the original artifact that was deleted
+        loan_id: Loan identifier for grouping related documents
+        artifact_type: Type of artifact ('json' or 'loan_packet')
+        payload_sha256: SHA-256 hash of the main payload
+        manifest_sha256: SHA-256 hash of the manifest (for loan packets)
+        walacor_tx_id: Original transaction ID from Walacor blockchain
+        original_created_at: Timestamp when the document was originally created
+        original_created_by: User who originally created the document
+        deleted_at: Timestamp when the document was deleted
+        deleted_by: User who deleted the document
+        deletion_reason: Reason for deletion (optional)
+        blockchain_seal: Original blockchain seal information
+        preserved_metadata: JSON containing preserved metadata from original document
+        borrower_info: Preserved borrower information for loan documents
+        files_info: JSON containing information about files that were deleted
+    """
+    
+    __tablename__ = 'deleted_documents'
+    
+    # Primary key
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    
+    # Reference to original artifact
+    original_artifact_id = Column(String(36), nullable=False, index=True, unique=True)
+    
+    # Core fields preserved from original document
+    loan_id = Column(String(255), nullable=False, index=True)
+    artifact_type = Column(String(50), nullable=False)
+    etid = Column(Integer, nullable=False)
+    payload_sha256 = Column(String(64), nullable=False, index=True)
+    manifest_sha256 = Column(String(64), nullable=True)
+    walacor_tx_id = Column(String(255), nullable=False, index=True)
+    schema_version = Column(String(20), default='1.0')
+    
+    # Original creation information
+    original_created_at = Column(DateTime(timezone=True), nullable=False)
+    original_created_by = Column(String(255), nullable=False)
+    
+    # Deletion information
+    deleted_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    deleted_by = Column(String(255), nullable=False)
+    deletion_reason = Column(Text, nullable=True)
+    
+    # Preserved metadata
+    blockchain_seal = Column(String(255), nullable=True)
+    preserved_metadata = Column(JSON, nullable=True)  # All original metadata
+    borrower_info = Column(JSON, nullable=True)  # Borrower information
+    files_info = Column(JSON, nullable=True)  # Information about deleted files
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_deleted_loan_id', 'loan_id'),
+        Index('idx_deleted_payload_hash', 'payload_sha256'),
+        Index('idx_deleted_walacor_tx', 'walacor_tx_id'),
+        Index('idx_deleted_original_created', 'original_created_at'),
+        Index('idx_deleted_deleted_at', 'deleted_at'),
+        Index('idx_deleted_deleted_by', 'deleted_by'),
+    )
+    
+    def __repr__(self) -> str:
+        return f"<DeletedDocument(id='{self.id}', original_id='{self.original_artifact_id}', loan_id='{self.loan_id}')>"
+    
+    def to_dict(self) -> dict:
+        """Convert deleted document to dictionary representation."""
+        return {
+            'id': self.id,
+            'original_artifact_id': self.original_artifact_id,
+            'loan_id': self.loan_id,
+            'artifact_type': self.artifact_type,
+            'etid': self.etid,
+            'payload_sha256': self.payload_sha256,
+            'manifest_sha256': self.manifest_sha256,
+            'walacor_tx_id': self.walacor_tx_id,
+            'schema_version': self.schema_version,
+            'original_created_at': self.original_created_at.isoformat() if self.original_created_at else None,
+            'original_created_by': self.original_created_by,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
+            'deleted_by': self.deleted_by,
+            'deletion_reason': self.deletion_reason,
+            'blockchain_seal': self.blockchain_seal,
+            'preserved_metadata': self.preserved_metadata,
+            'borrower_info': self.borrower_info,
+            'files_info': self.files_info
+        }
+    
+    def get_verification_info(self) -> dict:
+        """Get information needed for document verification."""
+        return {
+            'document_id': self.original_artifact_id,
+            'payload_sha256': self.payload_sha256,
+            'manifest_sha256': self.manifest_sha256,
+            'walacor_tx_id': self.walacor_tx_id,
+            'blockchain_seal': self.blockchain_seal,
+            'original_created_at': self.original_created_at.isoformat() if self.original_created_at else None,
+            'original_created_by': self.original_created_by,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
+            'deleted_by': self.deleted_by,
+            'deletion_reason': self.deletion_reason,
+            'status': 'deleted',
+            'verification_message': f"This document was uploaded on {self.original_created_at.strftime('%Y-%m-%d %H:%M:%S') if self.original_created_at else 'unknown date'} and deleted on {self.deleted_at.strftime('%Y-%m-%d %H:%M:%S') if self.deleted_at else 'unknown date'} by {self.deleted_by}."
+        }
+
+
 # Database engine configuration
 def create_database_engine(database_url: str, echo: bool = False):
     """
@@ -369,7 +484,7 @@ def drop_tables(engine):
 # Example usage and testing
 if __name__ == "__main__":
     # Example database URL (SQLite for testing)
-    DATABASE_URL = "sqlite:///./integrityx.db"
+    DATABASE_URL = "sqlite:///../database/integrityx.db"
     
     # Create engine
     engine = create_database_engine(DATABASE_URL, echo=True)

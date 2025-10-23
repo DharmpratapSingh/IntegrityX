@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, FileText, Eye, Plus, Filter, Calendar, Hash, AlertCircle, RefreshCw, Download, CheckSquare, Square } from 'lucide-react'
+import { Search, FileText, Eye, Plus, Filter, Calendar, Hash, AlertCircle, RefreshCw, Download, CheckSquare, Square, Shield, Lock, Zap, CheckCircle, TrendingUp } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import jsPDF from 'jspdf'
@@ -21,6 +21,7 @@ interface Document {
   artifact_type: string
   created_by: string
   sealed_status: string
+  security_level: string
 }
 
 export default function DocumentsPage() {
@@ -47,6 +48,15 @@ export default function DocumentsPage() {
   // Export functionality
   const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set())
   const [isExporting, setIsExporting] = useState(false)
+  
+  // Delete functionality
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteReason, setDeleteReason] = useState('')
+  
+  // Verification functionality
+  const [verificationResult, setVerificationResult] = useState<any>(null)
+  const [isVerifying, setIsVerifying] = useState(false)
 
   useEffect(() => {
     fetchDocuments()
@@ -74,7 +84,6 @@ export default function DocumentsPage() {
         headers: {
           'Accept': 'application/json',
         },
-        signal: AbortSignal.timeout(10000)
       })
       
       if (response.ok) {
@@ -113,6 +122,45 @@ export default function DocumentsPage() {
   const handleRetry = () => {
     setRetryCount(prev => prev + 1)
     fetchDocuments()
+  }
+
+  const handleVerifyDocument = async (documentId: string) => {
+    setIsVerifying(true)
+    setVerificationResult(null)
+
+    try {
+      const response = await fetch('http://localhost:8000/api/verify-by-document', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          document_info: documentId
+        })
+      })
+
+      const data = await response.json()
+      
+      if (response.ok && data.ok) {
+        setVerificationResult(data.data)
+        
+        // Show verification result in an alert for now
+        const status = data.data.status === 'sealed' ? '✅ VERIFIED' : '❌ TAMPERED'
+        const message = data.data.message
+        const borrowerName = data.data.document?.borrower_name || 'Unknown'
+        const loanId = data.data.document?.loan_id || 'Unknown'
+        const walacorTxId = data.data.document?.walacor_tx_id || 'N/A'
+        
+        alert(`${status}\n\nDocument: ${borrowerName} (${loanId})\nStatus: ${message}\nTransaction ID: ${walacorTxId}`)
+      } else {
+        alert(`❌ Verification Failed\n\nError: ${data.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Verification error:', error)
+      alert(`❌ Verification Failed\n\nError: Failed to verify document. Please try again.`)
+    } finally {
+      setIsVerifying(false)
+    }
   }
 
   const handleSearch = () => {
@@ -156,6 +204,59 @@ export default function DocumentsPage() {
     }).format(amount)
   }
 
+  const getSecurityLevelBadge = (securityLevel: string) => {
+    switch (securityLevel) {
+      case 'quantum_safe':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+            <Zap className="h-3 w-3 mr-1" />
+            Quantum Safe
+          </span>
+        )
+      case 'maximum':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <Lock className="h-3 w-3 mr-1" />
+            Maximum Security
+          </span>
+        )
+      case 'standard':
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <Shield className="h-3 w-3 mr-1" />
+            Standard
+          </span>
+        )
+    }
+  }
+
+  const cleanBorrowerName = (name: string) => {
+    // If the name contains very long text (likely encoded data), extract just the readable part
+    if (name.length > 50) {
+      // Split by spaces and filter out very long parts (likely encoded data)
+      const parts = name.split(' ')
+      const readableParts = parts.filter(part => {
+        // Keep parts that are reasonably short and contain mostly letters/spaces
+        return part.length <= 25 && /^[a-zA-Z\s]+$/.test(part)
+      })
+      
+      if (readableParts.length > 0) {
+        return readableParts.join(' ')
+      }
+      
+      // If no readable parts found, try to extract just the first few words
+      const firstWords = name.split(' ').slice(0, 2).join(' ')
+      if (firstWords.length <= 30) {
+        return firstWords
+      }
+      
+      // Last resort: just truncate
+      return name.substring(0, 25) + '...'
+    }
+    return name
+  }
+
   // Export functionality
   const handleSelectDocument = (documentId: string) => {
     const newSelected = new Set(selectedDocuments)
@@ -190,22 +291,22 @@ export default function DocumentsPage() {
     pdf.setFontSize(10)
     pdf.text(`Loan ID: ${document.loan_id}`, 20, 80)
     pdf.text(`Document Type: ${document.document_type}`, 20, 90)
-    pdf.text(`Loan Amount: ${formatCurrency(document.loan_amount)}`, 20, 100)
-    pdf.text(`Upload Date: ${formatDate(document.upload_date)}`, 20, 110)
-    pdf.text(`Created By: ${document.created_by}`, 20, 120)
+    pdf.text(`Upload Date: ${formatDate(document.upload_date)}`, 20, 100)
+    pdf.text(`Created By: ${document.created_by}`, 20, 110)
     
     // Borrower Information Section
     pdf.setFontSize(16)
-    pdf.text('Borrower Information', 20, 140)
+    pdf.text('Borrower Information', 20, 130)
     pdf.setFontSize(10)
-    pdf.text(`Name: ${document.borrower_name}`, 20, 155)
-    pdf.text(`Email: ${document.borrower_email}`, 20, 165)
+    pdf.text(`Name: ${document.borrower_name}`, 20, 145)
+    pdf.text(`Email: ${document.borrower_email}`, 20, 155)
     
     // Verification Status Section
     pdf.setFontSize(16)
-    pdf.text('Verification Status', 20, 185)
+    pdf.text('Verification Status', 20, 175)
     pdf.setFontSize(10)
-    pdf.text(`Status: ${document.sealed_status}`, 20, 200)
+    pdf.text(`Status: ${document.sealed_status}`, 20, 190)
+    pdf.text(`Security Level: ${document.security_level}`, 20, 200)
     pdf.text(`Walacor TX ID: ${document.walacor_tx_id}`, 20, 210)
     pdf.text(`Artifact ID: ${document.id}`, 20, 220)
     
@@ -250,6 +351,7 @@ export default function DocumentsPage() {
         },
         verification_status: {
           status: document.sealed_status,
+          security_level: document.security_level,
           walacor_tx_id: document.walacor_tx_id,
           artifact_id: document.id
         },
@@ -293,6 +395,7 @@ export default function DocumentsPage() {
           'Borrower Name': document.borrower_name,
           'Borrower Email': document.borrower_email,
           'Sealed Status': document.sealed_status,
+          'Security Level': document.security_level,
           'Walacor TX ID': document.walacor_tx_id,
           'Artifact ID': document.id,
           'Export Date': new Date().toISOString()
@@ -348,7 +451,6 @@ export default function DocumentsPage() {
           loan_details: {
             loan_id: doc.loan_id,
             document_type: doc.document_type,
-            loan_amount: doc.loan_amount,
             upload_date: doc.upload_date,
             created_by: doc.created_by
           },
@@ -358,6 +460,7 @@ export default function DocumentsPage() {
           },
           verification_status: {
             status: doc.sealed_status,
+            security_level: doc.security_level,
             walacor_tx_id: doc.walacor_tx_id,
             artifact_id: doc.id
           },
@@ -382,12 +485,12 @@ export default function DocumentsPage() {
         const csvData = selectedDocs.map(doc => ({
           'Loan ID': doc.loan_id,
           'Document Type': doc.document_type,
-          'Loan Amount': doc.loan_amount,
           'Upload Date': doc.upload_date,
           'Created By': doc.created_by,
           'Borrower Name': doc.borrower_name,
           'Borrower Email': doc.borrower_email,
           'Sealed Status': doc.sealed_status,
+          'Security Level': doc.security_level,
           'Walacor TX ID': doc.walacor_tx_id,
           'Artifact ID': doc.id,
           'Export Date': new Date().toISOString()
@@ -409,6 +512,55 @@ export default function DocumentsPage() {
       alert('Error exporting documents')
     } finally {
       setIsExporting(false)
+    }
+  }
+
+  const deleteSelectedDocuments = async () => {
+    if (selectedDocuments.size === 0) {
+      alert('Please select documents to delete')
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      const selectedDocs = documents.filter(doc => selectedDocuments.has(doc.id))
+      
+      // Delete each selected document
+      for (const doc of selectedDocs) {
+        // Build query parameters for DELETE request
+        const params = new URLSearchParams({
+          deleted_by: 'current_user', // In a real app, this would be the actual user ID from Clerk auth
+          ...(deleteReason && { deletion_reason: deleteReason || 'User requested deletion' })
+        })
+        
+        const response = await fetch(`http://localhost:8000/api/artifacts/${doc.id}?${params.toString()}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.error('Delete failed:', errorData)
+          throw new Error(`Failed to delete document ${doc.loan_id}: ${errorData.detail || response.statusText}`)
+        }
+      }
+      
+      // Refresh the documents list
+      await fetchDocuments()
+      
+      // Clear selection and close modal
+      setSelectedDocuments(new Set())
+      setShowDeleteConfirm(false)
+      setDeleteReason('')
+      
+      alert(`Successfully deleted ${selectedDocs.length} document(s). All information has been preserved for audit purposes.`)
+    } catch (error) {
+      console.error('Delete failed:', error)
+      alert('Delete failed. Please try again.')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -497,26 +649,76 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Documents</h1>
-          <p className="text-gray-600 mt-2">
-            Manage and view all your uploaded documents
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50/20 to-blue-50/20">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-purple-500 to-blue-600 text-white">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10"></div>
+        
+        <div className="relative max-w-7xl mx-auto px-6 py-16">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-3">
+                <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+                  Document Library
+                </h1>
+                <p className="text-lg md:text-xl text-purple-100 max-w-3xl">
+                  View and manage your verified documents
+                </p>
+              </div>
+              <Link
+                href="/upload"
+                className="inline-flex items-center px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-105"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Upload Document
+              </Link>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3 pt-4">
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-purple-100">Total Documents</p>
+                    <p className="text-3xl font-bold">{documents.length}</p>
+                  </div>
+                  <div className="p-3 bg-purple-500/20 text-white rounded-xl">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-purple-100">Sealed Today</p>
+                    <p className="text-3xl font-bold">12</p>
+                  </div>
+                  <div className="p-3 bg-green-500/20 text-white rounded-xl">
+                    <Shield className="h-6 w-6" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-purple-100">Success Rate</p>
+                    <p className="text-3xl font-bold">99.2%</p>
+                  </div>
+                  <div className="p-3 bg-blue-500/20 text-white rounded-xl">
+                    <CheckCircle className="h-6 w-6" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <Link
-          href="/upload"
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Upload Document
-        </Link>
       </div>
 
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
       {/* Search and Filter */}
-      <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Search Loans by Borrower Information</h2>
           <button
@@ -663,6 +865,14 @@ export default function DocumentsPage() {
                 <Download className="h-3 w-3 mr-1" />
                 Export CSV
               </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={selectedDocuments.size === 0 || isDeleting}
+                className="inline-flex items-center px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <AlertCircle className="h-3 w-3 mr-1" />
+                Delete
+              </button>
             </div>
           </div>
         </div>
@@ -672,7 +882,7 @@ export default function DocumentsPage() {
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         {documents.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full table-fixed">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
@@ -687,22 +897,22 @@ export default function DocumentsPage() {
                       )}
                     </button>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Loan ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
                     Borrower Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Loan Amount
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Upload Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Sealed Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                    Security Level
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Actions
                   </th>
                 </tr>
@@ -722,34 +932,29 @@ export default function DocumentsPage() {
                         )}
                       </button>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
+                    <td className="px-6 py-4 w-32">
+                          <div className="text-sm font-medium text-gray-900 truncate" title={doc.loan_id}>
                         {doc.loan_id}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-gray-500 truncate" title={doc.document_type}>
                         {doc.document_type}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {doc.borrower_name}
+                    <td className="px-6 py-4 w-48">
+                      <div className="text-sm font-medium text-gray-900 truncate" title={doc.borrower_name}>
+                        {cleanBorrowerName(doc.borrower_name)}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-gray-500 truncate" title={doc.borrower_email}>
                         {doc.borrower_email}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {formatCurrency(doc.loan_amount)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 w-32 text-sm text-gray-500">
                       <div className="flex items-center">
                         <Calendar className="h-3 w-3 mr-1 text-gray-400" />
                         {formatDate(doc.upload_date)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 w-32">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         doc.sealed_status === 'Sealed' 
                           ? 'bg-green-100 text-green-800' 
@@ -758,7 +963,10 @@ export default function DocumentsPage() {
                         {doc.sealed_status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 w-32">
+                      {getSecurityLevelBadge(doc.security_level)}
+                    </td>
+                    <td className="px-6 py-4 w-32 text-sm font-medium">
                       <div className="flex items-center space-x-2">
                       <Link
                         href={`/documents/${doc.id}`}
@@ -767,13 +975,23 @@ export default function DocumentsPage() {
                         <Eye className="h-3 w-3 mr-1" />
                         View
                       </Link>
-                        <Link
-                          href={`/verify?artifact_id=${doc.id}`}
-                          className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+                        <button
+                          onClick={() => handleVerifyDocument(doc.id)}
+                          disabled={isVerifying}
+                          className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors disabled:opacity-50"
                         >
-                          <Hash className="h-3 w-3 mr-1" />
-                          Verify
-                        </Link>
+                          {isVerifying ? (
+                            <>
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                              Verifying...
+                            </>
+                          ) : (
+                            <>
+                              <Hash className="h-3 w-3 mr-1" />
+                              Verify
+                            </>
+                          )}
+                        </button>
                         <div className="relative group">
                           <button
                             onClick={() => exportToPDF(doc)}
@@ -859,6 +1077,53 @@ export default function DocumentsPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <AlertCircle className="h-6 w-6 text-red-600 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">Confirm Deletion</h3>
+            </div>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to delete {selectedDocuments.size} selected document(s)? 
+              This action will preserve all document information for audit purposes.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reason for deletion (optional):
+              </label>
+              <textarea
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="Enter reason for deletion..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                rows={3}
+              />
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false)
+                  setDeleteReason('')
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deleteSelectedDocuments}
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Documents'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
     </div>
   )
 }

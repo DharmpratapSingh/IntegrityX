@@ -1,0 +1,36 @@
+2025-10-22 22:18:50,248 - backend.src.robust_logging - INFO - Robust logger initialized for service: walacor_integrity
+2025-10-22 22:18:50,249 - backend.src.robust_database - INFO - Database connection test successful
+2025-10-22 22:18:50,258 - backend.src.robust_database - INFO - Database connection initialized successfully
+2025-10-22 22:18:50,258 - backend.src.robust_database - INFO - Database health monitoring started
+2025-10-22 22:18:50,258 - backend.src.robust_database - INFO - Robust database service initialized with URL: postgresql://dharmpratapsingh@localhost:5432/walacor_integrity
+2025-10-22 22:19:00,451 - backend.src.robust_logging - INFO - Robust logger initialized for service: walacor_integrity
+2025-10-22 22:19:00,451 - walacor_integrity.test_service - INFO - {"timestamp": "2025-10-23T02:19:00.451464+00:00", "level": "INFO", "message": "Test log message", "service": "test_service", "operation": null, "user_id": null, "request_id": null, "duration_ms": null, "error_code": null, "stack_trace": null, "metadata": {}}
+2025-10-22 22:19:00,462 - backend.src.robust_database - INFO - Database connection test successful
+2025-10-22 22:19:00,473 - backend.src.robust_database - INFO - Database connection initialized successfully
+2025-10-22 22:19:00,473 - backend.src.robust_database - INFO - Database health monitoring started
+2025-10-22 22:19:00,473 - backend.src.robust_database - INFO - Robust database service initialized with URL: postgresql://dharmpratapsingh@localhost:5432/walacor_integrity
+2025-10-22 22:19:32,835 - backend.src.robust_logging - INFO - Robust logger initialized for service: walacor_integrity
+2025-10-22 22:19:32,835 - walacor_integrity.demo - INFO - {"timestamp": "2025-10-23T02:19:32.835497+00:00", "level": "INFO", "message": "Robust platform demonstration started", "service": "demo", "operation": null, "user_id": null, "request_id": null, "duration_ms": null, "error_code": null, "stack_trace": null, "metadata": {}}
+2025-10-22 22:19:32,836 - backend.src.robust_database - ERROR - Database session error: Not an executable object: 'SELECT 1 as test_value'
+2025-10-22 22:19:32,837 - walacor_integrity.demo - ERROR - {"timestamp": "2025-10-23T02:19:32.837418+00:00", "level": "ERROR", "message": "Database operation failed: Not an executable object: 'SELECT 1 as test_value'", "service": "demo", "operation": "database_test", "user_id": null, "request_id": null, "duration_ms": null, "error_code": null, "stack_trace": null, "metadata": {}}
+2025-10-22 22:19:32,838 - backend.src.fallback_service - INFO - Fallback mode updated to: degraded
+2025-10-22 22:19:32,838 - backend.src.fallback_service - INFO - Service database status updated: unavailable
+2025-10-22 22:19:32,838 - backend.src.fallback_service - INFO - Fallback mode updated to: normal
+2025-10-22 22:19:32,838 - backend.src.fallback_service - INFO - Service database status updated: available
+2025-10-22 22:19:32,838 - backend.src.fallback_service - INFO - Attempting service recovery...
+2025-10-22 22:19:32,840 - backend.src.robust_database - INFO - Database connection test successful
+2025-10-22 22:19:32,843 - backend.src.robust_database - INFO - Database connection initialized successfully
+2025-10-22 22:19:32,843 - backend.src.robust_database - INFO - Database health monitoring started
+2025-10-22 22:19:32,843 - backend.src.robust_database - INFO - Robust database service initialized with URL: postgresql://dharmpratapsingh@localhost:5432/walacor_integrity
+2025-10-22 22:19:32,844 - backend.src.robust_database - INFO - Database connection test successful
+2025-10-22 22:19:32,855 - backend.src.robust_database - INFO - Database connection initialized successfully
+2025-10-22 22:19:32,855 - backend.src.robust_database - INFO - Database health monitoring started
+2025-10-22 22:19:32,855 - backend.src.robust_database - INFO - Robust database service initialized with URL: postgresql://dharmpratapsingh@localhost:5432/walacor_integrity
+2025-10-22 22:19:32,862 - backend.src.fallback_service - INFO - Fallback mode updated to: normal
+2025-10-22 22:19:32,862 - backend.src.fallback_service - INFO - Service database status updated: available
+2025-10-22 22:19:32,862 - backend.src.fallback_service - INFO - Database service recovered
+2025-10-22 22:19:32,862 - backend.src.fallback_service - INFO - Syncing pending operations...
+2025-10-22 22:19:32,863 - backend.src.fallback_service - INFO - Synced 0 pending operations
+2025-10-22 22:19:32,863 - walacor_integrity.demo - INFO - {"timestamp": "2025-10-23T02:19:32.863189+00:00", "level": "INFO", "message": "System startup completed", "service": "demo", "operation": "startup", "user_id": null, "request_id": null, "duration_ms": 1250.0, "error_code": null, "stack_trace": null, "metadata": {}}
+2025-10-22 22:19:32,863 - walacor_integrity.demo - WARNING - {"timestamp": "2025-10-23T02:19:32.863259+00:00", "level": "WARNING", "message": "High memory usage detected", "service": "demo", "operation": "monitoring", "user_id": null, "request_id": null, "duration_ms": null, "error_code": null, "stack_trace": null, "metadata": {"memory_usage": "85%", "threshold": "80%"}}
+2025-10-22 22:19:32,863 - walacor_integrity.demo - ERROR - {"timestamp": "2025-10-23T02:19:32.863301+00:00", "level": "ERROR", "message": "Simulated error for demonstration", "service": "demo", "operation": "error_test", "user_id": null, "request_id": null, "duration_ms": null, "error_code": "DEMO_ERROR", "stack_trace": null, "metadata": {}}

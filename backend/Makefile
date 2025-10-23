@@ -15,7 +15,7 @@
 # =============================================================================
 
 # Default database URL (can be overridden with environment variable)
-DATABASE_URL ?= sqlite:///./integrityx.db
+DATABASE_URL ?= sqlite:///../database/integrityx.db
 
 # Python executable
 PYTHON := python
@@ -85,7 +85,7 @@ reset-db: ## Reset database (WARNING: destroys all data)
 	@echo "$(YELLOW)Are you sure? Type 'yes' to continue:$(NC)"
 	@read confirm && [ "$$confirm" = "yes" ] || (echo "$(RED)❌ Operation cancelled$(NC)" && exit 1)
 	@echo "$(BLUE)Resetting database...$(NC)"
-	@rm -f integrityx.db
+	@rm -f ../database/integrityx.db
 	@export DATABASE_URL=$(DATABASE_URL) && $(ALEMBIC) upgrade head
 	@echo "$(GREEN)✅ Database reset successfully!$(NC)"
 
@@ -141,7 +141,7 @@ check-db: ## Check database connection and show info
 
 show-tables: ## Show database tables (SQLite only)
 	@echo "$(BLUE)Database Tables:$(NC)"
-	@sqlite3 integrityx.db ".tables"
+	@sqlite3 ../database/integrityx.db ".tables"
 
 # =============================================================================
 # EXAMPLES

@@ -1,14 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { 
   ArrowLeft, 
   Calendar, 
   Shield, 
   Download, 
-  Link as LinkIcon, 
   Copy,
   CheckCircle,
   AlertCircle,
@@ -34,11 +33,11 @@ interface Document {
 
 interface Attestation {
   id: string
-  artifact_id: string
-  attestation_type: string
-  attestation_data: any
-  created_at: string
-  created_by: string
+  artifactId: string
+  kind: string
+  details: any
+  createdAt: string
+  issuedBy: string
 }
 
 interface AuditEvent {
@@ -62,6 +61,7 @@ export default function DocumentDetailPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [copiedHash, setCopiedHash] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
+  const [borrower, setBorrower] = useState<any>(null)
 
   // Utility functions for masking sensitive data
   const maskEmail = (email: string): string => {
@@ -69,6 +69,29 @@ export default function DocumentDetailPage() {
     const [local, domain] = email.split('@')
     if (local.length <= 2) return email
     return `${local[0]}***@${domain}`
+  }
+
+  // Safe date parsing function
+  const formatDate = (dateString: string | undefined | null): string => {
+    if (!dateString) return 'Invalid Date'
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return 'Invalid Date'
+      return date.toLocaleString()
+    } catch (error) {
+      return 'Invalid Date'
+    }
+  }
+
+  const formatDateOnly = (dateString: string | undefined | null): string => {
+    if (!dateString) return 'Invalid Date'
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return 'Invalid Date'
+      return date.toLocaleDateString()
+    } catch (error) {
+      return 'Invalid Date'
+    }
   }
 
   const maskPhone = (phone: string): string => {
@@ -111,7 +134,6 @@ export default function DocumentDetailPage() {
       // Fetch document details
       const docResponse = await fetch(`http://localhost:8000/api/artifacts/${documentId}`, {
         headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(10000)
       })
       
       if (docResponse.ok) {
@@ -129,7 +151,6 @@ export default function DocumentDetailPage() {
       // Fetch attestations
       const attResponse = await fetch(`http://localhost:8000/api/attestations?artifactId=${documentId}`, {
         headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(10000)
       })
       if (attResponse.ok) {
         const attData = await attResponse.json()
@@ -140,8 +161,7 @@ export default function DocumentDetailPage() {
 
       // Fetch borrower info (masked)
       const borrowerResponse = await fetch(`http://localhost:8000/api/loan-documents/${documentId}/borrower`, {
-        headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(10000)
+        headers: { 'Accept': 'application/json' }
       })
       if (borrowerResponse.ok) {
         const borrowerData = await borrowerResponse.json()
@@ -153,7 +173,6 @@ export default function DocumentDetailPage() {
       // Fetch audit events
       const auditResponse = await fetch(`http://localhost:8000/api/loan-documents/${documentId}/audit-trail`, {
         headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(10000)
       })
       if (auditResponse.ok) {
         const auditData = await auditResponse.json()
@@ -235,7 +254,7 @@ export default function DocumentDetailPage() {
   const handleGenerateDisclosurePack = async () => {
     setActionLoading('disclosure')
     try {
-      const response = await fetch(`http://localhost:8000/api/disclosure-pack?artifact_id=${documentId}`)
+      const response = await fetch(`http://localhost:8000/api/disclosure-pack?id=${documentId}`)
       if (response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
@@ -257,38 +276,6 @@ export default function DocumentDetailPage() {
     }
   }
 
-  const handleGenerateVerificationLink = async () => {
-    setActionLoading('verification')
-    try {
-      const response = await fetch('http://localhost:8000/api/verification/generate-link', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          documentId: documentId,
-          documentHash: document?.hash,
-          allowedParty: 'verifier@example.com',
-          permissions: ['hash', 'timestamp', 'attestations'],
-          expiresInHours: 24
-        })
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data.ok && data.data) {
-          const link = data.data.verification_link.verificationUrl
-          await copyToClipboard(link, 'verification link')
-        }
-      } else {
-        toast.error('Failed to generate verification link')
-      }
-    } catch (error) {
-      toast.error('Failed to generate verification link')
-    } finally {
-      setActionLoading(null)
-    }
-  }
 
   if (loading) {
     return (
@@ -491,13 +478,13 @@ export default function DocumentDetailPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Upload Date</label>
                 <div className="flex items-center text-sm text-gray-900">
                   <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                  {new Date(document.created_at).toLocaleString()}
+                  {formatDate(document.created_at)}
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Document Hash</label>
-                <div className="flex items-center space-x-2">
-                  <div className="flex-1 p-2 bg-gray-50 rounded border font-mono text-sm">
+                <div className="flex items-start space-x-2">
+                  <div className="flex-1 p-2 bg-gray-50 rounded border font-mono text-sm break-all overflow-hidden">
                     {document.payload_sha256}
                   </div>
                   <button
@@ -559,7 +546,16 @@ export default function DocumentDetailPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">SSN</label>
                   <div className="p-2 bg-gray-50 rounded border text-sm">
-                    {borrower.ssn_last4 ? `****-**-${borrower.ssn_last4}` : 'Not provided'}
+                    {borrower.ssn_last4 ? (
+                      // Check if it's a long encoded string (base64) and truncate it
+                      borrower.ssn_last4.length > 20 ? (
+                        <div className="truncate" title={`Encrypted SSN: ${borrower.ssn_last4}`}>
+                          ****-**-**** (Encrypted)
+                        </div>
+                      ) : (
+                        `****-**-${borrower.ssn_last4}`
+                      )
+                    ) : 'Not provided'}
                   </div>
                 </div>
                 <div>
@@ -593,7 +589,7 @@ export default function DocumentDetailPage() {
               <div className="flex items-center space-x-3">
                 <Clock className="h-5 w-5 text-blue-600" />
                 <span className="text-sm text-gray-900">
-                  Sealed on: {new Date(document.created_at).toLocaleString()}
+                  Sealed on: {formatDate(document.created_at)}
                 </span>
               </div>
               <div className="flex items-center space-x-3">
@@ -625,14 +621,6 @@ export default function DocumentDetailPage() {
                 <Download className="h-5 w-5 mr-2 text-blue-600" />
                 <span>Generate Disclosure Pack</span>
               </button>
-              <button
-                onClick={handleGenerateVerificationLink}
-                disabled={actionLoading === 'verification'}
-                className="flex items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                <LinkIcon className="h-5 w-5 mr-2 text-purple-600" />
-                <span>Generate Verification Link</span>
-              </button>
             </div>
           </div>
 
@@ -644,13 +632,13 @@ export default function DocumentDetailPage() {
                 {attestations.map((att) => (
                   <div key={att.id} className="p-4 border border-gray-200 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-gray-900">{att.attestation_type}</span>
+                      <span className="font-medium text-gray-900">{att.kind}</span>
                       <span className="text-sm text-gray-500">
-                        {new Date(att.created_at).toLocaleDateString()}
+                        {formatDateOnly(att.createdAt)}
                       </span>
                     </div>
                     <div className="text-sm text-gray-600">
-                      <pre className="whitespace-pre-wrap">{JSON.stringify(att.attestation_data, null, 2)}</pre>
+                      <pre className="whitespace-pre-wrap">{JSON.stringify(att.details, null, 2)}</pre>
                     </div>
                   </div>
                 ))}
@@ -701,7 +689,7 @@ export default function DocumentDetailPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">{event.event_type}</p>
                       <p className="text-xs text-gray-500">
-                        {new Date(event.created_at).toLocaleString()}
+                        {formatDate(event.created_at)}
                       </p>
                     </div>
                   </div>

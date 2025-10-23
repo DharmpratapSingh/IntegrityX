@@ -16,15 +16,18 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session, joinedload
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 try:
-    from .models import Base, Artifact, ArtifactFile, ArtifactEvent
+    from .models import Base, Artifact, ArtifactFile, ArtifactEvent, DeletedDocument
 except ImportError:
     # Fallback for when running as script
-    from models import Base, Artifact, ArtifactFile, ArtifactEvent
+    from models import Base, Artifact, ArtifactFile, ArtifactEvent, DeletedDocument
 import os
 from typing import Optional, List
 import uuid
 import logging
 import time
+from dotenv import load_dotenv
+
+# Environment variables will be loaded when Database class is instantiated
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -85,6 +88,9 @@ class Database:
             ValueError: If database URL cannot be determined
             SQLAlchemyError: If database connection fails
         """
+        # Load environment variables from backend .env file
+        load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+        
         # Get database URL from parameter, environment, or default
         if db_url:
             self.db_url = db_url
@@ -769,6 +775,7 @@ class Database:
             artifact_count = session.query(Artifact).count()
             file_count = session.query(ArtifactFile).count()
             event_count = session.query(ArtifactEvent).count()
+            deleted_doc_count = session.query(DeletedDocument).count()
             
             return {
                 'database_url': self._mask_url(self.db_url),
@@ -776,9 +783,10 @@ class Database:
                 'table_counts': {
                     'artifacts': artifact_count,
                     'artifact_files': file_count,
-                    'artifact_events': event_count
+                    'artifact_events': event_count,
+                    'deleted_documents': deleted_doc_count
                 },
-                'total_records': artifact_count + file_count + event_count
+                'total_records': artifact_count + file_count + event_count + deleted_doc_count
             }
             
         except SQLAlchemyError as e:
@@ -1053,6 +1061,235 @@ class Database:
             created_by=exported_by,
             payload_json=json.dumps(payload, separators=(',', ':'))
         )
+    
+    def delete_artifact(self, artifact_id: str, deleted_by: str, deletion_reason: Optional[str] = None) -> dict:
+        """
+        Delete an artifact while preserving its metadata for verification.
+        
+        This method implements a soft delete approach where:
+        1. The original artifact is removed from the artifacts table
+        2. All metadata is preserved in the deleted_documents table
+        3. An audit event is created for the deletion
+        4. The document can still be verified using its hash and blockchain seal
+        
+        Args:
+            artifact_id: ID of the artifact to delete
+            deleted_by: User ID of the person deleting the document
+            deletion_reason: Optional reason for deletion
+            
+        Returns:
+            dict: Result containing deletion information and verification data
+            
+        Raises:
+            ValueError: If artifact_id is empty or artifact not found
+            SQLAlchemyError: If database operation fails
+        """
+        if not artifact_id:
+            raise ValueError("artifact_id is required")
+        
+        if not deleted_by:
+            raise ValueError("deleted_by is required")
+        
+        try:
+            session = self._ensure_session()
+            
+            # Get the artifact to be deleted
+            artifact = session.query(Artifact)\
+                .options(
+                    joinedload(Artifact.files),
+                    joinedload(Artifact.events)
+                )\
+                .filter(Artifact.id == artifact_id)\
+                .first()
+            
+            if not artifact:
+                raise ValueError(f"Artifact not found: {artifact_id}")
+            
+            # Prepare files information for preservation
+            files_info = []
+            if artifact.files:
+                for file in artifact.files:
+                    files_info.append({
+                        'id': file.id,
+                        'name': file.name,
+                        'uri': file.uri,
+                        'sha256': file.sha256,
+                        'size_bytes': file.size_bytes,
+                        'content_type': file.content_type
+                    })
+            
+            # Create deleted document record
+            deleted_doc = DeletedDocument(
+                id=str(uuid.uuid4()),
+                original_artifact_id=artifact.id,
+                loan_id=artifact.loan_id,
+                artifact_type=artifact.artifact_type,
+                etid=artifact.etid,
+                payload_sha256=artifact.payload_sha256,
+                manifest_sha256=artifact.manifest_sha256,
+                walacor_tx_id=artifact.walacor_tx_id,
+                schema_version=artifact.schema_version,
+                original_created_at=artifact.created_at,
+                original_created_by=artifact.created_by,
+                deleted_by=deleted_by,
+                deletion_reason=deletion_reason,
+                blockchain_seal=artifact.blockchain_seal,
+                preserved_metadata=artifact.local_metadata,
+                borrower_info=artifact.borrower_info,
+                files_info=files_info
+            )
+            
+            session.add(deleted_doc)
+            
+            # Delete the original artifact (this will cascade to files and events due to CASCADE delete)
+            session.delete(artifact)
+            
+            # Create deletion audit event
+            from datetime import datetime, timezone
+            import json
+            deletion_payload = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "deleted_by": deleted_by,
+                "deletion_reason": deletion_reason,
+                "preserved_metadata": {
+                    "original_created_at": artifact.created_at.isoformat(),
+                    "original_created_by": artifact.created_by,
+                    "loan_id": artifact.loan_id,
+                    "payload_sha256": artifact.payload_sha256,
+                    "walacor_tx_id": artifact.walacor_tx_id,
+                    "files_count": len(artifact.files) if artifact.files else 0
+                },
+                "action_details": {
+                    "action": "document_deletion",
+                    "preservation_method": "metadata_preservation",
+                    "verification_possible": True,
+                    "compliance_requirement": "audit_trail_maintenance"
+                }
+            }
+            
+            deletion_event_id = self.insert_event(
+                artifact_id=artifact_id,  # Use original ID for audit trail
+                event_type="document_deleted",
+                created_by=deleted_by,
+                payload_json=json.dumps(deletion_payload, separators=(',', ':'))
+            )
+            
+            session.commit()
+            
+            logger.info(f"✅ Artifact {artifact_id} deleted and metadata preserved")
+            
+            return {
+                "deleted_artifact_id": artifact_id,
+                "deleted_document_id": deleted_doc.id,
+                "deletion_event_id": deletion_event_id,
+                "verification_info": deleted_doc.get_verification_info(),
+                "preserved_metadata": {
+                    "loan_id": artifact.loan_id,
+                    "payload_sha256": artifact.payload_sha256,
+                    "walacor_tx_id": artifact.walacor_tx_id,
+                    "original_created_at": artifact.created_at.isoformat(),
+                    "original_created_by": artifact.created_by,
+                    "files_info": files_info
+                }
+            }
+            
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Failed to delete artifact {artifact_id}: {e}")
+            raise
+    
+    def get_deleted_document_by_original_id(self, original_artifact_id: str) -> Optional[DeletedDocument]:
+        """
+        Get a deleted document by its original artifact ID.
+        
+        Args:
+            original_artifact_id: The original artifact ID
+            
+        Returns:
+            Optional[DeletedDocument]: The deleted document record, or None if not found
+        """
+        if not original_artifact_id:
+            raise ValueError("original_artifact_id is required")
+        
+        try:
+            session = self._ensure_session()
+            
+            deleted_doc = session.query(DeletedDocument)\
+                .filter(DeletedDocument.original_artifact_id == original_artifact_id)\
+                .first()
+            
+            if deleted_doc:
+                logger.debug(f"Retrieved deleted document: {original_artifact_id}")
+            else:
+                logger.debug(f"Deleted document not found: {original_artifact_id}")
+            
+            return deleted_doc
+            
+        except SQLAlchemyError as e:
+            logger.error(f"Database error retrieving deleted document {original_artifact_id}: {e}")
+            raise
+    
+    def get_deleted_document_by_hash(self, payload_sha256: str) -> Optional[DeletedDocument]:
+        """
+        Get a deleted document by its payload SHA-256 hash.
+        
+        Args:
+            payload_sha256: The SHA-256 hash to search for
+            
+        Returns:
+            Optional[DeletedDocument]: The deleted document record, or None if not found
+        """
+        if not payload_sha256:
+            raise ValueError("payload_sha256 is required")
+        
+        if len(payload_sha256) != 64:
+            raise ValueError("payload_sha256 must be a 64-character SHA-256 hash")
+        
+        try:
+            session = self._ensure_session()
+            
+            deleted_doc = session.query(DeletedDocument)\
+                .filter(DeletedDocument.payload_sha256 == payload_sha256)\
+                .first()
+            
+            if deleted_doc:
+                logger.debug(f"Retrieved deleted document by hash: {payload_sha256[:16]}...")
+            else:
+                logger.debug(f"Deleted document not found for hash: {payload_sha256[:16]}...")
+            
+            return deleted_doc
+            
+        except SQLAlchemyError as e:
+            logger.error(f"Database error retrieving deleted document by hash: {e}")
+            raise
+    
+    def get_deleted_documents_by_loan_id(self, loan_id: str) -> List[DeletedDocument]:
+        """
+        Get all deleted documents for a specific loan ID.
+        
+        Args:
+            loan_id: The loan ID to search for
+            
+        Returns:
+            List[DeletedDocument]: List of deleted documents for the loan
+        """
+        if not loan_id:
+            raise ValueError("loan_id is required")
+        
+        try:
+            session = self._ensure_session()
+            
+            deleted_docs = session.query(DeletedDocument)\
+                .filter(DeletedDocument.loan_id == loan_id)\
+                .order_by(DeletedDocument.deleted_at.desc())\
+                .all()
+            
+            logger.debug(f"Retrieved {len(deleted_docs)} deleted documents for loan {loan_id}")
+            return deleted_docs
+            
+        except SQLAlchemyError as e:
+            logger.error(f"Database error retrieving deleted documents for loan {loan_id}: {e}")
+            raise
 
 
 # Example usage and testing

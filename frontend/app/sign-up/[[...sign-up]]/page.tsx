@@ -15,7 +15,7 @@ export default function SignUpPage() {
               card: "shadow-xl"
             }
           }}
-          redirectUrl="/dashboard"
+          redirectUrl="/integrated-dashboard"
         />
       </div>
     </div>

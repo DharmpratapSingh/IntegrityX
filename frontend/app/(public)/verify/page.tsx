@@ -129,13 +129,84 @@ export default function VerifyPage() {
   const [showAuditTrail, setShowAuditTrail] = useState(false);
   const [showCryptographicProof, setShowCryptographicProof] = useState(false);
 
-  // Check for hash in URL params
+  // Check for hash or artifact_id in URL params
   useEffect(() => {
     const hashFromUrl = searchParams.get('hash');
+    const artifactIdFromUrl = searchParams.get('artifact_id');
+    
     if (hashFromUrl) {
       setFileHash(hashFromUrl);
+    } else if (artifactIdFromUrl) {
+      // Automatically verify the document by artifact ID
+      handleVerifyByArtifactId(artifactIdFromUrl);
     }
   }, [searchParams]);
+
+  const handleVerifyByArtifactId = async (artifactId: string) => {
+    setIsVerifying(true);
+    setVerifyResult(null);
+    setProofResult(null);
+
+    try {
+      const response = await fetch('http://localhost:8000/api/verify-by-document', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          document_info: artifactId
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.ok) {
+        // Convert the response to match the expected VerifyResult format
+        const result: VerifyResult = {
+          is_valid: data.data.status === 'sealed',
+          message: data.data.message,
+          artifact_id: data.data.document?.id,
+          details: {
+            created_at: data.data.document?.created_at || new Date().toISOString(),
+            hash: data.data.document?.payload_sha256 || '',
+            etid: 100001 // Default ETID for loan documents
+          }
+        };
+        
+        setVerifyResult(result);
+        
+        // Set verification status
+        const status: DocumentVerificationStatus = {
+          hashMatches: data.data.verification_details?.hash_match || false,
+          noTampering: !data.data.verification_details?.tamper_detected,
+          borrowerDataIntact: data.data.status === 'sealed',
+          sealedDateTime: data.data.document?.created_at || new Date().toISOString(),
+          walacorTxId: data.data.document?.walacor_tx_id || 'N/A',
+          overallStatus: data.data.status === 'sealed' ? 'verified' : 'tampered'
+        };
+        setVerificationStatus(status);
+        
+        if (result.is_valid) {
+          toast.success('Document verification successful!');
+          
+          // Load additional data for verified documents
+          if (result.artifact_id) {
+            loadBorrowerInfo(result.artifact_id);
+            loadAuditTrail(result.artifact_id);
+          }
+        } else {
+          toast.error('Document verification failed - tampering detected!');
+        }
+      } else {
+        toast.error(data.error || 'Verification failed');
+      }
+    } catch (error) {
+      console.error('Verification error:', error);
+      toast.error('Failed to verify document. Please try again.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   // Calculate file hash on client side
   const calculateFileHash = async (file: File): Promise<string> => {

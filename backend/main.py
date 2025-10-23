@@ -22,8 +22,14 @@ API Endpoints:
 """
 
 # Load environment variables first
+import os
 from dotenv import load_dotenv
-load_dotenv()
+
+# Load from root .env file (go up one directory from backend/)
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
+# Demo mode configuration
+DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status, Query, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,6 +48,12 @@ import aiohttp
 from contextvars import ContextVar
 import zipfile
 from io import BytesIO
+import shutil
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
 try:
     import boto3
     from botocore.exceptions import ClientError
@@ -59,6 +71,7 @@ from src.repositories import AttestationRepository, ProvenanceRepository
 from src.verification_portal import VerificationPortal
 from src.voice_service import VoiceCommandProcessor
 from src.analytics_service import AnalyticsService
+from src.bulk_operations_analytics import BulkOperationsAnalytics
 from src.advanced_security import AdvancedSecurityService
 from src.quantum_safe_security import HybridSecurityService, quantum_safe_hashing, quantum_safe_signatures
 from src.ai_anomaly_detector import AIAnomalyDetector
@@ -86,13 +99,16 @@ async def lifespan(app: FastAPI):
     global db, doc_handler, wal_service, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, voice_processor, analytics_service, ai_anomaly_detector, time_machine, smart_contracts, predictive_analytics, document_intelligence, advanced_security, hybrid_security
     
     try:
-        logger.info("Initializing Walacor Financial Integrity API services...")
+        mode_text = "DEMO" if DEMO_MODE else "FULL"
+        logger.info(f"Initializing Walacor Financial Integrity API services in {mode_text} mode...")
         
-        # Initialize database
-        db = Database()
+        # Initialize core services (always loaded)
+        # Use absolute path for database to ensure consistent location
+        import os
+        db_path = os.path.join(os.path.dirname(__file__), "integrityx.db")
+        db = Database(db_url=f"sqlite:///{db_path}")
         logger.info("✅ Database service initialized")
         
-        # Initialize document handler
         doc_handler = DocumentHandler()
         logger.info("✅ Document handler initialized")
         
@@ -104,68 +120,75 @@ async def lifespan(app: FastAPI):
             logger.warning(f"⚠️ Walacor service initialization failed (demo mode): {e}")
             wal_service = None
         
-        # Initialize Advanced Security service
-        try:
-            advanced_security = AdvancedSecurityService()
-            logger.info("✅ Advanced Security service initialized")
-        except Exception as e:
-            logger.error(f"❌ Advanced Security service initialization failed: {e}")
-            advanced_security = None
-
-        # Initialize Quantum-Safe Security service
-        try:
-            hybrid_security = HybridSecurityService()
-            logger.info("✅ Quantum-Safe Security service initialized")
-        except Exception as e:
-            logger.error(f"❌ Quantum-Safe Security service initialization failed: {e}")
-            hybrid_security = None
-        
-        # Initialize JSON handler
         json_handler = JSONHandler()
         logger.info("✅ JSON handler initialized")
         
-        # Initialize manifest handler
         manifest_handler = ManifestHandler()
         logger.info("✅ Manifest handler initialized")
         
-        # Initialize repositories
         attestation_repo = AttestationRepository()
         provenance_repo = ProvenanceRepository()
         logger.info("✅ Repository services initialized")
         
-        # Initialize verification portal
         verification_portal = VerificationPortal()
         logger.info("✅ Verification portal initialized")
         
-        # Initialize voice command processor
-        voice_processor = VoiceCommandProcessor()
-        logger.info("✅ Voice command processor initialized")
-        
-        # Initialize analytics service
         analytics_service = AnalyticsService(db_service=db)
+        bulk_operations_analytics = BulkOperationsAnalytics(db_service=db)
         logger.info("✅ Analytics service initialized")
         
-        # Initialize AI anomaly detector
-        ai_anomaly_detector = AIAnomalyDetector(db_service=db)
-        logger.info("✅ AI anomaly detector initialized")
-        
-        # Initialize time machine service
         time_machine = TimeMachine(db_service=db)
         logger.info("✅ Time machine service initialized")
         
-        # Initialize smart contracts service
-        smart_contracts = SmartContractsService(db_service=db)
-        logger.info("✅ Smart contracts service initialized")
+        # Initialize optional services only in FULL mode
+        if not DEMO_MODE:
+            # Initialize Advanced Security service
+            try:
+                advanced_security = AdvancedSecurityService()
+                logger.info("✅ Advanced Security service initialized")
+            except Exception as e:
+                logger.error(f"❌ Advanced Security service initialization failed: {e}")
+                advanced_security = None
+
+            # Initialize Quantum-Safe Security service
+            try:
+                hybrid_security = HybridSecurityService()
+                logger.info("✅ Quantum-Safe Security service initialized")
+            except Exception as e:
+                logger.error(f"❌ Quantum-Safe Security service initialization failed: {e}")
+                hybrid_security = None
+            
+            # Initialize voice command processor
+            voice_processor = VoiceCommandProcessor()
+            logger.info("✅ Voice command processor initialized")
+            
+            # Initialize AI anomaly detector
+            ai_anomaly_detector = AIAnomalyDetector(db_service=db)
+            logger.info("✅ AI anomaly detector initialized")
+            
+            # Initialize smart contracts service
+            smart_contracts = SmartContractsService(db_service=db)
+            logger.info("✅ Smart contracts service initialized")
+            
+            # Initialize predictive analytics service
+            predictive_analytics = PredictiveAnalyticsService(db_service=db)
+            logger.info("✅ Predictive analytics service initialized")
+            
+            # Initialize document intelligence service
+            document_intelligence = DocumentIntelligenceService()
+            logger.info("✅ Document intelligence service initialized")
+        else:
+            # Set optional services to None in demo mode
+            advanced_security = None
+            hybrid_security = None
+            voice_processor = None
+            ai_anomaly_detector = None
+            smart_contracts = None
+            predictive_analytics = None
+            document_intelligence = None
+            logger.info("🚀 Demo mode: Optional services skipped for faster startup")
         
-        # Initialize predictive analytics service
-        predictive_analytics = PredictiveAnalyticsService(db_service=db)
-        logger.info("✅ Predictive analytics service initialized")
-        
-        # Initialize document intelligence service
-        document_intelligence = DocumentIntelligenceService()
-        logger.info("✅ Document intelligence service initialized")
-        
-        logger.info("🎉 All services initialized successfully!")
+        logger.info(f"🎉 All services initialized successfully in {mode_text} mode!")
         
     except Exception as e:
         logger.error(f"❌ Failed to initialize services: {e}")
@@ -207,6 +230,7 @@ provenance_repo = None
 verification_portal = None
 voice_processor = None
 analytics_service = None
+bulk_operations_analytics = None
 ai_anomaly_detector = None
 time_machine = None
 smart_contracts = None
@@ -270,11 +294,14 @@ class ServiceHealth(BaseModel):
 
 class HealthData(BaseModel):
     """Health check data model."""
-    status: str = Field(..., description="Overall API status")
+    status: str = Field(..., description="Overall API status: healthy/degraded/unhealthy")
     message: str = Field(..., description="Status message")
     timestamp: str = Field(..., description="Response timestamp")
     total_duration_ms: float = Field(..., description="Total health check duration in milliseconds")
     services: Dict[str, ServiceHealth] = Field(..., description="Detailed service health information")
+    version: str = Field(..., description="API version")
+    database_stats: Optional[Dict[str, Any]] = Field(None, description="Database statistics")
+    system_info: Optional[Dict[str, Any]] = Field(None, description="System information (disk, memory)")
 
 
 class IngestResponse(BaseModel):
@@ -375,6 +402,24 @@ class VerifyRequest(BaseModel):
     """Verify request model."""
     etid: int = Field(..., description="Entity Type ID")
     payloadHash: str = Field(..., description="Payload SHA-256 hash")
+
+
+class VerifyByHashRequest(BaseModel):
+    """Verify by hash request model."""
+    hash: str = Field(..., description="Document hash to verify")
+
+
+class VerifyByDocumentRequest(BaseModel):
+    """Verify by document info request model."""
+    document_info: str = Field(..., description="Document information (ID, loan ID, etc.)")
+
+
+class VerificationResult(BaseModel):
+    """Verification result model."""
+    status: str = Field(..., description="Verification status: sealed, tampered, not_found, error")
+    message: str = Field(..., description="Human-readable message")
+    document: Optional[dict] = Field(None, description="Document information if found")
+    verification_details: Optional[dict] = Field(None, description="Detailed verification information")
 
 
 class VerifyResponse(BaseModel):
@@ -505,11 +550,15 @@ class VerificationResponse(BaseModel):
 # Dependency to check if services are initialized
 def get_services():
     """Get initialized services."""
-    if not all([db, doc_handler, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, voice_processor, analytics_service, ai_anomaly_detector, time_machine, smart_contracts, predictive_analytics, document_intelligence, advanced_security, hybrid_security]):
+    # Check core services (always required)
+    core_services = [db, doc_handler, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service, time_machine]
+    if not all(core_services):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Services not initialized"
+            detail="Core services not initialized"
         )
+    
+    # Return services dictionary (optional services may be None in demo mode)
     return {
         "db": db,
         "doc_handler": doc_handler,
@@ -521,9 +570,10 @@ def get_services():
         "verification_portal": verification_portal,
         "voice_processor": voice_processor,
         "analytics_service": analytics_service,
-            "ai_anomaly_detector": ai_anomaly_detector,
-            "time_machine": time_machine,
-            "smart_contracts": smart_contracts,
+        "bulk_operations_analytics": bulk_operations_analytics,
+        "ai_anomaly_detector": ai_anomaly_detector,
+        "time_machine": time_machine,
+        "smart_contracts": smart_contracts,
         "predictive_analytics": predictive_analytics,
         "document_intelligence": document_intelligence,
         "advanced_security": advanced_security,
@@ -622,6 +672,14 @@ async def health_check():
         storage_health = await check_storage_health()
         services_health["storage"] = storage_health
         
+        # Check disk space health
+        disk_health = await check_disk_space_health()
+        services_health["disk_space"] = disk_health
+        
+        # Check memory health
+        memory_health = await check_memory_health()
+        services_health["memory"] = memory_health
+        
         # Check other services (basic availability)
         services_health["document_handler"] = ServiceHealth(
             status="up" if doc_handler else "down",
@@ -641,16 +699,30 @@ async def health_check():
             details="Manifest handler service"
         )
         
-        # Determine overall status
-        critical_services = ["db", "walacor", "storage"]
-        critical_statuses = [services_health[svc].status for svc in critical_services if svc in services_health]
+        # Get database statistics
+        database_stats = await get_database_statistics()
         
+        # Get system information
+        system_info = await get_system_info()
+        
+        # Determine overall status with improved logic
+        critical_services = ["db", "walacor"]
+        warning_services = ["storage", "disk_space", "memory"]
+        
+        critical_statuses = [services_health[svc].status for svc in critical_services if svc in services_health]
+        warning_statuses = [services_health[svc].status for svc in warning_services if svc in services_health]
+        
+        # Determine overall status
         if all(status == "up" for status in critical_statuses):
-            overall_status = "healthy"
-            message = "All services are operational"
+            if all(status == "up" for status in warning_statuses):
+                overall_status = "healthy"
+                message = "All services are operational"
+            else:
+                overall_status = "degraded"
+                message = "Core services operational, some warnings present"
         elif any(status == "up" for status in critical_statuses):
             overall_status = "degraded"
-            message = "Some services are unavailable"
+            message = "Some critical services are unavailable"
         else:
             overall_status = "unhealthy"
             message = "Critical services are down"
@@ -662,7 +734,10 @@ async def health_check():
             message=message,
             timestamp=timestamp,
             total_duration_ms=total_duration,
-            services=services_health
+            services=services_health,
+            version="1.0.0",
+            database_stats=database_stats,
+            system_info=system_info
         )
         
         # Log successful completion
@@ -675,7 +750,19 @@ async def health_check():
             overall_status=overall_status
         )
         
-        return create_success_response(health_data.dict())
+        # Return appropriate HTTP status code based on health status
+        if overall_status == "healthy":
+            return create_success_response(health_data.dict())
+        elif overall_status == "degraded":
+            return JSONResponse(
+                status_code=200,  # Still return 200 for degraded
+                content=create_success_response(health_data.dict()).dict()
+            )
+        else:  # unhealthy
+            return JSONResponse(
+                status_code=503,  # Service Unavailable
+                content=create_success_response(health_data.dict()).dict()
+            )
         
     except Exception as e:
         logger.error(f"Health check failed: {e}")
@@ -703,10 +790,16 @@ async def health_check():
                     duration_ms=total_duration,
                     error=str(e)
                 )
-            }
+            },
+            version="1.0.0",
+            database_stats={"error": "Health check failed"},
+            system_info={"error": "Health check failed"}
         )
         
-        return create_success_response(error_data.dict())
+        return JSONResponse(
+            status_code=503,  # Service Unavailable
+            content=create_success_response(error_data.dict()).dict()
+        )
 
 
 async def check_database_health() -> ServiceHealth:
@@ -727,10 +820,18 @@ async def check_database_health() -> ServiceHealth:
             result = db.session.execute(text("SELECT 1")).fetchone()
             if result and result[0] == 1:
                 duration_ms = (time.time() - start_time) * 1000
+                # Detect database type from URL
+                db_url = db.db_url.lower()
+                if "postgresql" in db_url:
+                    db_type = "PostgreSQL"
+                elif "sqlite" in db_url:
+                    db_type = "SQLite"
+                else:
+                    db_type = "Unknown"
                 return ServiceHealth(
                     status="up",
                     duration_ms=duration_ms,
-                    details=f"Database connection successful (SQLite)"
+                    details=f"Database connection successful ({db_type})"
                 )
             else:
                 duration_ms = (time.time() - start_time) * 1000
@@ -864,6 +965,515 @@ async def check_storage_health() -> ServiceHealth:
             status="down",
             duration_ms=duration_ms,
             error=f"S3 health check failed: {str(e)}"
+        )
+
+
+async def check_disk_space_health() -> ServiceHealth:
+    """Check disk space availability."""
+    start_time = time.time()
+    
+    try:
+        # Get disk usage for the current directory
+        disk_usage = shutil.disk_usage('.')
+        
+        # Calculate percentages
+        total_bytes = disk_usage.total
+        free_bytes = disk_usage.free
+        used_bytes = total_bytes - free_bytes
+        
+        free_percent = (free_bytes / total_bytes) * 100
+        used_percent = (used_bytes / total_bytes) * 100
+        
+        # Determine status based on free space
+        if free_percent >= 20:  # At least 20% free
+            status = "up"
+            details = f"Disk space: {free_percent:.1f}% free ({free_bytes // (1024**3)}GB free, {total_bytes // (1024**3)}GB total)"
+        elif free_percent >= 10:  # At least 10% free
+            status = "up"
+            details = f"Disk space: {free_percent:.1f}% free (WARNING: Low disk space)"
+        else:  # Less than 10% free
+            status = "down"
+            details = f"Disk space: {free_percent:.1f}% free (CRITICAL: Very low disk space)"
+        
+        duration_ms = (time.time() - start_time) * 1000
+        return ServiceHealth(
+            status=status,
+            duration_ms=duration_ms,
+            details=details
+        )
+        
+    except Exception as e:
+        duration_ms = (time.time() - start_time) * 1000
+        return ServiceHealth(
+            status="down",
+            duration_ms=duration_ms,
+            error=f"Disk space check failed: {str(e)}"
+        )
+
+
+async def check_memory_health() -> ServiceHealth:
+    """Check memory usage."""
+    start_time = time.time()
+    
+    try:
+        if not PSUTIL_AVAILABLE:
+            return ServiceHealth(
+                status="up",
+                duration_ms=0.0,
+                details="Memory check skipped (psutil not available)"
+            )
+        
+        # Get memory information
+        memory = psutil.virtual_memory()
+        
+        # Calculate percentages
+        total_mb = memory.total // (1024 * 1024)
+        available_mb = memory.available // (1024 * 1024)
+        used_mb = memory.used // (1024 * 1024)
+        used_percent = memory.percent
+        
+        # Determine status based on memory usage
+        if used_percent <= 80:  # Less than 80% used
+            status = "up"
+            details = f"Memory: {used_percent:.1f}% used ({used_mb}MB/{total_mb}MB)"
+        elif used_percent <= 90:  # Less than 90% used
+            status = "up"
+            details = f"Memory: {used_percent:.1f}% used (WARNING: High memory usage)"
+        else:  # More than 90% used
+            status = "down"
+            details = f"Memory: {used_percent:.1f}% used (CRITICAL: Very high memory usage)"
+        
+        duration_ms = (time.time() - start_time) * 1000
+        return ServiceHealth(
+            status=status,
+            duration_ms=duration_ms,
+            details=details
+        )
+        
+    except Exception as e:
+        duration_ms = (time.time() - start_time) * 1000
+        return ServiceHealth(
+            status="down",
+            duration_ms=duration_ms,
+            error=f"Memory check failed: {str(e)}"
+        )
+
+
+async def get_database_statistics() -> Dict[str, Any]:
+    """Get database statistics (artifacts, files, events)."""
+    try:
+        if not db:
+            return {"error": "Database service not initialized"}
+        
+        with db:
+            from sqlalchemy import text
+            
+            # Get artifact count
+            artifact_count = db.session.execute(text("SELECT COUNT(*) FROM artifacts")).scalar()
+            
+            # Get file count
+            file_count = db.session.execute(text("SELECT COUNT(*) FROM artifact_files")).scalar()
+            
+            # Get event count
+            event_count = db.session.execute(text("SELECT COUNT(*) FROM artifact_events")).scalar()
+            
+            # Get recent activity (last 24 hours)
+            # SQLite-compatible date arithmetic
+            recent_artifacts = db.session.execute(text("""
+                SELECT COUNT(*) FROM artifacts 
+                WHERE created_at >= datetime('now', '-24 hours')
+            """)).scalar()
+            
+            return {
+                "total_artifacts": artifact_count or 0,
+                "total_files": file_count or 0,
+                "total_events": event_count or 0,
+                "recent_artifacts_24h": recent_artifacts or 0
+            }
+            
+    except Exception as e:
+        return {"error": f"Failed to get database statistics: {str(e)}"}
+
+
+async def get_system_info() -> Dict[str, Any]:
+    """Get system information (disk, memory)."""
+    try:
+        system_info = {}
+        
+        # Disk information
+        try:
+            disk_usage = shutil.disk_usage('.')
+            system_info["disk"] = {
+                "total_gb": disk_usage.total // (1024**3),
+                "free_gb": disk_usage.free // (1024**3),
+                "used_gb": (disk_usage.total - disk_usage.free) // (1024**3),
+                "free_percent": (disk_usage.free / disk_usage.total) * 100
+            }
+        except Exception as e:
+            system_info["disk"] = {"error": str(e)}
+        
+        # Memory information
+        if PSUTIL_AVAILABLE:
+            try:
+                memory = psutil.virtual_memory()
+                system_info["memory"] = {
+                    "total_mb": memory.total // (1024 * 1024),
+                    "available_mb": memory.available // (1024 * 1024),
+                    "used_mb": memory.used // (1024 * 1024),
+                    "used_percent": memory.percent
+                }
+            except Exception as e:
+                system_info["memory"] = {"error": str(e)}
+        else:
+            system_info["memory"] = {"error": "psutil not available"}
+        
+        return system_info
+        
+    except Exception as e:
+        return {"error": f"Failed to get system info: {str(e)}"}
+
+
+# =============================================================================
+# DUPLICATE DETECTION AND PREVENTION ENDPOINTS
+# =============================================================================
+
+class DuplicateCheckRequest(BaseModel):
+    """Request model for duplicate checking."""
+    file_hash: Optional[str] = Field(None, description="SHA-256 hash of the file")
+    loan_id: Optional[str] = Field(None, description="Loan ID to check")
+    borrower_email: Optional[str] = Field(None, description="Borrower email to check")
+    borrower_ssn_last4: Optional[str] = Field(None, description="Borrower SSN last 4 digits")
+    content_hash: Optional[str] = Field(None, description="Content hash for JSON files")
+
+
+class DuplicateCheckResponse(BaseModel):
+    """Response model for duplicate checking."""
+    is_duplicate: bool = Field(..., description="Whether duplicates were found")
+    duplicate_type: Optional[str] = Field(None, description="Type of duplicate found")
+    existing_artifacts: List[Dict[str, Any]] = Field(default_factory=list, description="Existing artifacts")
+    warnings: List[str] = Field(default_factory=list, description="Warning messages")
+    recommendations: List[str] = Field(default_factory=list, description="Recommendations")
+
+
+@app.post("/api/duplicate-check", response_model=StandardResponse)
+async def check_for_duplicates(
+    request: DuplicateCheckRequest,
+    services: dict = Depends(get_services)
+):
+    """
+    Comprehensive duplicate detection endpoint.
+    
+    Checks for duplicates based on:
+    - File hash (exact file match)
+    - Loan ID (same loan processed before)
+    - Borrower information (same borrower)
+    - Content hash (same content, different file)
+    """
+    try:
+        db = services["db"]
+        duplicates_found = []
+        warnings = []
+        recommendations = []
+        duplicate_type = None
+        
+        # 1. Check for exact file hash duplicates
+        if request.file_hash:
+            existing_by_hash = db.get_artifact_by_hash(request.file_hash)
+            if existing_by_hash:
+                duplicates_found.append({
+                    "type": "exact_file_match",
+                    "artifact_id": existing_by_hash.id,
+                    "loan_id": existing_by_hash.loan_id,
+                    "created_at": existing_by_hash.created_at.isoformat(),
+                    "walacor_tx_id": existing_by_hash.walacor_tx_id,
+                    "details": "Exact same file has been uploaded before"
+                })
+                duplicate_type = "exact_file_match"
+                warnings.append("This exact file has already been uploaded and sealed")
+                recommendations.append("Consider using the existing sealed document instead")
+        
+        # 2. Check for loan ID duplicates
+        if request.loan_id:
+            with db:
+                from sqlalchemy import text
+                loan_artifacts = db.session.execute(text("""
+                    SELECT id, artifact_type, created_at, walacor_tx_id, payload_sha256
+                    FROM artifacts 
+                    WHERE loan_id = :loan_id
+                    ORDER BY created_at DESC
+                """), {"loan_id": request.loan_id}).fetchall()
+                
+                if loan_artifacts:
+                    for artifact in loan_artifacts:
+                        duplicates_found.append({
+                            "type": "loan_id_match",
+                            "artifact_id": artifact[0],
+                            "artifact_type": artifact[1],
+                            "created_at": artifact[2].isoformat(),
+                            "walacor_tx_id": artifact[3],
+                            "file_hash": artifact[4],
+                            "details": f"Loan ID {request.loan_id} has been processed before"
+                        })
+                    
+                    if not duplicate_type:
+                        duplicate_type = "loan_id_match"
+                    warnings.append(f"Loan ID {request.loan_id} has been processed before")
+                    recommendations.append("Verify if this is a new document or an update to existing loan")
+        
+        # 3. Check for borrower duplicates (email and SSN)
+        if request.borrower_email or request.borrower_ssn_last4:
+            with db:
+                from sqlalchemy import text
+                
+                # Check by email
+                if request.borrower_email:
+                    email_artifacts = db.session.execute(text("""
+                        SELECT a.id, a.loan_id, a.created_at, a.walacor_tx_id, a.payload_sha256
+                        FROM artifacts a
+                        WHERE a.borrower_info::text ILIKE :email_pattern
+                        ORDER BY a.created_at DESC
+                    """), {"email_pattern": f"%{request.borrower_email}%"}).fetchall()
+                    
+                    for artifact in email_artifacts:
+                        duplicates_found.append({
+                            "type": "borrower_email_match",
+                            "artifact_id": artifact[0],
+                            "loan_id": artifact[1],
+                            "created_at": artifact[2].isoformat(),
+                            "walacor_tx_id": artifact[3],
+                            "file_hash": artifact[4],
+                            "details": f"Borrower with email {request.borrower_email} has documents on file"
+                        })
+                
+                # Check by SSN last 4
+                if request.borrower_ssn_last4:
+                    ssn_artifacts = db.session.execute(text("""
+                        SELECT a.id, a.loan_id, a.created_at, a.walacor_tx_id, a.payload_sha256
+                        FROM artifacts a
+                        WHERE a.borrower_info::text ILIKE :ssn_pattern
+                        ORDER BY a.created_at DESC
+                    """), {"ssn_pattern": f"%{request.borrower_ssn_last4}%"}).fetchall()
+                    
+                    for artifact in ssn_artifacts:
+                        duplicates_found.append({
+                            "type": "borrower_ssn_match",
+                            "artifact_id": artifact[0],
+                            "loan_id": artifact[1],
+                            "created_at": artifact[2].isoformat(),
+                            "walacor_tx_id": artifact[3],
+                            "file_hash": artifact[4],
+                            "details": f"Borrower with SSN ending in {request.borrower_ssn_last4} has documents on file"
+                        })
+                
+                if (request.borrower_email and email_artifacts) or (request.borrower_ssn_last4 and ssn_artifacts):
+                    if not duplicate_type:
+                        duplicate_type = "borrower_match"
+                    warnings.append("Borrower information matches existing records")
+                    recommendations.append("Verify borrower identity and document purpose")
+        
+        # 4. Check for content duplicates (for JSON files)
+        if request.content_hash:
+            with db:
+                from sqlalchemy import text
+                content_artifacts = db.session.execute(text("""
+                    SELECT id, loan_id, created_at, walacor_tx_id, payload_sha256
+                    FROM artifacts 
+                    WHERE local_metadata::text ILIKE :content_pattern
+                    ORDER BY created_at DESC
+                """), {"content_pattern": f"%{request.content_hash}%"}).fetchall()
+                
+                if content_artifacts:
+                    for artifact in content_artifacts:
+                        duplicates_found.append({
+                            "type": "content_match",
+                            "artifact_id": artifact[0],
+                            "loan_id": artifact[1],
+                            "created_at": artifact[2].isoformat(),
+                            "walacor_tx_id": artifact[3],
+                            "file_hash": artifact[4],
+                            "details": "Similar content has been processed before"
+                        })
+                    
+                    if not duplicate_type:
+                        duplicate_type = "content_match"
+                    warnings.append("Similar content has been processed before")
+                    recommendations.append("Review content for differences or updates")
+        
+        # Determine overall duplicate status
+        is_duplicate = len(duplicates_found) > 0
+        
+        # Add general recommendations
+        if is_duplicate:
+            recommendations.extend([
+                "Review existing documents before proceeding",
+                "Consider if this is an update or correction to existing data",
+                "Ensure proper audit trail for document relationships"
+            ])
+        else:
+            recommendations.append("No duplicates found - safe to proceed with upload")
+        
+        response_data = DuplicateCheckResponse(
+            is_duplicate=is_duplicate,
+            duplicate_type=duplicate_type,
+            existing_artifacts=duplicates_found,
+            warnings=warnings,
+            recommendations=recommendations
+        )
+        
+        return create_success_response(response_data.dict())
+        
+    except Exception as e:
+        logger.error(f"Duplicate check failed: {e}")
+        return create_error_response(
+            code="DUPLICATE_CHECK_FAILED",
+            message="Failed to check for duplicates",
+            details={"error": str(e)}
+        )
+
+
+@app.get("/api/duplicate-check/{artifact_id}", response_model=StandardResponse)
+async def get_duplicate_info(
+    artifact_id: str,
+    services: dict = Depends(get_services)
+):
+    """
+    Get detailed information about potential duplicates for a specific artifact.
+    """
+    try:
+        db = services["db"]
+        
+        # Get the artifact
+        with db:
+            from sqlalchemy import text
+            artifact = db.session.execute(text("""
+                SELECT id, loan_id, artifact_type, payload_sha256, borrower_info, 
+                       local_metadata, created_at, walacor_tx_id
+                FROM artifacts 
+                WHERE id = :artifact_id
+            """), {"artifact_id": artifact_id}).fetchone()
+            
+            if not artifact:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Artifact not found"
+                )
+            
+            # Find related artifacts
+            related_artifacts = []
+            
+            # Same loan ID
+            loan_artifacts = db.session.execute(text("""
+                SELECT id, artifact_type, created_at, walacor_tx_id, payload_sha256
+                FROM artifacts 
+                WHERE loan_id = :loan_id AND id != :artifact_id
+                ORDER BY created_at DESC
+            """), {"loan_id": artifact[1], "artifact_id": artifact_id}).fetchall()
+            
+            for related in loan_artifacts:
+                related_artifacts.append({
+                    "type": "same_loan",
+                    "artifact_id": related[0],
+                    "artifact_type": related[1],
+                    "created_at": related[2].isoformat(),
+                    "walacor_tx_id": related[3],
+                    "file_hash": related[4]
+                })
+            
+            # Same file hash
+            hash_artifacts = db.session.execute(text("""
+                SELECT id, loan_id, artifact_type, created_at, walacor_tx_id
+                FROM artifacts 
+                WHERE payload_sha256 = :payload_sha256 AND id != :artifact_id
+                ORDER BY created_at DESC
+            """), {"payload_sha256": artifact[3], "artifact_id": artifact_id}).fetchall()
+            
+            for related in hash_artifacts:
+                related_artifacts.append({
+                    "type": "same_file",
+                    "artifact_id": related[0],
+                    "loan_id": related[1],
+                    "artifact_type": related[2],
+                    "created_at": related[3].isoformat(),
+                    "walacor_tx_id": related[4]
+                })
+            
+            return create_success_response({
+                "artifact": {
+                    "id": artifact[0],
+                    "loan_id": artifact[1],
+                    "artifact_type": artifact[2],
+                    "payload_sha256": artifact[3],
+                    "created_at": artifact[6].isoformat(),
+                    "walacor_tx_id": artifact[7]
+                },
+                "related_artifacts": related_artifacts,
+                "total_related": len(related_artifacts)
+            })
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get duplicate info: {e}")
+        return create_error_response(
+            code="DUPLICATE_INFO_FAILED",
+            message="Failed to get duplicate information",
+            details={"error": str(e)}
+        )
+
+
+# Mode endpoint
+@app.get("/api/mode", response_model=StandardResponse)
+async def get_mode():
+    """
+    Get the current application mode (demo or full).
+    
+    Returns:
+        StandardResponse: Contains the current mode and available services
+    """
+    try:
+        mode_data = {
+            "mode": "demo" if DEMO_MODE else "full",
+            "demo_mode": DEMO_MODE,
+            "available_services": {
+                "core_services": [
+                    "database",
+                    "document_handler", 
+                    "walacor_service",
+                    "json_handler",
+                    "manifest_handler",
+                    "attestation_repo",
+                    "provenance_repo",
+                    "verification_portal",
+                    "analytics_service",
+                    "time_machine"
+                ],
+                "optional_services": [
+                    "advanced_security",
+                    "ai_anomaly_detector",
+                    "voice_processor",
+                    "smart_contracts",
+                    "predictive_analytics",
+                    "document_intelligence"
+                ]
+            },
+            "services_loaded": {
+                "advanced_security": advanced_security is not None,
+                "ai_anomaly_detector": ai_anomaly_detector is not None,
+                "voice_processor": voice_processor is not None,
+                "smart_contracts": smart_contracts is not None,
+                "predictive_analytics": predictive_analytics is not None,
+                "document_intelligence": document_intelligence is not None
+            }
+        }
+        
+        return create_success_response(mode_data)
+        
+    except Exception as e:
+        logger.error(f"Failed to get mode information: {e}")
+        return create_error_response(
+            code="MODE_RETRIEVAL_FAILED",
+            message="Failed to retrieve mode information",
+            details={"error": str(e)}
         )
 
 
@@ -1343,6 +1953,11 @@ async def get_artifacts(
                     matches = False
             
             if matches:
+                # Extract security level from local_metadata
+                security_level = "standard"  # Default to standard
+                if artifact.local_metadata:
+                    security_level = artifact.local_metadata.get('security_level', 'standard')
+                
                 # Create response object with borrower information
                 artifact_data = {
                     "id": artifact.id,
@@ -1355,7 +1970,8 @@ async def get_artifacts(
                     "walacor_tx_id": artifact.walacor_tx_id,
                     "artifact_type": artifact.artifact_type,
                     "created_by": artifact.created_by,
-                    "sealed_status": "Sealed" if artifact.walacor_tx_id else "Not Sealed"
+                    "sealed_status": "Sealed" if artifact.walacor_tx_id else "Not Sealed",
+                    "security_level": security_level
                 }
                 filtered_artifacts.append(artifact_data)
         
@@ -3544,6 +4160,134 @@ async def get_business_intelligence(
 
 
 # =============================================================================
+# BULK OPERATIONS ANALYTICS ENDPOINTS
+# =============================================================================
+
+@app.get("/api/analytics/bulk-operations", response_model=StandardResponse)
+async def get_bulk_operations_analytics(
+    services: dict = Depends(get_services)
+):
+    """
+    Get comprehensive bulk operations analytics.
+    
+    Returns detailed metrics about bulk operations performance, ObjectValidator usage,
+    directory verification statistics, and time savings from bulk processing.
+    """
+    try:
+        analytics = await services["bulk_operations_analytics"].get_bulk_operations_analytics()
+        
+        logger.info("✅ Retrieved bulk operations analytics")
+        
+        return create_success_response({
+            "analytics": analytics
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get bulk operations analytics: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=create_error_response(
+                code="BULK_OPERATIONS_ANALYTICS_RETRIEVAL_FAILED",
+                message="Failed to retrieve bulk operations analytics",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+
+@app.get("/api/analytics/object-validator-usage", response_model=StandardResponse)
+async def get_object_validator_usage_analytics(
+    services: dict = Depends(get_services)
+):
+    """
+    Get ObjectValidator usage analytics.
+    
+    Returns detailed metrics about ObjectValidator adoption, performance,
+    and directory hash generation statistics.
+    """
+    try:
+        analytics = await services["bulk_operations_analytics"].get_object_validator_analytics()
+        
+        logger.info("✅ Retrieved ObjectValidator usage analytics")
+        
+        return create_success_response({
+            "analytics": analytics
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get ObjectValidator usage analytics: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=create_error_response(
+                code="OBJECT_VALIDATOR_ANALYTICS_RETRIEVAL_FAILED",
+                message="Failed to retrieve ObjectValidator usage analytics",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+
+@app.get("/api/analytics/directory-verification-stats", response_model=StandardResponse)
+async def get_directory_verification_analytics(
+    services: dict = Depends(get_services)
+):
+    """
+    Get directory verification analytics.
+    
+    Returns detailed metrics about directory verification performance,
+    success rates, and ObjectValidator directory hash usage.
+    """
+    try:
+        analytics = await services["bulk_operations_analytics"].get_directory_verification_analytics()
+        
+        logger.info("✅ Retrieved directory verification analytics")
+        
+        return create_success_response({
+            "analytics": analytics
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get directory verification analytics: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=create_error_response(
+                code="DIRECTORY_VERIFICATION_ANALYTICS_RETRIEVAL_FAILED",
+                message="Failed to retrieve directory verification analytics",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+
+@app.get("/api/analytics/bulk-performance", response_model=StandardResponse)
+async def get_bulk_performance_analytics(
+    services: dict = Depends(get_services)
+):
+    """
+    Get bulk operations performance analytics.
+    
+    Returns detailed performance metrics including response times,
+    throughput, error rates, and scalability metrics.
+    """
+    try:
+        analytics = await services["bulk_operations_analytics"].get_bulk_performance_analytics()
+        
+        logger.info("✅ Retrieved bulk performance analytics")
+        
+        return create_success_response({
+            "analytics": analytics
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get bulk performance analytics: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=create_error_response(
+                code="BULK_PERFORMANCE_ANALYTICS_RETRIEVAL_FAILED",
+                message="Failed to retrieve bulk performance analytics",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+
+# =============================================================================
 # PREDICTIVE ANALYTICS ENDPOINTS
 # =============================================================================
 
@@ -4260,6 +5004,50 @@ class AuditTrailResponse(BaseModel):
     loan_id: str = Field(..., description="Loan ID")
     events: List[AuditEvent] = Field(..., description="List of audit events")
     total_events: int = Field(..., description="Total number of events")
+
+
+class DeleteDocumentRequest(BaseModel):
+    """Request model for deleting documents."""
+    artifact_id: str = Field(..., description="ID of the artifact to delete")
+    deletion_reason: Optional[str] = Field(None, description="Reason for deletion")
+
+
+class DeleteDocumentResponse(BaseModel):
+    """Response model for document deletion."""
+    deleted_artifact_id: str = Field(..., description="ID of the deleted artifact")
+    deleted_document_id: str = Field(..., description="ID of the deleted document record")
+    deletion_event_id: str = Field(..., description="ID of the deletion audit event")
+    verification_info: Dict[str, Any] = Field(..., description="Information for verifying the deleted document")
+    preserved_metadata: Dict[str, Any] = Field(..., description="Preserved metadata from the deleted document")
+
+
+class DeletedDocumentInfo(BaseModel):
+    """Information about a deleted document."""
+    id: str = Field(..., description="Deleted document record ID")
+    original_artifact_id: str = Field(..., description="Original artifact ID")
+    loan_id: str = Field(..., description="Loan ID")
+    artifact_type: str = Field(..., description="Type of artifact")
+    payload_sha256: str = Field(..., description="Document hash")
+    walacor_tx_id: str = Field(..., description="Blockchain transaction ID")
+    original_created_at: str = Field(..., description="Original creation timestamp")
+    original_created_by: str = Field(..., description="Original creator")
+    deleted_at: str = Field(..., description="Deletion timestamp")
+    deleted_by: str = Field(..., description="User who deleted the document")
+    deletion_reason: Optional[str] = Field(None, description="Reason for deletion")
+    verification_message: str = Field(..., description="Message for verification purposes")
+
+
+class VerifyDeletedDocumentRequest(BaseModel):
+    """Request model for verifying deleted documents."""
+    document_hash: str = Field(..., description="SHA-256 hash of the document to verify")
+    original_artifact_id: Optional[str] = Field(None, description="Original artifact ID (optional)")
+
+
+class VerifyDeletedDocumentResponse(BaseModel):
+    """Response model for deleted document verification."""
+    is_deleted: bool = Field(..., description="Whether the document was deleted")
+    document_info: Optional[DeletedDocumentInfo] = Field(None, description="Information about the deleted document")
+    verification_message: str = Field(..., description="Verification result message")
 
 
 @app.post("/api/smart-contracts/create", response_model=StandardResponse)
@@ -5414,6 +6202,1227 @@ async def get_audit_trail(
             data={"error": str(e)}
         )
 
+
+# ============================================================================
+# DOCUMENT DELETION ENDPOINTS
+# ============================================================================
+
+@app.delete("/api/artifacts/{artifact_id}", response_model=StandardResponse)
+async def delete_artifact(
+    artifact_id: str,
+    deleted_by: str = Query(..., description="User ID of the person deleting the document"),
+    deletion_reason: Optional[str] = Query(None, description="Reason for deletion"),
+    services: dict = Depends(get_services)
+):
+    """
+    Delete an artifact while preserving metadata for verification.
+    
+    This endpoint implements a comprehensive delete functionality that:
+    1. Removes the document from the active artifacts table
+    2. Preserves all metadata in the deleted_documents table
+    3. Creates a detailed audit trail of the deletion
+    4. Allows the document to still be verified using its hash and blockchain seal
+    
+    The deleted document can be verified later using the document hash,
+    and users will see detailed information about when it was uploaded,
+    when it was deleted, and who performed these actions.
+    """
+    try:
+        log_endpoint_start("delete_artifact", {"artifact_id": artifact_id, "deleted_by": deleted_by})
+        
+        # Check if artifact exists
+        artifact = services["db"].get_artifact_by_id(artifact_id)
+        if not artifact:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Artifact not found: {artifact_id}"
+            )
+        
+        # Perform the deletion with metadata preservation
+        deletion_result = services["db"].delete_artifact(
+            artifact_id=artifact_id,
+            deleted_by=deleted_by,
+            deletion_reason=deletion_reason
+        )
+        
+        logger.info(f"✅ Artifact {artifact_id} deleted successfully with metadata preservation")
+        
+        return create_success_response(
+            data=DeleteDocumentResponse(
+                deleted_artifact_id=deletion_result["deleted_artifact_id"],
+                deleted_document_id=deletion_result["deleted_document_id"],
+                deletion_event_id=deletion_result["deletion_event_id"],
+                verification_info=deletion_result["verification_info"],
+                preserved_metadata=deletion_result["preserved_metadata"]
+            ).dict()
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete artifact {artifact_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=create_error_response(
+                code="DOCUMENT_DELETION_FAILED",
+                message="Failed to delete document",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+
+@app.post("/api/artifacts/delete", response_model=StandardResponse)
+async def delete_artifact_with_request(
+    request: DeleteDocumentRequest,
+    deleted_by: str = Query(..., description="User ID of the person deleting the document"),
+    services: dict = Depends(get_services)
+):
+    """
+    Delete an artifact using a request body (alternative to DELETE method).
+    
+    This endpoint provides the same functionality as the DELETE endpoint
+    but accepts the deletion reason in the request body instead of query parameters.
+    """
+    try:
+        log_endpoint_start("delete_artifact_with_request", {
+            "artifact_id": request.artifact_id, 
+            "deleted_by": deleted_by,
+            "deletion_reason": request.deletion_reason
+        })
+        
+        # Check if artifact exists
+        artifact = services["db"].get_artifact_by_id(request.artifact_id)
+        if not artifact:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Artifact not found: {request.artifact_id}"
+            )
+        
+        # Perform the deletion with metadata preservation
+        deletion_result = services["db"].delete_artifact(
+            artifact_id=request.artifact_id,
+            deleted_by=deleted_by,
+            deletion_reason=request.deletion_reason
+        )
+        
+        logger.info(f"✅ Artifact {request.artifact_id} deleted successfully with metadata preservation")
+        
+        return create_success_response(
+            data=DeleteDocumentResponse(
+                deleted_artifact_id=deletion_result["deleted_artifact_id"],
+                deleted_document_id=deletion_result["deleted_document_id"],
+                deletion_event_id=deletion_result["deletion_event_id"],
+                verification_info=deletion_result["verification_info"],
+                preserved_metadata=deletion_result["preserved_metadata"]
+            ).dict()
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete artifact {request.artifact_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=create_error_response(
+                code="DOCUMENT_DELETION_FAILED",
+                message="Failed to delete document",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+
+@app.get("/api/deleted-documents/{original_artifact_id}", response_model=StandardResponse)
+async def get_deleted_document(
+    original_artifact_id: str,
+    services: dict = Depends(get_services)
+):
+    """
+    Get information about a deleted document by its original artifact ID.
+    
+    This endpoint allows users to retrieve information about deleted documents,
+    including when they were uploaded, when they were deleted, and who performed these actions.
+    """
+    try:
+        log_endpoint_start("get_deleted_document", {"original_artifact_id": original_artifact_id})
+        
+        # Get the deleted document
+        deleted_doc = services["db"].get_deleted_document_by_original_id(original_artifact_id)
+        if not deleted_doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Deleted document not found: {original_artifact_id}"
+            )
+        
+        logger.info(f"✅ Retrieved deleted document: {original_artifact_id}")
+        
+        return create_success_response(
+            data=DeletedDocumentInfo(
+                id=deleted_doc.id,
+                original_artifact_id=deleted_doc.original_artifact_id,
+                loan_id=deleted_doc.loan_id,
+                artifact_type=deleted_doc.artifact_type,
+                payload_sha256=deleted_doc.payload_sha256,
+                walacor_tx_id=deleted_doc.walacor_tx_id,
+                original_created_at=deleted_doc.original_created_at.isoformat(),
+                original_created_by=deleted_doc.original_created_by,
+                deleted_at=deleted_doc.deleted_at.isoformat(),
+                deleted_by=deleted_doc.deleted_by,
+                deletion_reason=deleted_doc.deletion_reason,
+                verification_message=deleted_doc.get_verification_info()["verification_message"]
+            ).dict()
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get deleted document {original_artifact_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=create_error_response(
+                code="DELETED_DOCUMENT_RETRIEVAL_FAILED",
+                message="Failed to retrieve deleted document information",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+
+@app.get("/api/deleted-documents/loan/{loan_id}", response_model=StandardResponse)
+async def get_deleted_documents_by_loan(
+    loan_id: str,
+    services: dict = Depends(get_services)
+):
+    """
+    Get all deleted documents for a specific loan.
+    
+    This endpoint returns a list of all documents that were deleted for a specific loan,
+    allowing users to see the complete history of document management for that loan.
+    """
+    try:
+        log_endpoint_start("get_deleted_documents_by_loan", {"loan_id": loan_id})
+        
+        # Get all deleted documents for the loan
+        deleted_docs = services["db"].get_deleted_documents_by_loan_id(loan_id)
+        
+        # Convert to response format
+        deleted_documents_info = []
+        for doc in deleted_docs:
+            deleted_documents_info.append(DeletedDocumentInfo(
+                id=doc.id,
+                original_artifact_id=doc.original_artifact_id,
+                loan_id=doc.loan_id,
+                artifact_type=doc.artifact_type,
+                payload_sha256=doc.payload_sha256,
+                walacor_tx_id=doc.walacor_tx_id,
+                original_created_at=doc.original_created_at.isoformat(),
+                original_created_by=doc.original_created_by,
+                deleted_at=doc.deleted_at.isoformat(),
+                deleted_by=doc.deleted_by,
+                deletion_reason=doc.deletion_reason,
+                verification_message=doc.get_verification_info()["verification_message"]
+            ).dict())
+        
+        logger.info(f"✅ Retrieved {len(deleted_docs)} deleted documents for loan: {loan_id}")
+        
+        return create_success_response({
+            "loan_id": loan_id,
+            "deleted_documents": deleted_documents_info,
+            "total_deleted": len(deleted_docs)
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get deleted documents for loan {loan_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=create_error_response(
+                code="DELETED_DOCUMENTS_RETRIEVAL_FAILED",
+                message="Failed to retrieve deleted documents for loan",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+
+# ============================================================================
+# VERIFICATION ENDPOINTS
+# ============================================================================
+
+@app.post("/api/verify-deleted-document", response_model=StandardResponse)
+async def verify_deleted_document(
+    request: VerifyDeletedDocumentRequest,
+    services: dict = Depends(get_services)
+):
+    """
+    Verify a deleted document by its hash.
+    
+    This endpoint allows users to verify documents that have been deleted
+    but still have their metadata preserved. When a deleted document is verified,
+    users will see detailed information about when it was uploaded, when it was deleted,
+    and who performed these actions.
+    
+    This is particularly useful for compliance and audit purposes where
+    the history of document management is important even for deleted documents.
+    """
+    try:
+        log_endpoint_start("verify_deleted_document", {"document_hash": request.document_hash})
+        
+        # Validate hash format
+        if len(request.document_hash) != 64:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Document hash must be a 64-character SHA-256 hash"
+            )
+        
+        # Try to find the document in deleted documents first
+        deleted_doc = services["db"].get_deleted_document_by_hash(request.document_hash)
+        
+        if deleted_doc:
+            logger.info(f"✅ Found deleted document for hash: {request.document_hash[:16]}...")
+            
+            verification_info = deleted_doc.get_verification_info()
+            
+            return create_success_response(
+                data=VerifyDeletedDocumentResponse(
+                    is_deleted=True,
+                    document_info=DeletedDocumentInfo(
+                        id=deleted_doc.id,
+                        original_artifact_id=deleted_doc.original_artifact_id,
+                        loan_id=deleted_doc.loan_id,
+                        artifact_type=deleted_doc.artifact_type,
+                        payload_sha256=deleted_doc.payload_sha256,
+                        walacor_tx_id=deleted_doc.walacor_tx_id,
+                        original_created_at=deleted_doc.original_created_at.isoformat(),
+                        original_created_by=deleted_doc.original_created_by,
+                        deleted_at=deleted_doc.deleted_at.isoformat(),
+                        deleted_by=deleted_doc.deleted_by,
+                        deletion_reason=deleted_doc.deletion_reason,
+                        verification_message=verification_info["verification_message"]
+                    ),
+                    verification_message=verification_info["verification_message"]
+                ).dict()
+            )
+        
+        # If not found in deleted documents, check if it's an active document
+        artifact = services["db"].get_artifact_by_hash(request.document_hash)
+        if artifact:
+            logger.info(f"✅ Found active document for hash: {request.document_hash[:16]}...")
+            
+            return create_success_response(
+                data=VerifyDeletedDocumentResponse(
+                    is_deleted=False,
+                    document_info=None,
+                    verification_message="Document is currently active and not deleted. Use the standard verification endpoint for active documents."
+                ).dict()
+            )
+        
+        # Document not found in either active or deleted documents
+        logger.info(f"❌ Document not found for hash: {request.document_hash[:16]}...")
+        
+        return create_success_response(
+            data=VerifyDeletedDocumentResponse(
+                is_deleted=False,
+                document_info=None,
+                verification_message="Document not found in the system. This document was never uploaded or has been permanently removed."
+            ).dict()
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to verify deleted document: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=create_error_response(
+                code="DELETED_DOCUMENT_VERIFICATION_FAILED",
+                message="Failed to verify deleted document",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+
+@app.post("/api/verify-by-hash", response_model=StandardResponse)
+@with_structured_logging("/api/verify-by-hash", "POST")
+async def verify_by_hash(
+    request: VerifyByHashRequest,
+    services: dict = Depends(get_services)
+):
+    """
+    Verify document by hash.
+    
+    Checks if a document with the given hash exists and is properly sealed.
+    """
+    try:
+        # Search for artifact by hash
+        artifact_obj = services["db"].get_artifact_by_hash(request.hash)
+        
+        if not artifact_obj:
+            # Check if the document was deleted but metadata preserved
+            deleted_doc = services["db"].get_deleted_document_by_hash(request.hash)
+            if deleted_doc:
+                verification_info = deleted_doc.get_verification_info()
+                return create_success_response(
+                    data=VerificationResult(
+                        status="deleted",
+                        message=verification_info["verification_message"],
+                        document={
+                            "id": deleted_doc.original_artifact_id,
+                            "loan_id": deleted_doc.loan_id,
+                            "borrower_name": "N/A",  # Could extract from preserved metadata
+                            "created_at": deleted_doc.original_created_at.isoformat(),
+                            "walacor_tx_id": deleted_doc.walacor_tx_id,
+                            "payload_sha256": deleted_doc.payload_sha256,
+                            "deleted_at": deleted_doc.deleted_at.isoformat(),
+                            "deleted_by": deleted_doc.deleted_by,
+                            "deletion_reason": deleted_doc.deletion_reason
+                        },
+                        verification_details={
+                            "hash_match": True,
+                            "blockchain_verified": True,
+                            "document_status": "deleted",
+                            "metadata_preserved": True
+                        }
+                    ).dict()
+                )
+            
+            return create_success_response(
+                data=VerificationResult(
+                    status="not_found",
+                    message="No document found with this hash. The document may not exist or may not be sealed."
+                ).dict()
+            )
+        
+        # Convert artifact object to dictionary
+        borrower_info = artifact_obj.borrower_info or {}
+        artifact = {
+            'id': artifact_obj.id,
+            'loan_id': artifact_obj.loan_id,
+            'borrower_name': borrower_info.get('full_name', 'N/A'),
+            'created_at': artifact_obj.created_at.isoformat() if artifact_obj.created_at else None,
+            'walacor_tx_id': artifact_obj.walacor_tx_id,
+            'payload_sha256': artifact_obj.payload_sha256
+        }
+        
+        # Check if document is properly sealed
+        if not artifact.get('walacor_tx_id'):
+            return create_success_response(
+                data=VerificationResult(
+                    status="error",
+                    message="Document found but not properly sealed. Missing blockchain transaction."
+                ).dict()
+            )
+        
+        # Verify with Walacor service
+        try:
+            verification_result = services["verification_portal"].verify_document(
+                document_id=artifact['id'],
+                document_hash=request.hash
+            )
+            
+            if verification_result.get('is_valid', False):
+                return create_success_response(
+                    data=VerificationResult(
+                        status="sealed",
+                        message="Document is properly sealed and verified on the blockchain.",
+                        document={
+                            "id": artifact['id'],
+                            "loan_id": artifact.get('loan_id', 'N/A'),
+                            "borrower_name": artifact.get('borrower_name', 'N/A'),
+                            "created_at": artifact.get('created_at', 'N/A'),
+                            "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
+                            "payload_sha256": artifact.get('payload_sha256', request.hash)
+                        },
+                        verification_details={
+                            "hash_match": True,
+                            "blockchain_verified": True,
+                            "last_verified": verification_result.get('timestamp', 'N/A'),
+                            "tamper_detected": False
+                        }
+                    ).dict()
+                )
+            else:
+                return create_success_response(
+                    data=VerificationResult(
+                        status="tampered",
+                        message="Document hash found but verification failed. Document may have been tampered with.",
+                        document={
+                            "id": artifact['id'],
+                            "loan_id": artifact.get('loan_id', 'N/A'),
+                            "borrower_name": artifact.get('borrower_name', 'N/A'),
+                            "created_at": artifact.get('created_at', 'N/A'),
+                            "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
+                            "payload_sha256": artifact.get('payload_sha256', request.hash)
+                        },
+                        verification_details={
+                            "hash_match": True,
+                            "blockchain_verified": False,
+                            "last_verified": verification_result.get('timestamp', 'N/A'),
+                            "tamper_detected": True
+                        }
+                    ).dict()
+                )
+        except Exception as e:
+            # If Walacor verification fails, still return document info but mark as unverified
+            return create_success_response(
+                data=VerificationResult(
+                    status="sealed",
+                    message="Document found and sealed, but blockchain verification is currently unavailable.",
+                    document={
+                        "id": artifact['id'],
+                        "loan_id": artifact.get('loan_id', 'N/A'),
+                        "borrower_name": artifact.get('borrower_name', 'N/A'),
+                        "created_at": artifact.get('created_at', 'N/A'),
+                        "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
+                        "payload_sha256": artifact.get('payload_sha256', request.hash)
+                    },
+                    verification_details={
+                        "hash_match": True,
+                        "blockchain_verified": False,
+                        "last_verified": "N/A",
+                        "tamper_detected": False
+                    }
+                ).dict()
+            )
+            
+    except Exception as e:
+        logger.error(f"Error verifying document by hash: {str(e)}")
+        return create_error_response(
+            code="VERIFICATION_ERROR",
+            message=f"Failed to verify document: {str(e)}"
+        )
+
+
+@app.post("/api/verify-by-document", response_model=StandardResponse)
+@with_structured_logging("/api/verify-by-document", "POST")
+async def verify_by_document(
+    request: VerifyByDocumentRequest,
+    services: dict = Depends(get_services)
+):
+    """
+    Verify document by document information.
+    
+    Searches for documents by ID, loan ID, or other identifying information.
+    """
+    try:
+        # Search for artifacts by various criteria
+        artifacts = []
+        
+        # Try searching by artifact ID first
+        try:
+            artifact_obj = services["db"].get_artifact_by_id(request.document_info)
+            if artifact_obj:
+                borrower_info = artifact_obj.borrower_info or {}
+                artifacts.append({
+                    'id': artifact_obj.id,
+                    'loan_id': artifact_obj.loan_id,
+                    'borrower_name': borrower_info.get('full_name', 'N/A'),
+                    'created_at': artifact_obj.created_at.isoformat() if artifact_obj.created_at else None,
+                    'walacor_tx_id': artifact_obj.walacor_tx_id,
+                    'payload_sha256': artifact_obj.payload_sha256
+                })
+        except:
+            pass
+        
+        # If no direct ID match, search by loan ID or other fields
+        if not artifacts:
+            all_artifacts = services["db"].get_all_artifacts()  # Get all artifacts for search
+            for artifact in all_artifacts:
+                borrower_info = artifact.borrower_info or {}
+                borrower_name = borrower_info.get('full_name', '')
+                if (request.document_info.lower() in (artifact.loan_id or '').lower() or
+                    request.document_info.lower() in borrower_name.lower() or
+                    request.document_info.lower() in artifact.id.lower()):
+                    artifacts.append({
+                        'id': artifact.id,
+                        'loan_id': artifact.loan_id,
+                        'borrower_name': borrower_name,
+                        'created_at': artifact.created_at.isoformat() if artifact.created_at else None,
+                        'walacor_tx_id': artifact.walacor_tx_id,
+                        'payload_sha256': artifact.payload_sha256
+                    })
+        
+        if not artifacts:
+            return create_success_response(
+                data=VerificationResult(
+                    status="not_found",
+                    message="No document found matching the provided information."
+                ).dict()
+            )
+        
+        # Get the first matching artifact
+        artifact = artifacts[0]
+        
+        # Check if document is properly sealed
+        if not artifact.get('walacor_tx_id'):
+            return create_success_response(
+                data=VerificationResult(
+                    status="error",
+                    message="Document found but not properly sealed. Missing blockchain transaction."
+                ).dict()
+            )
+        
+        # Verify with Walacor service
+        try:
+            verification_result = services["verification_portal"].verify_document(
+                document_id=artifact['id'],
+                document_hash=artifact.get('payload_sha256', '')
+            )
+            
+            if verification_result.get('is_valid', False):
+                return create_success_response(
+                    data=VerificationResult(
+                        status="sealed",
+                        message="Document is properly sealed and verified on the blockchain.",
+                        document={
+                            "id": artifact['id'],
+                            "loan_id": artifact.get('loan_id', 'N/A'),
+                            "borrower_name": artifact.get('borrower_name', 'N/A'),
+                            "created_at": artifact.get('created_at', 'N/A'),
+                            "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
+                            "payload_sha256": artifact.get('payload_sha256', 'N/A')
+                        },
+                        verification_details={
+                            "hash_match": True,
+                            "blockchain_verified": True,
+                            "last_verified": verification_result.get('timestamp', 'N/A'),
+                            "tamper_detected": False
+                        }
+                    ).dict()
+                )
+            else:
+                return create_success_response(
+                    data=VerificationResult(
+                        status="tampered",
+                        message="Document found but verification failed. Document may have been tampered with.",
+                        document={
+                            "id": artifact['id'],
+                            "loan_id": artifact.get('loan_id', 'N/A'),
+                            "borrower_name": artifact.get('borrower_name', 'N/A'),
+                            "created_at": artifact.get('created_at', 'N/A'),
+                            "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
+                            "payload_sha256": artifact.get('payload_sha256', 'N/A')
+                        },
+                        verification_details={
+                            "hash_match": True,
+                            "blockchain_verified": False,
+                            "last_verified": verification_result.get('timestamp', 'N/A'),
+                            "tamper_detected": True
+                        }
+                    ).dict()
+                )
+        except Exception as e:
+            # If Walacor verification fails, still return document info but mark as unverified
+            return create_success_response(
+                data=VerificationResult(
+                    status="sealed",
+                    message="Document found and sealed, but blockchain verification is currently unavailable.",
+                    document={
+                        "id": artifact['id'],
+                        "loan_id": artifact.get('loan_id', 'N/A'),
+                        "borrower_name": artifact.get('borrower_name', 'N/A'),
+                        "created_at": artifact.get('created_at', 'N/A'),
+                        "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
+                        "payload_sha256": artifact.get('payload_sha256', 'N/A')
+                    },
+                    verification_details={
+                        "hash_match": True,
+                        "blockchain_verified": False,
+                        "last_verified": "N/A",
+                        "tamper_detected": False
+                    }
+                ).dict()
+            )
+            
+    except Exception as e:
+        logger.error(f"Error verifying document by info: {str(e)}")
+        return create_error_response(
+            code="VERIFICATION_ERROR",
+            message=f"Failed to verify document: {str(e)}"
+        )
+
+
+# =============================================================================
+# DOCUMENT SIGNING ENDPOINTS
+# =============================================================================
+
+from src.document_signing_service import DocumentSigningService, Signer, SigningField, SigningProvider
+
+# Initialize signing service
+signing_service = DocumentSigningService()
+
+# Pydantic models for signing
+class SignerRequest(BaseModel):
+    """Request model for signer information."""
+    email: str = Field(..., description="Signer email address")
+    name: str = Field(..., description="Signer full name")
+    role: str = Field(default="signer", description="Signer role")
+    order: int = Field(default=1, description="Signing order")
+    phone_number: Optional[str] = Field(None, description="Signer phone number")
+    access_code: Optional[str] = Field(None, description="Access code for signing")
+
+class SigningFieldRequest(BaseModel):
+    """Request model for signing field configuration."""
+    field_type: str = Field(..., description="Field type (signature, initial, date, text, checkbox)")
+    page_number: int = Field(..., description="Page number for the field")
+    x_position: float = Field(..., description="X position of the field")
+    y_position: float = Field(..., description="Y position of the field")
+    width: float = Field(..., description="Width of the field")
+    height: float = Field(..., description="Height of the field")
+    recipient_id: str = Field(..., description="Recipient ID for the field")
+    required: bool = Field(default=True, description="Whether the field is required")
+    tab_label: Optional[str] = Field(None, description="Tab label for the field")
+    value: Optional[str] = Field(None, description="Default value for the field")
+
+class CreateEnvelopeRequest(BaseModel):
+    """Request model for creating a signing envelope."""
+    document_id: str = Field(..., description="ID of the document to be signed")
+    document_name: str = Field(..., description="Name of the document")
+    signers: List[SignerRequest] = Field(..., description="List of signers")
+    signing_fields: List[SigningFieldRequest] = Field(..., description="List of signing fields")
+    template_type: str = Field(default="loan_application", description="Type of signing template")
+    provider: str = Field(default="docusign", description="Signing provider to use")
+    custom_config: Optional[Dict[str, Any]] = Field(None, description="Custom configuration")
+
+@app.post("/api/signing/create-envelope", response_model=StandardResponse)
+async def create_signing_envelope(
+    request: CreateEnvelopeRequest,
+    services: dict = Depends(get_services)
+):
+    """Create a document signing envelope."""
+    try:
+        # Convert request models to service models
+        signers = [
+            Signer(
+                email=signer.email,
+                name=signer.name,
+                role=signer.role,
+                order=signer.order,
+                phone_number=signer.phone_number,
+                access_code=signer.access_code
+            )
+            for signer in request.signers
+        ]
+        
+        signing_fields = [
+            SigningField(
+                field_type=field.field_type,
+                page_number=field.page_number,
+                x_position=field.x_position,
+                y_position=field.y_position,
+                width=field.width,
+                height=field.height,
+                recipient_id=field.recipient_id,
+                required=field.required,
+                tab_label=field.tab_label,
+                value=field.value
+            )
+            for field in request.signing_fields
+        ]
+        
+        # Convert provider string to enum
+        provider = SigningProvider(request.provider)
+        
+        # Create signing envelope
+        result = await signing_service.create_signing_envelope(
+            document_id=request.document_id,
+            document_name=request.document_name,
+            signers=signers,
+            signing_fields=signing_fields,
+            template_type=request.template_type,
+            provider=provider,
+            custom_config=request.custom_config
+        )
+        
+        logger.info(f"✅ Created signing envelope {result.envelope_id} with provider {provider.value}")
+        
+        return create_success_response({
+            "signing_result": {
+                "success": result.success,
+                "envelope_id": result.envelope_id,
+                "signing_url": result.signing_url,
+                "status": result.status.value,
+                "error_message": result.error_message,
+                "processing_time": result.processing_time,
+                "provider_response": result.provider_response
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to create signing envelope: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=create_error_response(
+                code="ENVELOPE_CREATION_FAILED",
+                message="Failed to create signing envelope",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+@app.post("/api/signing/send-envelope", response_model=StandardResponse)
+async def send_signing_envelope(
+    envelope_id: str = Query(..., description="ID of the envelope to send"),
+    provider: str = Query(default="docusign", description="Signing provider"),
+    services: dict = Depends(get_services)
+):
+    """Send a signing envelope to signers."""
+    try:
+        # Convert provider string to enum
+        provider_enum = SigningProvider(provider)
+        
+        # Send signing envelope
+        result = await signing_service.send_signing_envelope(
+            envelope_id=envelope_id,
+            provider=provider_enum
+        )
+        
+        logger.info(f"✅ Sent signing envelope {envelope_id} with provider {provider}")
+        
+        return create_success_response({
+            "signing_result": {
+                "success": result.success,
+                "envelope_id": result.envelope_id,
+                "signing_url": result.signing_url,
+                "status": result.status.value,
+                "error_message": result.error_message,
+                "processing_time": result.processing_time,
+                "provider_response": result.provider_response
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to send signing envelope: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=create_error_response(
+                code="ENVELOPE_SENDING_FAILED",
+                message="Failed to send signing envelope",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+@app.get("/api/signing/providers", response_model=StandardResponse)
+async def get_signing_providers(
+    services: dict = Depends(get_services)
+):
+    """Get available signing providers."""
+    try:
+        providers = signing_service.get_signing_providers()
+        
+        provider_info = {
+            "docusign": {
+                "name": "DocuSign",
+                "description": "Industry-leading electronic signature platform",
+                "features": ["eSignatures", "Workflow automation", "Compliance", "Integration"],
+                "supported_formats": ["PDF", "Word", "Excel", "Images"],
+                "api_version": "v2.1"
+            },
+            "adobe_sign": {
+                "name": "Adobe Sign",
+                "description": "Adobe's electronic signature solution",
+                "features": ["eSignatures", "Document management", "Mobile signing", "Analytics"],
+                "supported_formats": ["PDF", "Word", "Excel", "Images"],
+                "api_version": "v6"
+            },
+            "hello_sign": {
+                "name": "HelloSign",
+                "description": "Dropbox's electronic signature platform",
+                "features": ["eSignatures", "Template management", "Team collaboration", "API"],
+                "supported_formats": ["PDF", "Word", "Excel"],
+                "api_version": "v3"
+            },
+            "internal": {
+                "name": "Internal Signing",
+                "description": "Internal document signing system",
+                "features": ["Custom workflows", "Internal verification", "Audit trails", "Integration"],
+                "supported_formats": ["PDF", "Word", "Excel", "Images"],
+                "api_version": "v1"
+            }
+        }
+        
+        logger.info("✅ Retrieved signing providers")
+        
+        return create_success_response({
+            "signing_providers": providers,
+            "provider_info": provider_info,
+            "total_providers": len(providers)
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get signing providers: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=create_error_response(
+                code="PROVIDERS_RETRIEVAL_FAILED",
+                message="Failed to get signing providers",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+@app.get("/api/signing/templates", response_model=StandardResponse)
+async def get_signing_templates(
+    services: dict = Depends(get_services)
+):
+    """Get available signing templates."""
+    try:
+        templates = signing_service.get_signing_templates()
+        
+        logger.info("✅ Retrieved signing templates")
+        
+        return create_success_response({
+            "signing_templates": templates,
+            "total_templates": len(templates)
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get signing templates: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=create_error_response(
+                code="TEMPLATES_RETRIEVAL_FAILED",
+                message="Failed to get signing templates",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+# =============================================================================
+# AI DOCUMENT PROCESSING ENDPOINTS
+# =============================================================================
+
+from src.enhanced_document_intelligence import EnhancedDocumentIntelligenceService
+
+# Initialize AI service
+ai_service = EnhancedDocumentIntelligenceService()
+
+class AnalyzeDocumentRequest(BaseModel):
+    """Request model for AI document analysis."""
+    filename: str = Field(..., description="Original filename")
+    content_type: str = Field(..., description="MIME content type")
+    file_content: str = Field(..., description="Base64 encoded file content")
+    document_id: Optional[str] = Field(None, description="Optional document ID for tracking")
+
+@app.post("/api/ai/analyze-document-json", response_model=StandardResponse)
+async def analyze_document_json(
+    request: AnalyzeDocumentRequest,
+    services: dict = Depends(get_services)
+):
+    """Analyze a JSON document using AI."""
+    try:
+        import base64
+        
+        # Decode the base64 content
+        file_content = base64.b64decode(request.file_content)
+        
+        # Analyze the document
+        result = await ai_service.analyze_document(
+            file_content=file_content,
+            filename=request.filename,
+            content_type=request.content_type
+        )
+        
+        logger.info(f"✅ Document '{request.filename}' analyzed successfully. Type: {result.document_type}")
+        
+        return create_success_response({
+            "analysis_result": {
+                "document_type": result.document_type,
+                "classification_confidence": result.classification_confidence,
+                "quality_score": result.quality_score,
+                "risk_score": result.risk_score,
+                "is_duplicate": getattr(result, 'is_duplicate', False),
+                "duplicate_match_type": getattr(result, 'duplicate_match_type', 'none'),
+                "extracted_fields": result.extracted_fields,
+                "recommendations": result.recommendations,
+                "processing_time": result.processing_time,
+                "raw_text_content": getattr(result, 'raw_text_content', None),
+                "error": getattr(result, 'error', None)
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to analyze document '{request.filename}': {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=create_error_response(
+                code="DOCUMENT_ANALYSIS_FAILED",
+                message="Failed to perform document analysis",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+class BatchAnalyzeRequest(BaseModel):
+    """Request model for batch document analysis."""
+    documents: List[AnalyzeDocumentRequest] = Field(..., description="List of documents to analyze")
+
+@app.post("/api/ai/analyze-batch", response_model=StandardResponse)
+async def analyze_batch_documents(
+    request: BatchAnalyzeRequest,
+    services: dict = Depends(get_services)
+):
+    """Analyze multiple documents in batch."""
+    try:
+        import base64
+        
+        results = []
+        successful_analyses = 0
+        failed_analyses = 0
+        
+        for doc_request in request.documents:
+            try:
+                # Decode the base64 content
+                file_content = base64.b64decode(doc_request.file_content)
+                
+                # Analyze the document
+                result = await ai_service.analyze_document(
+                    file_content=file_content,
+                    filename=doc_request.filename,
+                    content_type=doc_request.content_type
+                )
+                
+                results.append({
+                    "filename": doc_request.filename,
+                    "success": True,
+                    "analysis_result": {
+                        "document_type": result.document_type,
+                        "classification_confidence": result.classification_confidence,
+                        "quality_score": result.quality_score,
+                        "risk_score": result.risk_score,
+                        "is_duplicate": getattr(result, 'is_duplicate', False),
+                        "duplicate_match_type": getattr(result, 'duplicate_match_type', 'none'),
+                        "extracted_fields": result.extracted_fields,
+                        "recommendations": result.recommendations,
+                        "processing_time": result.processing_time,
+                        "error": getattr(result, 'error', None)
+                    }
+                })
+                
+                successful_analyses += 1
+                
+            except Exception as e:
+                results.append({
+                    "filename": doc_request.filename,
+                    "success": False,
+                    "error": str(e)
+                })
+                failed_analyses += 1
+        
+        success_rate = (successful_analyses / len(request.documents)) * 100 if request.documents else 0
+        
+        logger.info(f"✅ Batch analysis completed: {successful_analyses} successful, {failed_analyses} failed")
+        
+        return create_success_response({
+            "batch_analysis_result": {
+                "results": results,
+                "summary": {
+                    "total_documents": len(request.documents),
+                    "successful_analyses": successful_analyses,
+                    "failed_analyses": failed_analyses,
+                    "success_rate": success_rate
+                }
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to perform batch analysis: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=create_error_response(
+                code="BATCH_ANALYSIS_FAILED",
+                message="Failed to perform batch document analysis",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+@app.get("/api/ai/document-types", response_model=StandardResponse)
+async def get_ai_document_types(
+    services: dict = Depends(get_services)
+):
+    """Get supported document types for AI processing."""
+    try:
+        # Get document types from the AI service
+        document_types = list(ai_service.document_classifiers.keys())
+        
+        logger.info("✅ Retrieved AI document types")
+        
+        return create_success_response({
+            "document_types": document_types,
+            "total_types": len(document_types)
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get AI document types: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=create_error_response(
+                code="DOCUMENT_TYPES_RETRIEVAL_FAILED",
+                message="Failed to get AI document types",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+@app.get("/api/ai/ai-capabilities", response_model=StandardResponse)
+async def get_ai_capabilities(
+    services: dict = Depends(get_services)
+):
+    """Get AI service capabilities."""
+    try:
+        capabilities = {
+            "document_classification": True,
+            "content_extraction": True,
+            "quality_assessment": True,
+            "risk_scoring": True,
+            "duplicate_detection": True,
+            "recommendations": True,
+            "batch_processing": True,
+            "supported_formats": ["JSON", "PDF", "Word", "Excel", "Text", "Images"],
+            "document_types": list(ai_service.document_classifiers.keys()),
+            "processing_features": [
+                "Automatic document type detection",
+                "Content extraction and analysis",
+                "Quality scoring and assessment",
+                "Risk analysis and scoring",
+                "Duplicate detection",
+                "Automated recommendations",
+                "Batch processing support"
+            ]
+        }
+        
+        logger.info("✅ Retrieved AI capabilities")
+        
+        return create_success_response({
+            "ai_capabilities": capabilities
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get AI capabilities: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=create_error_response(
+                code="AI_CAPABILITIES_RETRIEVAL_FAILED",
+                message="Failed to get AI capabilities",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+# =============================================================================
+# BULK OPERATIONS ANALYTICS ENDPOINTS
+# =============================================================================
+
+from src.bulk_operations_analytics import BulkOperationsAnalytics
+
+# Initialize bulk operations analytics service
+bulk_operations_analytics = BulkOperationsAnalytics()
+
+@app.get("/api/analytics/bulk-operations", response_model=StandardResponse)
+async def get_bulk_operations_analytics(
+    services: dict = Depends(get_services)
+):
+    """Get comprehensive bulk operations analytics."""
+    try:
+        analytics = await bulk_operations_analytics.get_bulk_operations_analytics()
+        
+        logger.info("✅ Retrieved bulk operations analytics")
+        
+        return create_success_response({
+            "analytics": analytics
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get bulk operations analytics: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=create_error_response(
+                code="BULK_OPERATIONS_ANALYTICS_RETRIEVAL_FAILED",
+                message="Failed to retrieve bulk operations analytics",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+@app.get("/api/analytics/object-validator-usage", response_model=StandardResponse)
+async def get_object_validator_usage_analytics(
+    services: dict = Depends(get_services)
+):
+    """Get ObjectValidator usage analytics."""
+    try:
+        analytics = await bulk_operations_analytics.get_object_validator_analytics()
+        
+        logger.info("✅ Retrieved ObjectValidator usage analytics")
+        
+        return create_success_response({
+            "analytics": analytics
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to get ObjectValidator usage analytics: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=create_error_response(
+                code="OBJECT_VALIDATOR_ANALYTICS_RETRIEVAL_FAILED",
+                message="Failed to retrieve ObjectValidator usage analytics",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+# =============================================================================
+# DOCUMENT UPLOAD ENDPOINTS
+# =============================================================================
+
+class DocumentUploadRequest(BaseModel):
+    """Request model for document upload."""
+    loan_id: str = Field(..., description="Loan ID")
+    borrower_name: str = Field(..., description="Borrower name")
+    loan_amount: float = Field(..., description="Loan amount")
+    interest_rate: float = Field(..., description="Interest rate")
+    loan_term: int = Field(..., description="Loan term in months")
+    property_address: str = Field(..., description="Property address")
+    credit_score: int = Field(..., description="Credit score")
+    annual_income: float = Field(..., description="Annual income")
+    employment_status: str = Field(..., description="Employment status")
+    document_type: str = Field(default="loan_application", description="Document type")
+    submission_date: str = Field(..., description="Submission date")
+
+@app.post("/api/artifacts", response_model=StandardResponse)
+async def upload_document(
+    request: DocumentUploadRequest,
+    services: dict = Depends(get_services)
+):
+    """Upload a document for processing."""
+    try:
+        # Generate artifact ID
+        artifact_id = str(uuid.uuid4())
+        
+        # Create artifact data
+        artifact_data = {
+            "id": artifact_id,
+            "loan_id": request.loan_id,
+            "borrower_name": request.borrower_name,
+            "loan_amount": request.loan_amount,
+            "interest_rate": request.interest_rate,
+            "loan_term": request.loan_term,
+            "property_address": request.property_address,
+            "credit_score": request.credit_score,
+            "annual_income": request.annual_income,
+            "employment_status": request.employment_status,
+            "document_type": request.document_type,
+            "submission_date": request.submission_date,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "status": "uploaded"
+        }
+        
+        logger.info(f"✅ Document uploaded successfully: {artifact_id}")
+        
+        return create_success_response({
+            "artifact_id": artifact_id,
+            "status": "uploaded",
+            "message": "Document uploaded successfully",
+            "artifact_data": artifact_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to upload document: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=create_error_response(
+                code="DOCUMENT_UPLOAD_FAILED",
+                message="Failed to upload document",
+                details={"error": str(e)}
+            ).dict()
+        )
 
 # Main block
 if __name__ == "__main__":

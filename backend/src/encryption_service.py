@@ -68,11 +68,12 @@ class EncryptionService:
             ValueError: If unable to load or generate encryption key
         """
         try:
-            # Load environment variables
+            # Load environment variables from root .env file
             if env_file_path:
                 load_dotenv(env_file_path)
             else:
-                load_dotenv()
+                # Load from root .env file (go up two directories from backend/src/)
+                load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
             
             # Get or generate encryption key
             encryption_key = self._get_or_generate_key()

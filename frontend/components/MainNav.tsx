@@ -4,22 +4,23 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
-import { Menu, X, Home, Upload, FileText, BarChart3, Mic } from 'lucide-react'
+import { Menu, X, Home, Upload, FileText, BarChart3, Mic, Shield } from 'lucide-react'
 
 export default function MainNav() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
+    { name: 'Dashboard', href: '/integrated-dashboard', icon: Home },
     { name: 'Upload', href: '/upload', icon: Upload },
     { name: 'Documents', href: '/documents', icon: FileText },
+    { name: 'Verification', href: '/verification', icon: Shield },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   ]
 
   const isActive = (href: string) => {
-    if (href === '/dashboard') {
-      return pathname === '/dashboard'
+    if (href === '/integrated-dashboard') {
+      return pathname === '/integrated-dashboard'
     }
     return pathname.startsWith(href)
   }
@@ -30,7 +31,7 @@ export default function MainNav() {
         <div className="flex justify-between h-16">
           {/* Logo and Brand */}
           <div className="flex items-center">
-            <Link href="/dashboard" className="flex items-center space-x-2">
+            <Link href="/integrated-dashboard" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">W</span>
               </div>

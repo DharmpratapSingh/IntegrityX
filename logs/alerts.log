@@ -1,0 +1,2 @@
+{"level": "ERROR", "message": "Database operation failed: Not an executable object: 'SELECT 1 as test_value'", "service": "demo", "operation": "database_test", "timestamp": "2025-10-23T02:19:32.837418+00:00", "error_code": null}
+{"level": "ERROR", "message": "Simulated error for demonstration", "service": "demo", "operation": "error_test", "timestamp": "2025-10-23T02:19:32.863301+00:00", "error_code": "DEMO_ERROR"}
