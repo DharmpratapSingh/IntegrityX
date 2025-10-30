@@ -1,0 +1,280 @@
+"""
+Secure Configuration Management for Production Environments
+
+This module provides secure configuration management with proper secret handling,
+environment validation, and security best practices for production deployment.
+"""
+
+import os
+import secrets
+import hashlib
+from typing import Dict, Any, Optional
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import base64
+
+
+class SecureConfigManager:
+    """
+    Secure configuration manager for production environments.
+    
+    Provides secure secret management, environment validation, and
+    security best practices for production deployment.
+    """
+    
+    def __init__(self):
+        self.required_env_vars = [
+            'SECRET_KEY',
+            'ENCRYPTION_KEY',
+            'WALACOR_HOST',
+            'WALACOR_USERNAME',
+            'WALACOR_PASSWORD'
+        ]
+        
+        self.optional_env_vars = [
+            'DATABASE_URL',
+            'LOG_LEVEL',
+            'AUDIT_LOG_ENABLED',
+            'DEMO_MODE'
+        ]
+    
+    def validate_environment(self) -> Dict[str, Any]:
+        """
+        Validate environment configuration for security compliance.
+        
+        Returns:
+            Dict with validation results and security recommendations
+        """
+        validation_result = {
+            'valid': True,
+            'warnings': [],
+            'errors': [],
+            'security_score': 0,
+            'recommendations': []
+        }
+        
+        # Check required environment variables
+        missing_vars = []
+        for var in self.required_env_vars:
+            if not os.getenv(var):
+                missing_vars.append(var)
+                validation_result['errors'].append(f"Missing required environment variable: {var}")
+        
+        if missing_vars:
+            validation_result['valid'] = False
+            validation_result['security_score'] -= 20
+        
+        # Validate secret key strength
+        secret_key = os.getenv('SECRET_KEY')
+        if secret_key:
+            if len(secret_key) < 32:
+                validation_result['warnings'].append("SECRET_KEY should be at least 32 characters")
+                validation_result['security_score'] -= 5
+            elif len(secret_key) >= 64:
+                validation_result['security_score'] += 10
+        
+        # Validate encryption key
+        encryption_key = os.getenv('ENCRYPTION_KEY')
+        if encryption_key:
+            try:
+                # Test if it's a valid Fernet key
+                Fernet(encryption_key.encode())
+                validation_result['security_score'] += 15
+            except Exception:
+                validation_result['errors'].append("ENCRYPTION_KEY is not a valid Fernet key")
+                validation_result['valid'] = False
+                validation_result['security_score'] -= 10
+        
+        # Check for development secrets in production
+        if not os.getenv('DEMO_MODE', 'false').lower() == 'true':
+            dev_secrets = ['test', 'dev', 'development', 'localhost', '123456']
+            for secret in dev_secrets:
+                if secret in (secret_key or '').lower():
+                    validation_result['warnings'].append(f"SECRET_KEY contains development pattern: {secret}")
+                    validation_result['security_score'] -= 5
+                if secret in (encryption_key or '').lower():
+                    validation_result['warnings'].append(f"ENCRYPTION_KEY contains development pattern: {secret}")
+                    validation_result['security_score'] -= 5
+        
+        # Security recommendations
+        if validation_result['security_score'] < 80:
+            validation_result['recommendations'].extend([
+                "Use strong, randomly generated secrets (64+ characters)",
+                "Rotate secrets regularly in production",
+                "Use environment-specific configuration files",
+                "Enable audit logging for security events",
+                "Implement rate limiting for API endpoints"
+            ])
+        
+        return validation_result
+    
+    def generate_secure_secrets(self) -> Dict[str, str]:
+        """
+        Generate cryptographically secure secrets for production.
+        
+        Returns:
+            Dict with generated secrets
+        """
+        return {
+            'SECRET_KEY': secrets.token_urlsafe(64),
+            'ENCRYPTION_KEY': Fernet.generate_key().decode(),
+            'JWT_SECRET': secrets.token_urlsafe(32),
+            'API_KEY': secrets.token_urlsafe(32)
+        }
+    
+    def create_production_env_template(self) -> str:
+        """
+        Create a production environment template with security best practices.
+        
+        Returns:
+            String containing .env template
+        """
+        template = """# Production Environment Configuration
+# Generated by SecureConfigManager
+
+# Security Configuration
+SECRET_KEY={secret_key}
+ENCRYPTION_KEY={encryption_key}
+JWT_SECRET={jwt_secret}
+
+# Database Configuration
+DATABASE_URL=postgresql://user:password@localhost:5432/integrityx_prod
+
+# Walacor Blockchain Configuration
+WALACOR_HOST=13.220.225.175
+WALACOR_USERNAME=Admin
+WALACOR_PASSWORD=Th!51s1T@gMu
+
+# Security Settings
+AUDIT_LOG_ENABLED=true
+LOG_LEVEL=INFO
+DEMO_MODE=false
+
+# API Security
+RATE_LIMIT_ENABLED=true
+MAX_REQUESTS_PER_MINUTE=100
+
+# CORS Configuration
+CORS_ORIGINS=https://yourdomain.com,https://api.yourdomain.com
+
+# File Upload Security
+MAX_FILE_SIZE=52428800  # 50MB
+ALLOWED_FILE_TYPES=pdf,doc,docx,txt,json
+
+# Quantum-Safe Configuration
+QUANTUM_SAFE_ENABLED=true
+HYBRID_SECURITY_MODE=true
+
+# Monitoring
+HEALTH_CHECK_ENABLED=true
+METRICS_ENABLED=true
+""".format(
+            secret_key=secrets.token_urlsafe(64),
+            encryption_key=Fernet.generate_key().decode(),
+            jwt_secret=secrets.token_urlsafe(32)
+        )
+        
+        return template
+    
+    def validate_file_permissions(self) -> Dict[str, Any]:
+        """
+        Validate file permissions for security compliance.
+        
+        Returns:
+            Dict with permission validation results
+        """
+        permission_result = {
+            'secure': True,
+            'issues': [],
+            'recommendations': []
+        }
+        
+        # Check .env file permissions
+        env_file = '.env'
+        if os.path.exists(env_file):
+            file_mode = oct(os.stat(env_file).st_mode)[-3:]
+            if file_mode != '600':
+                permission_result['issues'].append(f".env file permissions are {file_mode}, should be 600")
+                permission_result['secure'] = False
+        
+        # Check database file permissions
+        db_files = ['integrityx.db', 'app.db']
+        for db_file in db_files:
+            if os.path.exists(db_file):
+                file_mode = oct(os.stat(db_file).st_mode)[-3:]
+                if file_mode not in ['600', '644']:
+                    permission_result['issues'].append(f"Database file {db_file} permissions are {file_mode}")
+        
+        # Security recommendations
+        if permission_result['issues']:
+            permission_result['recommendations'].extend([
+                "Set .env file permissions to 600 (owner read/write only)",
+                "Ensure database files have appropriate permissions",
+                "Use environment variables instead of config files for secrets",
+                "Implement file system monitoring for unauthorized changes"
+            ])
+        
+        return permission_result
+
+
+def get_secure_config() -> SecureConfigManager:
+    """
+    Get secure configuration manager instance.
+    
+    Returns:
+        SecureConfigManager instance
+    """
+    return SecureConfigManager()
+
+
+def validate_production_security() -> Dict[str, Any]:
+    """
+    Comprehensive production security validation.
+    
+    Returns:
+        Dict with complete security assessment
+    """
+    config_manager = get_secure_config()
+    
+    # Environment validation
+    env_validation = config_manager.validate_environment()
+    
+    # File permissions validation
+    permission_validation = config_manager.validate_file_permissions()
+    
+    # Overall security assessment
+    security_assessment = {
+        'overall_score': 0,
+        'environment_validation': env_validation,
+        'permission_validation': permission_validation,
+        'production_ready': True,
+        'critical_issues': [],
+        'security_recommendations': []
+    }
+    
+    # Calculate overall score
+    security_assessment['overall_score'] = (
+        env_validation.get('security_score', 0) + 
+        (50 if permission_validation.get('secure', False) else 0)
+    )
+    
+    # Check for critical issues
+    if not env_validation.get('valid', False):
+        security_assessment['critical_issues'].append("Environment configuration invalid")
+        security_assessment['production_ready'] = False
+    
+    if not permission_validation.get('secure', False):
+        security_assessment['critical_issues'].append("File permissions insecure")
+        security_assessment['production_ready'] = False
+    
+    # Compile recommendations
+    security_assessment['security_recommendations'] = (
+        env_validation.get('recommendations', []) +
+        permission_validation.get('recommendations', [])
+    )
+    
+    return security_assessment
+
+
+

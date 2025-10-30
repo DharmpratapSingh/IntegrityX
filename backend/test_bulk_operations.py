@@ -37,11 +37,15 @@ class BulkOperationsTestSuite:
     """Test suite for bulk operations functionality."""
     
     def __init__(self):
-        self.engine = create_engine("sqlite:///:memory:", echo=False)
+        import os
+        test_db_url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+        if not test_db_url or not test_db_url.startswith("postgresql"):
+            raise RuntimeError("TEST_DATABASE_URL (or DATABASE_URL) must be set to a PostgreSQL connection string for tests.")
+        self.engine = create_engine(test_db_url, echo=False)
         Base.metadata.create_all(self.engine)
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
-        self.db = Database(db_url="sqlite:///:memory:")
+        self.db = Database(db_url=test_db_url)
         self.db.session = self.session
         
         # Initialize services
@@ -92,7 +96,7 @@ class BulkOperationsTestSuite:
         self.session.commit()
         print(f"✅ Created {len(self.test_artifacts)} test artifacts")
         
-    def test_1_bulk_directory_verification(self):
+    async def test_1_bulk_directory_verification(self):
         """Test bulk directory verification with ObjectValidator."""
         print("\n🧪 Test 1: Bulk Directory Verification")
         print("-" * 50)
@@ -126,7 +130,7 @@ class BulkOperationsTestSuite:
         print(f"   Files: {result['files_count']}")
         print(f"   Status: {result['verification_status']}")
         
-    def test_2_bulk_delete_with_verification(self):
+    async def test_2_bulk_delete_with_verification(self):
         """Test bulk deletion with verification."""
         print("\n🧪 Test 2: Bulk Delete with Verification")
         print("-" * 50)
@@ -162,7 +166,7 @@ class BulkOperationsTestSuite:
         
         print("✅ All artifacts properly deleted and metadata preserved")
         
-    def test_3_bulk_export_metadata(self):
+    async def test_3_bulk_export_metadata(self):
         """Test bulk metadata export."""
         print("\n🧪 Test 3: Bulk Metadata Export")
         print("-" * 50)
@@ -199,7 +203,7 @@ class BulkOperationsTestSuite:
         
         print("✅ CSV export also successful")
         
-    def test_4_object_validator_fallback(self):
+    async def test_4_object_validator_fallback(self):
         """Test ObjectValidator fallback implementation."""
         print("\n🧪 Test 4: ObjectValidator Fallback")
         print("-" * 50)
@@ -234,7 +238,7 @@ class BulkOperationsTestSuite:
         
         print("✅ Hash verification successful")
         
-    def test_5_error_handling(self):
+    async def test_5_error_handling(self):
         """Test error handling in bulk operations."""
         print("\n🧪 Test 5: Error Handling")
         print("-" * 50)
@@ -274,7 +278,7 @@ class BulkOperationsTestSuite:
         except Exception as e:
             print(f"⚠️ Exception caught: {e}")
         
-    def test_6_performance_metrics(self):
+    async def test_6_performance_metrics(self):
         """Test performance metrics for bulk operations."""
         print("\n🧪 Test 6: Performance Metrics")
         print("-" * 50)
@@ -317,7 +321,7 @@ class BulkOperationsTestSuite:
         print(f"   Artifacts: {len(artifact_ids)}")
         print(f"   Time per artifact: {deletion_time/len(artifact_ids):.3f} seconds")
         
-    def test_7_integration_scenarios(self):
+    async def test_7_integration_scenarios(self):
         """Test integration scenarios."""
         print("\n🧪 Test 7: Integration Scenarios")
         print("-" * 50)
@@ -405,3 +409,6 @@ def run_bulk_operations_tests():
 if __name__ == "__main__":
     success = run_bulk_operations_tests()
     exit(0 if success else 1)
+
+
+

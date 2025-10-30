@@ -1,0 +1,52 @@
+{
+  "loanId": "TEST_COMPREHENSIVE_001",
+  "documentType": "comprehensive_loan_application",
+  "amount": 250000,
+  "rate": 6.5,
+  "term": 360,
+  "borrower": {
+    "full_name": "John Comprehensive Test",
+    "date_of_birth": "1985-03-15",
+    "email": "john.comprehensive@test.com",
+    "phone": "+1-555-0199",
+    "address": {
+      "street": "789 Comprehensive Avenue",
+      "city": "Test City",
+      "state": "CA",
+      "zip_code": "90210",
+      "country": "US"
+    },
+    "ssn_last4": "9876",
+    "employment_status": "employed",
+    "annual_income": 95000,
+    "co_borrower_name": "Jane Comprehensive Test"
+  },
+  "loan_details": {
+    "property_type": "single_family",
+    "property_address": "789 Comprehensive Avenue, Test City, CA 90210",
+    "purchase_price": 300000,
+    "down_payment": 50000,
+    "loan_to_value": 83.33,
+    "debt_to_income": 28.5,
+    "credit_score": 750
+  },
+  "compliance_info": {
+    "genius_2025_compliant": true,
+    "kyc_verified": true,
+    "aml_checked": true,
+    "risk_level": "low"
+  },
+  "additional_notes": "Comprehensive test document for full system validation including KYC compliance, loan details, and security features",
+  "security_level": "maximum",
+  "test_metadata": {
+    "created_for": "system_testing",
+    "test_type": "comprehensive_upload",
+    "expected_features": [
+      "auto_fill_kyc",
+      "security_level_display",
+      "duplicate_detection",
+      "blockchain_sealing",
+      "verification_flow"
+    ]
+  }
+}

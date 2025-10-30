@@ -36,12 +36,11 @@ class WalacorIntegrityService:
         wal (WalacorService): The underlying Walacor service instance
     """
     
-    # Schema ETIds for easy reference
+    # Schema ETIds for easy reference (following documentation only)
     LOAN_DOCUMENTS_ETID = 100001
     DOCUMENT_PROVENANCE_ETID = 100002
     ATTESTATIONS_ETID = 100003
     AUDIT_LOGS_ETID = 100004
-    LOAN_DOCUMENTS_WITH_BORROWER_ETID = 100005
     
     def __init__(self, env_file_path: Optional[str] = None):
         """
@@ -91,6 +90,12 @@ class WalacorIntegrityService:
                 password=password
             )
             
+            # Circuit breaker state
+            self._cb_failures = 0
+            self._cb_threshold = 3
+            self._cb_open_until = 0  # epoch seconds
+            self._cb_cooldown = 30   # seconds
+
             # Test connection by getting schema list
             schemas = self.wal.schema.get_list_with_latest_version()
             print(f"✅ Connected to Walacor successfully (found {len(schemas)} schemas)")
@@ -100,6 +105,12 @@ class WalacorIntegrityService:
             print(f"⚠️ Walacor EC2 unreachable, initializing local blockchain simulation: {e}")
             self.wal = None
             self._init_local_blockchain()
+            # Initialize circuit breaker state as open temporarily
+            self._cb_failures = self._cb_threshold
+            self._cb_open_until = int(datetime.now().timestamp()) + 30
+        
+        # Always initialize local blockchain as fallback
+        self._init_local_blockchain()
     
     def _init_local_blockchain(self):
         """Initialize local blockchain simulation for production mode."""
@@ -195,7 +206,7 @@ class WalacorIntegrityService:
         
         This method implements a hybrid approach where:
         - WALACOR (Blockchain): Only stores document hash, seal info, and transaction ID
-        - LOCAL (SQLite): Stores all metadata, file content, and search indexes
+        - LOCAL (PostgreSQL): Stores all metadata, file content, and search indexes
         
         Args:
             loan_id (str): Unique identifier for the loan (stored locally only)
@@ -234,10 +245,36 @@ class WalacorIntegrityService:
             # Store in Walacor or local blockchain (only essential data)
             if self.wal is not None:
                 # Real Walacor connection - only hash and seal info
-                result = self.wal.data_requests.insert_single_record(
-                    jsonRecord=json.dumps(blockchain_data),
-                    ETId=self.LOAN_DOCUMENTS_ETID
-                )
+                try:
+                    # Simple circuit breaker: if open, skip external call
+                    now = int(datetime.now().timestamp())
+                    if self._cb_failures >= self._cb_threshold and now < self._cb_open_until:
+                        raise RuntimeError("Walacor circuit breaker open")
+
+                    result = self.wal.data_requests.insert_single_record(
+                        jsonRecord=json.dumps(blockchain_data),
+                        ETId=self.LOAN_DOCUMENTS_ETID
+                    )
+                    print(f"✅ Successfully stored document hash in Walacor blockchain")
+                    # success resets breaker
+                    self._cb_failures = 0
+                except Exception as e:
+                    print(f"⚠️ Walacor insertion failed, falling back to local simulation: {e}")
+                    # trip breaker
+                    self._cb_failures += 1
+                    if self._cb_failures >= self._cb_threshold:
+                        self._cb_open_until = int(datetime.now().timestamp()) + self._cb_cooldown
+                    # Fallback to local blockchain simulation
+                    tx_id = self._create_transaction("seal_document_hash", blockchain_data)
+                    block_id = self._add_block([tx_id])
+                    result = {
+                        "tx_id": tx_id,
+                        "block_id": block_id,
+                        "seal_timestamp": blockchain_data["seal_timestamp"],
+                        "integrity_seal": blockchain_data["integrity_seal"],
+                        "mode": "local_fallback",
+                        "walacor_error": str(e)
+                    }
             else:
                 # Local blockchain simulation - only essential data
                 tx_id = self._create_transaction("seal_document_hash", blockchain_data)
@@ -274,7 +311,7 @@ class WalacorIntegrityService:
         Seal a loan document with borrower information in the Walacor blockchain.
         
         This method creates a structured JSON envelope containing loan data, borrower information,
-        and file metadata, then seals the hash of this envelope in the blockchain using ETID 100005.
+        and file metadata, then seals the hash of this envelope in the blockchain using ETID 100001.
         
         Args:
             loan_id (str): Unique identifier for the loan
@@ -328,7 +365,7 @@ class WalacorIntegrityService:
                 "document_hash": document_hash,
                 "loan_id": loan_id,
                 "seal_timestamp": envelope["sealed_timestamp"],
-                "etid": self.LOAN_DOCUMENTS_WITH_BORROWER_ETID,
+                "etid": self.LOAN_DOCUMENTS_ETID,
                 "integrity_seal": f"LOAN_SEAL_{document_hash[:16]}_{int(datetime.now().timestamp())}",
                 "envelope_size": len(envelope_json),
                 "borrower_data_included": True,
@@ -339,16 +376,25 @@ class WalacorIntegrityService:
             if self.wal is not None:
                 # Real Walacor connection
                 try:
+                    # Circuit breaker check
+                    now = int(datetime.now().timestamp())
+                    if self._cb_failures >= self._cb_threshold and now < self._cb_open_until:
+                        raise RuntimeError("Walacor circuit breaker open")
+
                     result = self.wal.data_requests.insert_single_record(
                         jsonRecord=json.dumps(blockchain_data),
-                        ETId=self.LOAN_DOCUMENTS_WITH_BORROWER_ETID
+                        ETId=self.LOAN_DOCUMENTS_ETID
                     )
                     
                     # Extract transaction ID from Walacor response
                     walacor_tx_id = result.get("tx_id", f"TX_{int(datetime.now().timestamp() * 1000)}_{document_hash[:8]}")
+                    self._cb_failures = 0
                     
                 except Exception as walacor_error:
                     print(f"⚠️ Walacor operation failed, falling back to local simulation: {walacor_error}")
+                    self._cb_failures += 1
+                    if self._cb_failures >= self._cb_threshold:
+                        self._cb_open_until = int(datetime.now().timestamp()) + self._cb_cooldown
                     # Fallback to local blockchain simulation
                     tx_id = self._create_transaction("seal_loan_document", blockchain_data)
                     block_id = self._add_block([tx_id])
@@ -356,7 +402,7 @@ class WalacorIntegrityService:
                     result = {
                         "tx_id": tx_id,
                         "block_id": block_id,
-                        "etid": self.LOAN_DOCUMENTS_WITH_BORROWER_ETID,
+                        "etid": self.LOAN_DOCUMENTS_ETID,
                         "status": "success",
                         "timestamp": envelope["sealed_timestamp"],
                         "seal_info": blockchain_data
@@ -369,7 +415,7 @@ class WalacorIntegrityService:
                 result = {
                     "tx_id": tx_id,
                     "block_id": block_id,
-                    "etid": self.LOAN_DOCUMENTS_WITH_BORROWER_ETID,
+                    "etid": self.LOAN_DOCUMENTS_ETID,
                     "status": "success",
                     "timestamp": envelope["sealed_timestamp"],
                     "seal_info": blockchain_data
@@ -379,7 +425,7 @@ class WalacorIntegrityService:
             blockchain_proof = {
                 "transaction_id": walacor_tx_id,
                 "blockchain_network": "walacor" if self.wal is not None else "local_simulation",
-                "etid": self.LOAN_DOCUMENTS_WITH_BORROWER_ETID,
+                "etid": self.LOAN_DOCUMENTS_ETID,
                 "seal_timestamp": envelope["sealed_timestamp"],
                 "integrity_verified": True,
                 "immutability_established": True

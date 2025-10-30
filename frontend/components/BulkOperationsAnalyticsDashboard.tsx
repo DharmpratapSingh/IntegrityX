@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { json as fetchJson, fetchWithTimeout } from '@/utils/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -112,20 +113,12 @@ export default function BulkOperationsAnalyticsDashboard() {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('http://localhost:8000/api/analytics/bulk-operations', {
-        headers: { 'Accept': 'application/json' }
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
+      const res = await fetchJson<any>('http://localhost:8000/api/analytics/bulk-operations', { timeoutMs: 8000 })
       
-      if (data.ok) {
-        setAnalytics(data.data.analytics)
+      if (res.ok && res.data) {
+        setAnalytics(res.data.data.analytics)
       } else {
-        throw new Error(data.message || 'Failed to fetch bulk operations analytics')
+        throw new Error(res.error as any || 'Failed to fetch bulk operations analytics')
       }
 
     } catch (err) {

@@ -1,0 +1,363 @@
+{
+  "directory_tests": [
+    {
+      "test_name": "Directory Structure Test",
+      "total_directories": 2,
+      "existing_directories": 2,
+      "directory_tests": [
+        {
+          "directory": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/loan_documents_2025",
+          "exists": true,
+          "file_count": 4,
+          "total_size": 11681,
+          "directory_hash": "52f98bc4d9e6ec17c3d7c06d622c276028e1f04f12fa14faf5d815a80ad9773e",
+          "files": [
+            {
+              "filename": "bank_statements.json",
+              "path": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/loan_documents_2025/bank_statements.json",
+              "size": 3728,
+              "relative_path": "bank_statements.json"
+            },
+            {
+              "filename": "credit_report.pdf",
+              "path": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/loan_documents_2025/credit_report.pdf",
+              "size": 1765,
+              "relative_path": "credit_report.pdf"
+            },
+            {
+              "filename": "loan_application.json",
+              "path": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/loan_documents_2025/loan_application.json",
+              "size": 4452,
+              "relative_path": "loan_application.json"
+            },
+            {
+              "filename": "employment_verification.txt",
+              "path": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/loan_documents_2025/employment_verification.txt",
+              "size": 1736,
+              "relative_path": "employment_verification.txt"
+            }
+          ]
+        },
+        {
+          "directory": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/borrower_documents_2025",
+          "exists": true,
+          "file_count": 3,
+          "total_size": 12992,
+          "directory_hash": "b1012e82968c4dc2a0565aa7538d56b3de3912a1513fef9ae233ee06d5cfcc13",
+          "files": [
+            {
+              "filename": "borrower_profile.json",
+              "path": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/borrower_documents_2025/borrower_profile.json",
+              "size": 7210,
+              "relative_path": "borrower_profile.json"
+            },
+            {
+              "filename": "income_verification.txt",
+              "path": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/borrower_documents_2025/income_verification.txt",
+              "size": 2470,
+              "relative_path": "income_verification.txt"
+            },
+            {
+              "filename": "tax_returns.json",
+              "path": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/borrower_documents_2025/tax_returns.json",
+              "size": 3312,
+              "relative_path": "tax_returns.json"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "integrity_tests": [
+    {
+      "test_name": "Directory Integrity Checking",
+      "total_tests": 2,
+      "verified_tests": 2,
+      "verification_rate": 100.0,
+      "integrity_tests": [
+        {
+          "directory": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/loan_documents_2025",
+          "initial_hash": "52f98bc4d9e6ec17c3d7c06d622c276028e1f04f12fa14faf5d815a80ad9773e",
+          "second_hash": "52f98bc4d9e6ec17c3d7c06d622c276028e1f04f12fa14faf5d815a80ad9773e",
+          "hash_consistent": true,
+          "file_count": 4,
+          "file_hashes": [
+            {
+              "filename": "bank_statements.json",
+              "hash": "28d39395caf10b3a2873a86fd216a47f76e5328d2231299d3e687e88a32ccb0a",
+              "size": 3728
+            },
+            {
+              "filename": "credit_report.pdf",
+              "hash": "24cdc4b2466706f5a34def7bda720651b20b91da01b23d4dbe3f49c450e05fc9",
+              "size": 1765
+            },
+            {
+              "filename": "loan_application.json",
+              "hash": "8a139a044ded5147bd63058ac6b92cfdc1827aed89e870307dfd5d5f38513086",
+              "size": 4452
+            },
+            {
+              "filename": "employment_verification.txt",
+              "hash": "bfcf873110028fae02f2a8ce2676ce96fc586e59fc7d45741f7cb4deb53840eb",
+              "size": 1736
+            }
+          ],
+          "integrity_status": "verified"
+        },
+        {
+          "directory": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/borrower_documents_2025",
+          "initial_hash": "b1012e82968c4dc2a0565aa7538d56b3de3912a1513fef9ae233ee06d5cfcc13",
+          "second_hash": "b1012e82968c4dc2a0565aa7538d56b3de3912a1513fef9ae233ee06d5cfcc13",
+          "hash_consistent": true,
+          "file_count": 3,
+          "file_hashes": [
+            {
+              "filename": "borrower_profile.json",
+              "hash": "2d1ad9c0f8a907964e2839c84403b1823db1c72e49a6387aff24d4165d6f7c4a",
+              "size": 7210
+            },
+            {
+              "filename": "income_verification.txt",
+              "hash": "dda78d69a19e21a01cfa6ffa80a8fdd12dabcc5e26de057fe91b606a03d0d1d0",
+              "size": 2470
+            },
+            {
+              "filename": "tax_returns.json",
+              "hash": "b176e1900e0bbafeead9f5fea6e9305c6f5ed119b332513f536bc4c6b335fb99",
+              "size": 3312
+            }
+          ],
+          "integrity_status": "verified"
+        }
+      ]
+    }
+  ],
+  "file_processing_tests": [
+    {
+      "test_name": "File Processing Simulation",
+      "total_files": 7,
+      "successful_files": 7,
+      "success_rate": 100.0,
+      "processing_tests": [
+        {
+          "directory": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/loan_documents_2025",
+          "files_processed": 4,
+          "total_processing_time": 0.8139872550964355,
+          "average_processing_time": 0.2034968137741089,
+          "successful_files": 4,
+          "file_details": [
+            {
+              "filename": "bank_statements.json",
+              "file_size": 3728,
+              "file_hash": "28d39395caf10b3a2873a86fd216a47f76e5328d2231299d3e687e88a32ccb0a",
+              "processing_time": 0.4488546848297119,
+              "api_status": 200,
+              "api_success": true,
+              "artifact_id": "80e9f9cc-d478-489f-b2ad-29af5c877634"
+            },
+            {
+              "filename": "credit_report.pdf",
+              "file_size": 1765,
+              "file_hash": "24cdc4b2466706f5a34def7bda720651b20b91da01b23d4dbe3f49c450e05fc9",
+              "processing_time": 0.0743858814239502,
+              "api_status": 200,
+              "api_success": true,
+              "artifact_id": "f8f6ab61-e7f4-427e-916e-a4eb778b3543"
+            },
+            {
+              "filename": "loan_application.json",
+              "file_size": 4452,
+              "file_hash": "8a139a044ded5147bd63058ac6b92cfdc1827aed89e870307dfd5d5f38513086",
+              "processing_time": 0.11085176467895508,
+              "api_status": 200,
+              "api_success": true,
+              "artifact_id": "c6fd8b62-ccea-4847-b60f-f51060c94e3f"
+            },
+            {
+              "filename": "employment_verification.txt",
+              "file_size": 1736,
+              "file_hash": "bfcf873110028fae02f2a8ce2676ce96fc586e59fc7d45741f7cb4deb53840eb",
+              "processing_time": 0.17989492416381836,
+              "api_status": 200,
+              "api_success": true,
+              "artifact_id": "f780487a-a9eb-4063-b1e2-d1b992b9c4cb"
+            }
+          ]
+        },
+        {
+          "directory": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/borrower_documents_2025",
+          "files_processed": 3,
+          "total_processing_time": 0.29619884490966797,
+          "average_processing_time": 0.09873294830322266,
+          "successful_files": 3,
+          "file_details": [
+            {
+              "filename": "borrower_profile.json",
+              "file_size": 7210,
+              "file_hash": "2d1ad9c0f8a907964e2839c84403b1823db1c72e49a6387aff24d4165d6f7c4a",
+              "processing_time": 0.06746602058410645,
+              "api_status": 200,
+              "api_success": true,
+              "artifact_id": "2954b519-817d-42cc-bc3d-fdb07522ec70"
+            },
+            {
+              "filename": "income_verification.txt",
+              "file_size": 2470,
+              "file_hash": "dda78d69a19e21a01cfa6ffa80a8fdd12dabcc5e26de057fe91b606a03d0d1d0",
+              "processing_time": 0.0695648193359375,
+              "api_status": 200,
+              "api_success": true,
+              "artifact_id": "7317cf62-faab-458c-936e-8dd29891d3df"
+            },
+            {
+              "filename": "tax_returns.json",
+              "file_size": 3312,
+              "file_hash": "b176e1900e0bbafeead9f5fea6e9305c6f5ed119b332513f536bc4c6b335fb99",
+              "processing_time": 0.15916800498962402,
+              "api_status": 200,
+              "api_success": true,
+              "artifact_id": "79215b46-571c-4c23-b805-a42bc0694885"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "hash_verification_tests": [
+    {
+      "test_name": "Hash Verification Workflow",
+      "total_verifications": 7,
+      "successful_verifications": 7,
+      "verification_rate": 100.0,
+      "verification_tests": [
+        {
+          "directory": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/loan_documents_2025",
+          "file_verifications": [
+            {
+              "filename": "bank_statements.json",
+              "file_hash": "28d39395caf10b3a2873a86fd216a47f76e5328d2231299d3e687e88a32ccb0a",
+              "verification_status": 200,
+              "verification_success": true,
+              "response_data": {
+                "ok": true,
+                "data": {
+                  "status": "not_found",
+                  "message": "No document found with this hash. The document may not exist or may not be sealed.",
+                  "document": null,
+                  "verification_details": null
+                },
+                "error": null
+              }
+            },
+            {
+              "filename": "credit_report.pdf",
+              "file_hash": "24cdc4b2466706f5a34def7bda720651b20b91da01b23d4dbe3f49c450e05fc9",
+              "verification_status": 200,
+              "verification_success": true,
+              "response_data": {
+                "ok": true,
+                "data": {
+                  "status": "not_found",
+                  "message": "No document found with this hash. The document may not exist or may not be sealed.",
+                  "document": null,
+                  "verification_details": null
+                },
+                "error": null
+              }
+            },
+            {
+              "filename": "loan_application.json",
+              "file_hash": "8a139a044ded5147bd63058ac6b92cfdc1827aed89e870307dfd5d5f38513086",
+              "verification_status": 200,
+              "verification_success": true,
+              "response_data": {
+                "ok": true,
+                "data": {
+                  "status": "not_found",
+                  "message": "No document found with this hash. The document may not exist or may not be sealed.",
+                  "document": null,
+                  "verification_details": null
+                },
+                "error": null
+              }
+            },
+            {
+              "filename": "employment_verification.txt",
+              "file_hash": "bfcf873110028fae02f2a8ce2676ce96fc586e59fc7d45741f7cb4deb53840eb",
+              "verification_status": 200,
+              "verification_success": true,
+              "response_data": {
+                "ok": true,
+                "data": {
+                  "status": "not_found",
+                  "message": "No document found with this hash. The document may not exist or may not be sealed.",
+                  "document": null,
+                  "verification_details": null
+                },
+                "error": null
+              }
+            }
+          ],
+          "total_files": 4,
+          "successful_verifications": 4
+        },
+        {
+          "directory": "/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/test_directories/borrower_documents_2025",
+          "file_verifications": [
+            {
+              "filename": "borrower_profile.json",
+              "file_hash": "2d1ad9c0f8a907964e2839c84403b1823db1c72e49a6387aff24d4165d6f7c4a",
+              "verification_status": 200,
+              "verification_success": true,
+              "response_data": {
+                "ok": true,
+                "data": {
+                  "status": "not_found",
+                  "message": "No document found with this hash. The document may not exist or may not be sealed.",
+                  "document": null,
+                  "verification_details": null
+                },
+                "error": null
+              }
+            },
+            {
+              "filename": "income_verification.txt",
+              "file_hash": "dda78d69a19e21a01cfa6ffa80a8fdd12dabcc5e26de057fe91b606a03d0d1d0",
+              "verification_status": 200,
+              "verification_success": true,
+              "response_data": {
+                "ok": true,
+                "data": {
+                  "status": "not_found",
+                  "message": "No document found with this hash. The document may not exist or may not be sealed.",
+                  "document": null,
+                  "verification_details": null
+                },
+                "error": null
+              }
+            },
+            {
+              "filename": "tax_returns.json",
+              "file_hash": "b176e1900e0bbafeead9f5fea6e9305c6f5ed119b332513f536bc4c6b335fb99",
+              "verification_status": 200,
+              "verification_success": true,
+              "response_data": {
+                "ok": true,
+                "data": {
+                  "status": "not_found",
+                  "message": "No document found with this hash. The document may not exist or may not be sealed.",
+                  "document": null,
+                  "verification_details": null
+                },
+                "error": null
+              }
+            }
+          ],
+          "total_files": 3,
+          "successful_verifications": 3
+        }
+      ]
+    }
+  ]
+}

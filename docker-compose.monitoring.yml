@@ -1,0 +1,148 @@
+# ============================================================================
+# IntegrityX Monitoring Stack Docker Compose
+# Prometheus + Grafana + Exporters for comprehensive monitoring
+# ============================================================================
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # Prometheus
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: integrityx_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+      - integrityx-network
+
+  # ==========================================================================
+  # Grafana
+  # ==========================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: integrityx_grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: http://localhost:3001
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
+  # ==========================================================================
+  # Node Exporter (System Metrics)
+  # ==========================================================================
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: integrityx_node_exporter
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
+  # ==========================================================================
+  # PostgreSQL Exporter (Database Metrics)
+  # ==========================================================================
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: integrityx_postgres_exporter
+    ports:
+      - "9187:9187"
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-integrityx_user}:${POSTGRES_PASSWORD:-changeme123}@postgres:5432/${POSTGRES_DB:-integrityx}?sslmode=disable"
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+      - integrityx-network
+
+  # ==========================================================================
+  # Redis Exporter (Cache Metrics)
+  # ==========================================================================
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: integrityx_redis_exporter
+    ports:
+      - "9121:9121"
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+      - integrityx-network
+
+  # ==========================================================================
+  # Alertmanager (Optional - for alerts)
+  # ==========================================================================
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: integrityx_alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
+# ==========================================================================
+# Networks
+# ==========================================================================
+networks:
+  monitoring-network:
+    driver: bridge
+  integrityx-network:
+    external: true
+
+# ==========================================================================
+# Volumes
+# ==========================================================================
+volumes:
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  alertmanager_data:
+    driver: local
+
+
+

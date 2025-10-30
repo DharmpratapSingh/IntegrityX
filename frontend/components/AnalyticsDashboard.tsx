@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { json as fetchJson } from '@/utils/api'
 
 interface SystemMetrics {
   timestamp: string
@@ -140,24 +141,17 @@ export default function AnalyticsDashboard() {
     setError(null)
 
     try {
-      const [systemResponse, attestationResponse, complianceResponse, performanceResponse] = await Promise.all([
-        fetch('http://localhost:8000/api/analytics/system-metrics'),
-        fetch('http://localhost:8000/api/analytics/attestations'),
-        fetch('http://localhost:8000/api/analytics/compliance'),
-        fetch('http://localhost:8000/api/analytics/performance')
+      const [systemRes, attestationRes, complianceRes, performanceRes] = await Promise.all([
+        fetchJson<any>('http://localhost:8000/api/analytics/system-metrics', { timeoutMs: 8000 }),
+        fetchJson<any>('http://localhost:8000/api/analytics/attestations', { timeoutMs: 8000 }),
+        fetchJson<any>('http://localhost:8000/api/analytics/compliance', { timeoutMs: 8000 }),
+        fetchJson<any>('http://localhost:8000/api/analytics/performance', { timeoutMs: 8000 })
       ])
 
-      const [systemData, attestationData, complianceData, performanceData] = await Promise.all([
-        systemResponse.json(),
-        attestationResponse.json(),
-        complianceResponse.json(),
-        performanceResponse.json()
-      ])
-
-      if (systemData.ok) setSystemMetrics(systemData.data.metrics)
-      if (attestationData.ok) setAttestationAnalytics(attestationData.data.analytics)
-      if (complianceData.ok) setComplianceDashboard(complianceData.data.dashboard)
-      if (performanceData.ok) setPerformanceAnalytics(performanceData.data.analytics)
+      if (systemRes.ok && systemRes.data) setSystemMetrics(systemRes.data.data.metrics)
+      if (attestationRes.ok && attestationRes.data) setAttestationAnalytics(attestationRes.data.data.analytics)
+      if (complianceRes.ok && complianceRes.data) setComplianceDashboard(complianceRes.data.data.dashboard)
+      if (performanceRes.ok && performanceRes.data) setPerformanceAnalytics(performanceRes.data.data.analytics)
 
     } catch (err) {
       setError(`Failed to load analytics data: ${err}`)

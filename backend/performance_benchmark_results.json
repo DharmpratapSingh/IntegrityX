@@ -1,0 +1,192 @@
+{
+  "response_time_benchmarks": [
+    {
+      "test_name": "API Response Time Benchmarks",
+      "total_endpoints": 5,
+      "benchmark_results": [
+        {
+          "endpoint": "/health",
+          "method": "GET",
+          "total_requests": 10,
+          "successful_requests": 10,
+          "success_rate": 100.0,
+          "avg_response_time": 0.03987662792205811,
+          "min_response_time": 0.033392906188964844,
+          "max_response_time": 0.05328726768493652,
+          "std_deviation": 0.006469530867629668,
+          "expected_time": 0.1,
+          "meets_expectation": true
+        },
+        {
+          "endpoint": "/artifacts",
+          "method": "GET",
+          "total_requests": 10,
+          "successful_requests": 10,
+          "success_rate": 100.0,
+          "avg_response_time": 0.006839823722839355,
+          "min_response_time": 0.005273103713989258,
+          "max_response_time": 0.015379905700683594,
+          "std_deviation": 0.003048989001138578,
+          "expected_time": 0.5,
+          "meets_expectation": true
+        },
+        {
+          "endpoint": "/analytics/system-metrics",
+          "method": "GET",
+          "total_requests": 10,
+          "successful_requests": 10,
+          "success_rate": 100.0,
+          "avg_response_time": 0.001548910140991211,
+          "min_response_time": 0.0013699531555175781,
+          "max_response_time": 0.0017971992492675781,
+          "std_deviation": 0.0001477956410746243,
+          "expected_time": 1.0,
+          "meets_expectation": true
+        },
+        {
+          "endpoint": "/analytics/dashboard",
+          "method": "GET",
+          "total_requests": 10,
+          "successful_requests": 10,
+          "success_rate": 100.0,
+          "avg_response_time": 0.0013777971267700194,
+          "min_response_time": 0.0010750293731689453,
+          "max_response_time": 0.0016472339630126953,
+          "std_deviation": 0.0001715564278192393,
+          "expected_time": 1.5,
+          "meets_expectation": true
+        }
+      ],
+      "overall_performance": "Good"
+    }
+  ],
+  "throughput_tests": [
+    {
+      "test_name": "Throughput Under Load",
+      "load_levels_tested": 3,
+      "throughput_results": [
+        {
+          "load_level": "Light Load",
+          "concurrent_users": 5,
+          "requests_per_user": 10,
+          "total_requests": 50,
+          "successful_requests": 50,
+          "success_rate": 100.0,
+          "total_duration": 0.5324182510375977,
+          "requests_per_second": 93.91113077464574,
+          "avg_response_time": 0.052818465232849124,
+          "max_response_time": 0.06271004676818848
+        },
+        {
+          "load_level": "Medium Load",
+          "concurrent_users": 10,
+          "requests_per_user": 20,
+          "total_requests": 200,
+          "successful_requests": 200,
+          "success_rate": 100.0,
+          "total_duration": 1.007127046585083,
+          "requests_per_second": 198.58467775058787,
+          "avg_response_time": 0.0491300368309021,
+          "max_response_time": 0.06579995155334473
+        },
+        {
+          "load_level": "Heavy Load",
+          "concurrent_users": 20,
+          "requests_per_user": 15,
+          "total_requests": 300,
+          "successful_requests": 300,
+          "success_rate": 100.0,
+          "total_duration": 0.87857985496521,
+          "requests_per_second": 341.4601396840352,
+          "avg_response_time": 0.0568605120976766,
+          "max_response_time": 0.0795440673828125
+        }
+      ]
+    }
+  ],
+  "memory_usage_tests": [
+    {
+      "test_name": "Memory Usage Under Load",
+      "initial_memory_available": 4684054528,
+      "final_memory_available": 4746952704,
+      "memory_increase": -62898176,
+      "max_memory_usage_percent": 75.8,
+      "avg_memory_usage_percent": 75.52,
+      "memory_samples": 10,
+      "total_operations": 300,
+      "duration": 20.034236907958984
+    }
+  ],
+  "cpu_usage_tests": [],
+  "database_performance_tests": [
+    {
+      "test_name": "Database Performance Benchmarks",
+      "total_operations": 3,
+      "db_results": [
+        {
+          "operation": "list_artifacts",
+          "description": "List all artifacts",
+          "total_requests": 5,
+          "successful_requests": 5,
+          "success_rate": 100.0,
+          "avg_response_time": 0.010390806198120116,
+          "min_response_time": 0.0073010921478271484,
+          "max_response_time": 0.01731395721435547,
+          "performance_rating": "Excellent"
+        },
+        {
+          "operation": "get_analytics",
+          "description": "Get system metrics",
+          "total_requests": 5,
+          "successful_requests": 5,
+          "success_rate": 100.0,
+          "avg_response_time": 0.0019383907318115234,
+          "min_response_time": 0.0017018318176269531,
+          "max_response_time": 0.0021381378173828125,
+          "performance_rating": "Excellent"
+        },
+        {
+          "operation": "get_dashboard",
+          "description": "Get dashboard data",
+          "total_requests": 5,
+          "successful_requests": 5,
+          "success_rate": 100.0,
+          "avg_response_time": 0.001605844497680664,
+          "min_response_time": 0.0015299320220947266,
+          "max_response_time": 0.001728057861328125,
+          "performance_rating": "Excellent"
+        }
+      ]
+    }
+  ],
+  "walacor_performance_tests": [
+    {
+      "test_name": "Walacor Performance Benchmarks",
+      "total_operations": 2,
+      "walacor_results": [
+        {
+          "operation": "status_check",
+          "description": "Walacor status check",
+          "total_requests": 5,
+          "successful_requests": 0,
+          "success_rate": 0.0,
+          "avg_response_time": 0.0014009952545166015,
+          "min_response_time": 0.0012929439544677734,
+          "max_response_time": 0.0015540122985839844,
+          "blockchain_performance": "Excellent"
+        },
+        {
+          "operation": "schema_management",
+          "description": "Schema management",
+          "total_requests": 5,
+          "successful_requests": 0,
+          "success_rate": 0.0,
+          "avg_response_time": 0.0013684272766113282,
+          "min_response_time": 0.001146078109741211,
+          "max_response_time": 0.0016908645629882812,
+          "blockchain_performance": "Excellent"
+        }
+      ]
+    }
+  ]
+}

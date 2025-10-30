@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import { json as fetchJson, fetchWithTimeout } from '@/utils/api'
+import { Mic, MicOff, HelpCircle, X, CheckCircle, AlertCircle, Loader2, Sparkles } from 'lucide-react'
 
 interface VoiceCommandResponse {
   success: boolean
@@ -29,6 +31,8 @@ export default function VoiceCommandInterface({
   const [isProcessing, setIsProcessing] = useState(false)
   const [availableCommands, setAvailableCommands] = useState<any[]>([])
   const [showHelp, setShowHelp] = useState(false)
+  const [commandResult, setCommandResult] = useState<string | null>(null)
+  const [resultType, setResultType] = useState<'success' | 'error' | null>(null)
   
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -68,6 +72,8 @@ export default function VoiceCommandInterface({
     recognition.onstart = () => {
       setIsListening(true)
       setTranscript('')
+      setCommandResult(null)
+      setResultType(null)
     }
 
     recognition.onresult = (event) => {
@@ -96,17 +102,16 @@ export default function VoiceCommandInterface({
     recognition.onerror = (event) => {
       console.error('Speech recognition error:', event.error)
       setIsListening(false)
+      setResultType('error')
+      setCommandResult(`Speech recognition error: ${event.error}`)
       onError?.(`Speech recognition error: ${event.error}`)
     }
   }
 
   const loadAvailableCommands = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/voice/available-commands')
-      const data = await response.json()
-      if (data.ok) {
-        setAvailableCommands(data.data.commands)
-      }
+      const res = await fetchJson<any>('http://localhost:8000/api/voice/available-commands', { timeoutMs: 8000 })
+      if (res.ok && res.data) setAvailableCommands(res.data.data.commands)
     } catch (error) {
       console.error('Failed to load available commands:', error)
     }
@@ -117,9 +122,11 @@ export default function VoiceCommandInterface({
 
     setIsProcessing(true)
     setLastCommand(command)
+    setCommandResult(null)
+    setResultType(null)
 
     try {
-      const response = await fetch('http://localhost:8000/api/voice/process-command', {
+      const response = await fetchWithTimeout('http://localhost:8000/api/voice/process-command', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +134,9 @@ export default function VoiceCommandInterface({
         body: JSON.stringify({
           command: command,
           user_id: 'frontend_user'
-        })
+        }),
+        timeoutMs: 10000,
+        retries: 1
       })
 
       const data = await response.json()
@@ -136,15 +145,22 @@ export default function VoiceCommandInterface({
         const voiceResponse = data.data.voice_response as VoiceCommandResponse
         onCommandProcessed?.(voiceResponse)
         
+        setResultType('success')
+        setCommandResult(voiceResponse.message)
+        
         // If the command was successful and has an API endpoint, execute it
         if (voiceResponse.success && voiceResponse.api_endpoint) {
           await executeCommand(voiceResponse)
         }
       } else {
+        setResultType('error')
+        setCommandResult(data.error?.message || 'Failed to process voice command')
         onError?.(data.error?.message || 'Failed to process voice command')
       }
     } catch (error) {
       console.error('Error processing voice command:', error)
+      setResultType('error')
+      setCommandResult(`Network error: ${error}`)
       onError?.(`Network error: ${error}`)
     } finally {
       setIsProcessing(false)
@@ -173,17 +189,23 @@ export default function VoiceCommandInterface({
         options.body = JSON.stringify(parameters)
       }
 
-      const response = await fetch(url, options)
+      const response = await fetchWithTimeout(url, { ...options, timeoutMs: 10000, retries: 1 })
       const data = await response.json()
       
       if (data.ok) {
         console.log('Command executed successfully:', data)
+        setResultType('success')
+        setCommandResult('Command executed successfully!')
       } else {
         console.error('Command execution failed:', data)
+        setResultType('error')
+        setCommandResult(`Execution failed: ${data.error?.message || 'Unknown error'}`)
         onError?.(`Command execution failed: ${data.error?.message || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Error executing command:', error)
+      setResultType('error')
+      setCommandResult(`Execution error: ${error}`)
       onError?.(`Command execution error: ${error}`)
     }
   }
@@ -195,6 +217,8 @@ export default function VoiceCommandInterface({
       recognitionRef.current.start()
     } catch (error) {
       console.error('Error starting speech recognition:', error)
+      setResultType('error')
+      setCommandResult('Failed to start voice recognition')
       onError?.('Failed to start voice recognition')
     }
   }
@@ -211,287 +235,211 @@ export default function VoiceCommandInterface({
     }
   }
 
+  // Group commands by category
+  const groupedCommands = availableCommands.reduce((acc, cmd) => {
+    let category = 'General'
+    if (cmd.operation.includes('bulk') || cmd.operation.includes('compliance')) {
+      category = 'Analytics'
+    } else if (cmd.operation.includes('lineage') || cmd.operation.includes('version') || cmd.operation.includes('provenance') || cmd.operation.includes('creator') || cmd.operation.includes('modified')) {
+      category = 'Provenance'
+    } else if (cmd.operation.includes('quantum') || cmd.operation.includes('tamper') || cmd.operation.includes('security') || cmd.operation.includes('fraud')) {
+      category = 'Security'
+    } else if (cmd.operation.includes('attestation') || cmd.operation.includes('disclosure') || cmd.operation.includes('verify')) {
+      category = 'Documents'
+    } else if (cmd.operation.includes('list') || cmd.operation.includes('system')) {
+      category = 'System'
+    }
+    
+    if (!acc[category]) acc[category] = []
+    acc[category].push(cmd)
+    return acc
+  }, {} as Record<string, any[]>)
+
   if (!isSupported) {
     return (
-      <div className="voice-interface">
-        <div className="error-message">
-          <h3>🎤 Voice Commands Not Supported</h3>
-          <p>Your browser doesn't support speech recognition. Please use a modern browser like Chrome, Edge, or Safari.</p>
+      <div className="flex items-center justify-center p-8 bg-gradient-to-br from-red-50 to-red-100 rounded-2xl">
+        <div className="text-center">
+          <MicOff className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Voice Commands Not Supported</h3>
+          <p className="text-gray-600 max-w-md">
+            Your browser doesn't support speech recognition. Please use a modern browser like Chrome, Edge, or Safari.
+          </p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="voice-interface">
-      <div className="voice-header">
-        <h3>🎤 Voice Commands</h3>
-        <button 
-          className="help-button"
-          onClick={() => setShowHelp(!showHelp)}
-        >
-          {showHelp ? 'Hide Help' : 'Show Help'}
-        </button>
-      </div>
-
-      {showHelp && (
-        <div className="voice-help">
-          <h4>Available Commands:</h4>
-          <ul>
-            {availableCommands.map((cmd, index) => (
-              <li key={index}>
-                <strong>{cmd.operation.replace('_', ' ')}:</strong> {cmd.description}
-                <br />
-                <em>Examples: {cmd.examples.join(', ')}</em>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div className="voice-controls">
-        <div className="voice-button-container">
-          <button
-            className={`voice-button ${isListening ? 'listening' : ''}`}
-            onClick={isListening ? stopListening : startListening}
-            disabled={isProcessing}
+    <div className="flex flex-col h-full bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl overflow-hidden">
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold">Voice Commands</h3>
+              <p className="text-sm text-blue-100">Control IntegrityX with your voice</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setShowHelp(!showHelp)}
+            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
           >
-            {isListening ? '🛑 Stop Listening' : '🎤 Start Listening'}
+            {showHelp ? <X className="h-5 w-5" /> : <HelpCircle className="h-5 w-5" />}
           </button>
         </div>
-
-        <div className="voice-status">
-          {isListening && <span className="status listening">🎤 Listening...</span>}
-          {isProcessing && <span className="status processing">⚙️ Processing...</span>}
-          {!isListening && !isProcessing && <span className="status ready">✅ Ready</span>}
-        </div>
       </div>
 
-      <div className="voice-transcript">
-        <label htmlFor="transcript">Transcript:</label>
-        <textarea
-          id="transcript"
-          value={transcript}
-          onChange={(e) => setTranscript(e.target.value)}
-          placeholder="Speak or type your command here..."
-          rows={3}
-        />
-        <button 
-          className="process-button"
-          onClick={handleManualCommand}
-          disabled={!transcript.trim() || isProcessing}
-        >
-          Process Command
-        </button>
-      </div>
-
-      {lastCommand && (
-        <div className="last-command">
-          <h4>Last Command:</h4>
-          <p>"{lastCommand}"</p>
+      {/* Help Section */}
+      {showHelp && (
+        <div className="bg-white border-b border-gray-200 max-h-96 overflow-y-auto">
+          <div className="p-6 space-y-6">
+            {Object.entries(groupedCommands).map(([category, commands]) => (
+              <div key={category}>
+                <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <div className="h-1 w-1 rounded-full bg-blue-500"></div>
+                  {category}
+                </h4>
+                <div className="space-y-3 ml-3">
+                  {commands.map((cmd, index) => (
+                    <div key={index} className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
+                      <p className="text-sm text-gray-700 font-medium mb-1">{cmd.description}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {cmd.examples.slice(0, 2).map((example: string, i: number) => (
+                          <code key={i} className="text-xs bg-white px-2 py-1 rounded border border-gray-200 text-blue-600">
+                            "{example}"
+                          </code>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      <style jsx>{`
-        .voice-interface {
-          background: #f8f9fa;
-          border: 1px solid #dee2e6;
-          border-radius: 8px;
-          padding: 20px;
-          margin: 20px 0;
-        }
+      {/* Main Content */}
+      <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+        {/* Microphone Control */}
+        <div className="flex flex-col items-center justify-center p-8 bg-white rounded-2xl shadow-lg">
+          <button
+            onClick={isListening ? stopListening : startListening}
+            disabled={isProcessing}
+            className={`
+              relative w-24 h-24 rounded-full transition-all duration-300 transform hover:scale-105
+              ${isListening 
+                ? 'bg-gradient-to-br from-red-500 to-pink-500 shadow-lg shadow-red-500/50 animate-pulse' 
+                : isProcessing
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg shadow-blue-500/50 hover:shadow-xl'
+              }
+            `}
+          >
+            {isProcessing ? (
+              <Loader2 className="h-10 w-10 text-white animate-spin mx-auto" />
+            ) : isListening ? (
+              <Mic className="h-10 w-10 text-white mx-auto" />
+            ) : (
+              <MicOff className="h-10 w-10 text-white mx-auto" />
+            )}
+          </button>
+          
+          <div className="mt-6 text-center">
+            {isListening && (
+              <div className="flex items-center gap-2 text-red-600 font-medium">
+                <div className="h-2 w-2 bg-red-600 rounded-full animate-pulse"></div>
+                Listening...
+              </div>
+            )}
+            {isProcessing && (
+              <div className="flex items-center gap-2 text-blue-600 font-medium">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Processing...
+              </div>
+            )}
+            {!isListening && !isProcessing && (
+              <div className="flex items-center gap-2 text-green-600 font-medium">
+                <CheckCircle className="h-4 w-4" />
+                Ready
+              </div>
+            )}
+          </div>
+        </div>
 
-        .voice-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 15px;
-        }
+        {/* Transcript Input */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <label className="block text-sm font-semibold text-gray-700 mb-3">
+            Command Transcript
+          </label>
+          <div className="relative">
+            <textarea
+              value={transcript}
+              onChange={(e) => setTranscript(e.target.value)}
+              placeholder="Speak or type your command here..."
+              rows={3}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-sm"
+            />
+            <button 
+              onClick={handleManualCommand}
+              disabled={!transcript.trim() || isProcessing}
+              className="absolute bottom-3 right-3 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+            >
+              Execute
+            </button>
+          </div>
+        </div>
 
-        .voice-header h3 {
-          margin: 0;
-          color: #495057;
-        }
+        {/* Command Result */}
+        {commandResult && (
+          <div className={`rounded-2xl shadow-lg p-6 ${
+            resultType === 'success' 
+              ? 'bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200' 
+              : 'bg-gradient-to-br from-red-50 to-pink-50 border border-red-200'
+          }`}>
+            <div className="flex items-start gap-3">
+              {resultType === 'success' ? (
+                <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+              ) : (
+                <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-1" />
+              )}
+              <div className="flex-1">
+                <h4 className={`font-semibold mb-1 ${
+                  resultType === 'success' ? 'text-green-900' : 'text-red-900'
+                }`}>
+                  {resultType === 'success' ? 'Success' : 'Error'}
+                </h4>
+                <p className={`text-sm ${
+                  resultType === 'success' ? 'text-green-700' : 'text-red-700'
+                }`}>
+                  {commandResult}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
-        .help-button {
-          background: #6c757d;
-          color: white;
-          border: none;
-          padding: 8px 16px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-        }
+        {/* Last Command */}
+        {lastCommand && (
+          <div className="bg-white rounded-2xl shadow p-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+              <div className="h-1 w-1 rounded-full bg-gray-400"></div>
+              Last Command
+            </div>
+            <p className="text-gray-900 font-mono text-sm">"{lastCommand}"</p>
+          </div>
+        )}
+      </div>
 
-        .help-button:hover {
-          background: #5a6268;
-        }
-
-        .voice-help {
-          background: #e9ecef;
-          border-radius: 4px;
-          padding: 15px;
-          margin-bottom: 15px;
-        }
-
-        .voice-help h4 {
-          margin-top: 0;
-          color: #495057;
-        }
-
-        .voice-help ul {
-          margin: 10px 0;
-          padding-left: 20px;
-        }
-
-        .voice-help li {
-          margin-bottom: 10px;
-          color: #6c757d;
-        }
-
-        .voice-controls {
-          display: flex;
-          align-items: center;
-          gap: 20px;
-          margin-bottom: 15px;
-        }
-
-        .voice-button {
-          background: #007bff;
-          color: white;
-          border: none;
-          padding: 12px 24px;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 16px;
-          font-weight: 500;
-          transition: all 0.2s;
-        }
-
-        .voice-button:hover:not(:disabled) {
-          background: #0056b3;
-        }
-
-        .voice-button:disabled {
-          background: #6c757d;
-          cursor: not-allowed;
-        }
-
-        .voice-button.listening {
-          background: #dc3545;
-          animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-          0% { opacity: 1; }
-          50% { opacity: 0.7; }
-          100% { opacity: 1; }
-        }
-
-        .voice-status {
-          display: flex;
-          align-items: center;
-        }
-
-        .status {
-          padding: 6px 12px;
-          border-radius: 4px;
-          font-size: 14px;
-          font-weight: 500;
-        }
-
-        .status.listening {
-          background: #fff3cd;
-          color: #856404;
-        }
-
-        .status.processing {
-          background: #d1ecf1;
-          color: #0c5460;
-        }
-
-        .status.ready {
-          background: #d4edda;
-          color: #155724;
-        }
-
-        .voice-transcript {
-          margin-bottom: 15px;
-        }
-
-        .voice-transcript label {
-          display: block;
-          margin-bottom: 5px;
-          font-weight: 500;
-          color: #495057;
-        }
-
-        .voice-transcript textarea {
-          width: 100%;
-          padding: 10px;
-          border: 1px solid #ced4da;
-          border-radius: 4px;
-          font-family: inherit;
-          font-size: 14px;
-          resize: vertical;
-        }
-
-        .voice-transcript textarea:focus {
-          outline: none;
-          border-color: #007bff;
-          box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-        }
-
-        .process-button {
-          background: #28a745;
-          color: white;
-          border: none;
-          padding: 8px 16px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-          margin-top: 10px;
-        }
-
-        .process-button:hover:not(:disabled) {
-          background: #218838;
-        }
-
-        .process-button:disabled {
-          background: #6c757d;
-          cursor: not-allowed;
-        }
-
-        .last-command {
-          background: #e9ecef;
-          border-radius: 4px;
-          padding: 10px;
-        }
-
-        .last-command h4 {
-          margin: 0 0 5px 0;
-          color: #495057;
-        }
-
-        .last-command p {
-          margin: 0;
-          color: #6c757d;
-          font-style: italic;
-        }
-
-        .error-message {
-          background: #f8d7da;
-          color: #721c24;
-          border: 1px solid #f5c6cb;
-          border-radius: 4px;
-          padding: 15px;
-          text-align: center;
-        }
-
-        .error-message h3 {
-          margin-top: 0;
-        }
-      `}</style>
+      {/* Footer Hint */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+        <p className="text-sm text-white text-center">
+          💡 <span className="font-semibold">Tip:</span> Click the <HelpCircle className="inline h-4 w-4" /> icon to see all available commands
+        </p>
+      </div>
     </div>
   )
 }

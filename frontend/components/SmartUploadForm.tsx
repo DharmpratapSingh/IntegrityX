@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, FileText, CheckCircle, AlertCircle, Upload, Sparkles } from 'lucide-react'
 import { toast } from '@/components/ui/toast'
+import { fetchWithTimeout } from '@/utils/api'
 
 interface ExtractedData {
   documentType: string
@@ -101,9 +102,11 @@ export default function SmartUploadForm({ onUpload, isUploading }: SmartUploadFo
       const formData = new FormData()
       formData.append('file', file)
       
-      const response = await fetch('http://localhost:8000/api/extract-document-data', {
+      const response = await fetchWithTimeout('http://localhost:8000/api/extract-document-data', {
         method: 'POST',
-        body: formData
+        body: formData,
+        timeoutMs: 20000,
+        retries: 1
       })
       
       if (response.ok) {

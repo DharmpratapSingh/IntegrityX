@@ -839,12 +839,18 @@ export default function UploadPage() {
     // Clear previous errors
     setUploadState(prev => ({ ...prev, error: null, validationErrors: [] }));
     
-    // Check for duplicates if not already allowed
-    if (duplicateCheckResult?.is_duplicate && !allowUploadDespiteDuplicates) {
-      setShowDuplicateWarning(true);
-      toast.error('Duplicates detected! Please review and confirm before proceeding.');
-      return;
-    }
+  // If potential duplicates are detected, block unless explicitly allowed
+  if (duplicateCheckResult?.is_duplicate && !allowUploadDespiteDuplicates) {
+    setShowDuplicateWarning(true);
+    toast.error('Duplicates detected! Please review and confirm before proceeding.');
+    return;
+  }
+
+  // Enforce KYC completeness before allowing upload
+  if (!validateKYC()) {
+    toast.error('KYC information is required. Please complete all required fields.');
+    return;
+  }
     
     // Validate form first
     const validationErrors = validateForm();
@@ -1058,64 +1064,64 @@ export default function UploadPage() {
       errors.push({ field: 'file', message: 'File size must be less than 50MB' });
     }
 
-    // Loan data validation
-    if (!currentMeta.loanId?.trim()) {
-      errors.push({ field: 'loanId', message: 'Loan ID is required' });
-    }
-    if (!currentMeta.loanAmount || currentMeta.loanAmount <= 0) {
-      errors.push({ field: 'loanAmount', message: 'Valid loan amount is required' });
-    }
-    if (!currentMeta.borrowerFullName?.trim()) {
-      errors.push({ field: 'borrowerFullName', message: 'Borrower full name is required' });
-    }
+  // Loan data validation
+  if (!currentMeta.loanId?.trim()) {
+    errors.push({ field: 'loanId', message: 'Loan ID is required' });
+  }
+  if (!currentMeta.loanAmount || currentMeta.loanAmount <= 0) {
+    errors.push({ field: 'loanAmount', message: 'Valid loan amount is required' });
+  }
+  if (!currentMeta.borrowerFullName?.trim()) {
+    errors.push({ field: 'borrowerFullName', message: 'Borrower full name is required' });
+  }
 
-    // Borrower information validation
-    if (!currentMeta.borrowerEmail?.trim()) {
-      errors.push({ field: 'borrowerEmail', message: 'Email address is required' });
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentMeta.borrowerEmail)) {
-      errors.push({ field: 'borrowerEmail', message: 'Please enter a valid email address' });
-    }
+  // Borrower information validation
+  if (!currentMeta.borrowerEmail?.trim()) {
+    errors.push({ field: 'borrowerEmail', message: 'Email address is required' });
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentMeta.borrowerEmail)) {
+    errors.push({ field: 'borrowerEmail', message: 'Please enter a valid email address' });
+  }
 
-    if (!currentMeta.borrowerPhone?.trim()) {
-      errors.push({ field: 'borrowerPhone', message: 'Phone number is required' });
-    }
+  if (!currentMeta.borrowerPhone?.trim()) {
+    errors.push({ field: 'borrowerPhone', message: 'Phone number is required' });
+  }
 
-    if (!currentMeta.borrowerDateOfBirth?.trim()) {
-      errors.push({ field: 'borrowerDateOfBirth', message: 'Date of birth is required' });
-      } else {
-      const dob = new Date(currentMeta.borrowerDateOfBirth);
-      const today = new Date();
-      const age = today.getFullYear() - dob.getFullYear();
-      if (age < 18) {
-        errors.push({ field: 'borrowerDateOfBirth', message: 'Borrower must be at least 18 years old' });
-      }
+  if (!currentMeta.borrowerDateOfBirth?.trim()) {
+    errors.push({ field: 'borrowerDateOfBirth', message: 'Date of birth is required' });
+  } else {
+    const dob = new Date(currentMeta.borrowerDateOfBirth);
+    const today = new Date();
+    const age = today.getFullYear() - dob.getFullYear();
+    if (age < 18) {
+      errors.push({ field: 'borrowerDateOfBirth', message: 'Borrower must be at least 18 years old' });
     }
+  }
 
-    if (!currentMeta.borrowerStreetAddress?.trim()) {
-      errors.push({ field: 'borrowerStreetAddress', message: 'Street address is required' });
-    }
+  if (!currentMeta.borrowerStreetAddress?.trim()) {
+    errors.push({ field: 'borrowerStreetAddress', message: 'Street address is required' });
+  }
 
-    if (!currentMeta.borrowerCity?.trim()) {
-      errors.push({ field: 'borrowerCity', message: 'City is required' });
-    }
+  if (!currentMeta.borrowerCity?.trim()) {
+    errors.push({ field: 'borrowerCity', message: 'City is required' });
+  }
 
-    if (!currentMeta.borrowerState?.trim()) {
-      errors.push({ field: 'borrowerState', message: 'State is required' });
-    }
+  if (!currentMeta.borrowerState?.trim()) {
+    errors.push({ field: 'borrowerState', message: 'State is required' });
+  }
 
-    if (!currentMeta.borrowerZipCode?.trim()) {
-      errors.push({ field: 'borrowerZipCode', message: 'ZIP code is required' });
-    }
+  if (!currentMeta.borrowerZipCode?.trim()) {
+    errors.push({ field: 'borrowerZipCode', message: 'ZIP code is required' });
+  }
 
-    if (!currentMeta.borrowerSSNLast4?.trim()) {
-      errors.push({ field: 'borrowerSSNLast4', message: 'SSN last 4 digits are required' });
-    } else if (!/^\d{4}$/.test(currentMeta.borrowerSSNLast4)) {
-      errors.push({ field: 'borrowerSSNLast4', message: 'SSN last 4 digits must be exactly 4 numbers' });
-    }
+  if (!currentMeta.borrowerSSNLast4?.trim()) {
+    errors.push({ field: 'borrowerSSNLast4', message: 'SSN last 4 digits are required' });
+  } else if (!/^\d{4}$/.test(currentMeta.borrowerSSNLast4)) {
+    errors.push({ field: 'borrowerSSNLast4', message: 'SSN last 4 digits must be exactly 4 numbers' });
+  }
 
-    if (!currentMeta.borrowerAnnualIncome || currentMeta.borrowerAnnualIncome <= 0) {
-      errors.push({ field: 'borrowerAnnualIncome', message: 'Valid annual income is required' });
-    }
+  if (!currentMeta.borrowerAnnualIncome || currentMeta.borrowerAnnualIncome <= 0) {
+    errors.push({ field: 'borrowerAnnualIncome', message: 'Valid annual income is required' });
+  }
 
     return errors;
   };
@@ -1701,13 +1707,21 @@ export default function UploadPage() {
       </Dialog>
 
       {/* Main Upload Page */}
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/20">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/20 relative overflow-hidden isolate">
+      {/* Balanced gradient background orbs */}
+      <div className="pointer-events-none absolute -z-10 top-[-220px] left-[-220px] w-[520px] h-[520px] bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full filter blur-3xl opacity-25 animate-blob" />
+      <div className="pointer-events-none absolute -z-10 top-[-200px] right-[-220px] w-[560px] h-[560px] bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-1000" />
+      <div className="pointer-events-none absolute -z-10 bottom-[-240px] left-[-220px] w-[640px] h-[640px] bg-gradient-to-br from-pink-400 to-rose-500 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
+      <div className="pointer-events-none absolute -z-10 bottom-[-220px] right-[-240px] w-[680px] h-[680px] bg-gradient-to-br from-amber-300 to-orange-500 rounded-full filter blur-3xl opacity-15 animate-blob animation-delay-3000" />
+      <div className="pointer-events-none absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-gradient-to-br from-fuchsia-400 to-sky-400 rounded-full filter blur-3xl opacity-10 animate-blob animation-delay-4000" />
+      {/* Soft radial vignette */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.15),rgba(255,255,255,0)_60%)]" />
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-blue-500 to-purple-600 text-white">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10"></div>
         
-        <div className="relative max-w-7xl mx-auto px-6 py-16">
+        <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
           <div className="space-y-6">
             <div className="flex items-center gap-4 mb-4">
               <Link
@@ -1767,7 +1781,7 @@ export default function UploadPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 space-y-8">
         {/* Progress Indicator */}
         <div className="flex items-center gap-4 p-4 bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl">
           <div className="flex items-center gap-2">
@@ -1787,6 +1801,7 @@ export default function UploadPage() {
         </div>
       </div>
 
+      <div className="relative z-10 max-w-7xl mx-auto px-6 pb-16">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-3 space-y-6">
@@ -1798,29 +1813,25 @@ export default function UploadPage() {
               File Upload
             </CardTitle>
             <CardDescription>
-              <div className="space-y-2">
-                <div>
-                  Drag and drop a file or click to select. Maximum file size: 50MB
-                </div>
-                <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div className="space-y-1 text-sm">
-                    <div className="font-medium text-blue-900">💡 Tips & Features:</div>
-                    <ul className="list-disc list-inside space-y-1 text-blue-800">
-                      <li><strong>Single File:</strong> Upload a JSON file with loan data to auto-fill form fields</li>
-                      <li><strong>Bulk Upload:</strong> Select multiple files at once for batch processing</li>
-                      <li><strong>Directory Upload:</strong> Upload entire folders containing loan documents</li>
-                      <li><strong>Smart Validation:</strong> Powered by ObjectValidator - ensures only loan-related files are processed</li>
-                    </ul>
-                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-amber-900">
-                      <strong>⚠️ Important:</strong> Directories will be validated to contain only loan documents (PDF, JSON, DOCX, XLSX, TXT). Non-loan files will be automatically filtered out.
-                    </div>
-                  </div>
-                </div>
-              </div>
+              Drag and drop a file or click to select. Maximum file size: 50MB
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="space-y-1 text-sm">
+                <div className="font-medium text-blue-900">💡 Tips & Features:</div>
+                <ul className="list-disc list-inside space-y-1 text-blue-800">
+                  <li><strong>Single File:</strong> Upload a JSON file with loan data to auto-fill form fields</li>
+                  <li><strong>Bulk Upload:</strong> Select multiple files at once for batch processing</li>
+                  <li><strong>Directory Upload:</strong> Upload entire folders containing loan documents</li>
+                  <li><strong>Smart Validation:</strong> Powered by ObjectValidator - ensures only loan-related files are processed</li>
+                </ul>
+                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-amber-900">
+                  <strong>⚠️ Important:</strong> Directories will be validated to contain only loan documents (PDF, JSON, DOCX, XLSX, TXT). Non-loan files will be automatically filtered out.
+                </div>
+              </div>
+            </div>
             {/* Upload Mode Selection */}
             <div className="space-y-2">
               <Label>Upload Mode</Label>
@@ -1854,6 +1865,7 @@ export default function UploadPage() {
               onDrop={onDrop}
               accept={fileAccept}
               maxFiles={uploadMode === 'single' ? 1 : undefined}
+              directoryMode={uploadMode === 'directory'}
               maxSize={50 * 1024 * 1024} // 50MB
               description={
                 uploadMode === 'single' 
@@ -3385,6 +3397,7 @@ export default function UploadPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
       </div>
     </div>
     </>

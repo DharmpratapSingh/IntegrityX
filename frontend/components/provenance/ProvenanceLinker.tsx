@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, AlertCircle, Loader2, Link, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'react-hot-toast'
+import { fetchWithTimeout } from '@/utils/api'
 
 interface ProvenanceLinkerProps {
   readonly artifactId: string
@@ -38,13 +39,13 @@ async function createProvenanceLink(data: {
   childArtifactId: string
   relation: string
 }): Promise<ProvenanceLink> {
-  const response = await fetch('/api/provenance/link', {
+  const response = await fetchWithTimeout('/api/provenance/link', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(data)
-  })
+  , timeoutMs: 8000, retries: 1 })
   
   if (!response.ok) {
     const errorData = await response.json()

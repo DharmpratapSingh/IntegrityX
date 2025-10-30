@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { GitBranch, ArrowUp, ArrowDown, AlertCircle, RefreshCw, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { json as fetchJson } from '@/utils/api'
 
 interface ProvenanceLink {
   id: number
@@ -45,35 +46,15 @@ const formatDate = (dateString: string): string => {
 }
 
 async function fetchParents(childId: string): Promise<ProvenanceLink[]> {
-  const response = await fetch(`/api/provenance/parents?childId=${encodeURIComponent(childId)}`)
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch parents: ${response.statusText}`)
-  }
-  
-  const apiResponse = await response.json()
-  
-  if (!apiResponse.ok) {
-    throw new Error(apiResponse.error?.message || 'Failed to fetch parents')
-  }
-  
-  return apiResponse.data.parents || []
+  const res = await fetchJson<any>(`/api/provenance/parents?childId=${encodeURIComponent(childId)}`, { timeoutMs: 8000 })
+  if (!res.ok || !res.data) throw new Error((res.error as any)?.message || 'Failed to fetch parents')
+  return res.data.data.parents || []
 }
 
 async function fetchChildren(parentId: string): Promise<ProvenanceLink[]> {
-  const response = await fetch(`/api/provenance/children?parentId=${encodeURIComponent(parentId)}`)
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch children: ${response.statusText}`)
-  }
-  
-  const apiResponse = await response.json()
-  
-  if (!apiResponse.ok) {
-    throw new Error(apiResponse.error?.message || 'Failed to fetch children')
-  }
-  
-  return apiResponse.data.children || []
+  const res = await fetchJson<any>(`/api/provenance/children?parentId=${encodeURIComponent(parentId)}`, { timeoutMs: 8000 })
+  if (!res.ok || !res.data) throw new Error((res.error as any)?.message || 'Failed to fetch children')
+  return res.data.data.children || []
 }
 
 export function LineageGraph({ artifactId, className }: LineageGraphProps) {

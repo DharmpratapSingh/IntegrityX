@@ -1,0 +1,87 @@
+# ============================================================================
+# IntegrityX Backend Dockerfile
+# Multi-stage build for optimized production image
+# ============================================================================
+
+# Stage 1: Builder
+FROM python:3.12-slim as builder
+
+LABEL maintainer="Walacor DevOps <ops@walacor.com>"
+LABEL description="IntegrityX Backend - Financial Document Integrity Platform"
+LABEL version="1.0.0"
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Copy requirements first (for caching)
+COPY config/requirements.txt .
+
+# Install Python dependencies
+RUN pip install --upgrade pip && \
+    pip install --user --no-warn-script-location -r requirements.txt
+
+# ============================================================================
+# Stage 2: Runtime
+FROM python:3.12-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH=/root/.local/bin:$PATH \
+    ENVIRONMENT=production
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN useradd -m -u 1000 integrityx && \
+    mkdir -p /app /app/logs /app/data /app/database && \
+    chown -R integrityx:integrityx /app
+
+# Set working directory
+WORKDIR /app
+
+# Copy Python dependencies from builder
+COPY --from=builder --chown=integrityx:integrityx /root/.local /root/.local
+
+# Copy application code
+COPY --chown=integrityx:integrityx backend/ ./backend/
+# Note: app_streamlit_demo.py is not needed for production (FastAPI only)
+COPY --chown=integrityx:integrityx config/ ./config/
+
+# Create necessary directories with proper permissions
+RUN mkdir -p \
+    logs \
+    data/documents \
+    database \
+    && chown -R integrityx:integrityx /app
+
+# Switch to non-root user
+USER integrityx
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/api/health || exit 1
+
+# Default command (can be overridden)
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+

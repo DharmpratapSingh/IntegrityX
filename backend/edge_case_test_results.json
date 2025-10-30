@@ -1,0 +1,322 @@
+{
+  "edge_cases": [
+    {
+      "test_name": "Extreme Data Sizes",
+      "total_cases": 5,
+      "handled_cases": 5,
+      "details": [
+        {
+          "field": "loan_id",
+          "size": 10000,
+          "response_time": 0.07625579833984375,
+          "status_code": 200,
+          "handled": true,
+          "error_message": "Success"
+        },
+        {
+          "field": "additional_notes",
+          "size": 100000,
+          "response_time": 0.29827308654785156,
+          "status_code": 200,
+          "handled": true,
+          "error_message": "Success"
+        },
+        {
+          "field": "borrower_name",
+          "size": 5000,
+          "response_time": 0.07038474082946777,
+          "status_code": 200,
+          "handled": true,
+          "error_message": "Success"
+        },
+        {
+          "field": "email",
+          "size": 1000,
+          "response_time": 0.06145501136779785,
+          "status_code": 200,
+          "handled": true,
+          "error_message": "Success"
+        },
+        {
+          "field": "address_street",
+          "size": 2000,
+          "response_time": 0.08397531509399414,
+          "status_code": 200,
+          "handled": true,
+          "error_message": "Success"
+        }
+      ]
+    },
+    {
+      "test_name": "Concurrent Operations",
+      "total_operations": 5,
+      "successful_operations": 5,
+      "details": [
+        {
+          "operation_id": 4,
+          "status_code": 200,
+          "success": true,
+          "response_time": 1761254098.9324522
+        },
+        {
+          "operation_id": 2,
+          "status_code": 200,
+          "success": true,
+          "response_time": 1761254099.2054138
+        },
+        {
+          "operation_id": 3,
+          "status_code": 200,
+          "success": true,
+          "response_time": 1761254099.205648
+        },
+        {
+          "operation_id": 1,
+          "status_code": 200,
+          "success": true,
+          "response_time": 1761254099.205796
+        },
+        {
+          "operation_id": 0,
+          "status_code": 200,
+          "success": true,
+          "response_time": 1761254099.205826
+        }
+      ]
+    },
+    {
+      "test_name": "Unicode and Special Characters",
+      "total_tests": 10,
+      "handled_tests": 10,
+      "details": [
+        {
+          "field": "borrower_name",
+          "value": "Jos\u00e9 Mar\u00eda Garc\u00eda-L\u00f3pez...",
+          "status_code": 200,
+          "handled": true
+        },
+        {
+          "field": "borrower_name",
+          "value": "\u674e\u5c0f\u660e...",
+          "status_code": 200,
+          "handled": true
+        },
+        {
+          "field": "borrower_name",
+          "value": "\u0410\u043b\u0435\u043a\u0441\u0430\u043d\u0434\u0440 \u041f\u0435\u0442\u0440\u043e\u0432...",
+          "status_code": 200,
+          "handled": true
+        },
+        {
+          "field": "borrower_name",
+          "value": "\u0645\u062d\u0645\u062f \u0623\u062d\u0645\u062f...",
+          "status_code": 200,
+          "handled": true
+        },
+        {
+          "field": "borrower_name",
+          "value": "Fran\u00e7ois D'Angelo...",
+          "status_code": 200,
+          "handled": true
+        },
+        {
+          "field": "borrower_name",
+          "value": "O'Connor-Smith...",
+          "status_code": 200,
+          "handled": true
+        },
+        {
+          "field": "borrower_name",
+          "value": "Test User \ud83c\udfe0...",
+          "status_code": 200,
+          "handled": true
+        },
+        {
+          "field": "borrower_name",
+          "value": "Test User \n New Line...",
+          "status_code": 200,
+          "handled": true
+        },
+        {
+          "field": "borrower_name",
+          "value": "Test User \t Tab...",
+          "status_code": 200,
+          "handled": true
+        },
+        {
+          "field": "borrower_name",
+          "value": "Test User \" Quotes \"...",
+          "status_code": 200,
+          "handled": true
+        }
+      ]
+    }
+  ],
+  "error_scenarios": [
+    {
+      "test_name": "Malformed JSON",
+      "total_payloads": 8,
+      "handled_payloads": 8,
+      "details": [
+        {
+          "payload": "{\"loan_id\": \"test\", \"loan_amount\": }...",
+          "status_code": 422,
+          "handled": true,
+          "error_message": "{\"detail\":[{\"type\":\"json_invalid\",\"loc\":[\"body\",35],\"msg\":\"JSON decode error\",\"input\":{},\"ctx\":{\"err"
+        },
+        {
+          "payload": "{\"loan_id\": \"test\", \"loan_amount\": 1000,}...",
+          "status_code": 422,
+          "handled": true,
+          "error_message": "{\"detail\":[{\"type\":\"json_invalid\",\"loc\":[\"body\",40],\"msg\":\"JSON decode error\",\"input\":{},\"ctx\":{\"err"
+        },
+        {
+          "payload": "{\"loan_id\": \"test\", \"loan_amount\": 1000...",
+          "status_code": 422,
+          "handled": true,
+          "error_message": "{\"detail\":[{\"type\":\"json_invalid\",\"loc\":[\"body\",39],\"msg\":\"JSON decode error\",\"input\":{},\"ctx\":{\"err"
+        },
+        {
+          "payload": "{\"loan_id\": \"test\", \"loan_amount\": \"invalid\"}...",
+          "status_code": 422,
+          "handled": true,
+          "error_message": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"document_type\"],\"msg\":\"Field required\",\"input\":{\"loan_id"
+        },
+        {
+          "payload": "{\"loan_id\": \"test\", \"loan_amount\": null}...",
+          "status_code": 422,
+          "handled": true,
+          "error_message": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"document_type\"],\"msg\":\"Field required\",\"input\":{\"loan_id"
+        },
+        {
+          "payload": "{\"loan_id\": \"test\", \"loan_amount\": undefined}...",
+          "status_code": 422,
+          "handled": true,
+          "error_message": "{\"detail\":[{\"type\":\"json_invalid\",\"loc\":[\"body\",35],\"msg\":\"JSON decode error\",\"input\":{},\"ctx\":{\"err"
+        },
+        {
+          "payload": "{\"loan_id\": \"test\", \"loan_amount\": [1000]}...",
+          "status_code": 422,
+          "handled": true,
+          "error_message": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"document_type\"],\"msg\":\"Field required\",\"input\":{\"loan_id"
+        },
+        {
+          "payload": "{\"loan_id\": \"test\", \"loan_amount\": {\"value\": 1000}...",
+          "status_code": 422,
+          "handled": true,
+          "error_message": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"document_type\"],\"msg\":\"Field required\",\"input\":{\"loan_id"
+        }
+      ]
+    }
+  ],
+  "boundary_tests": [
+    {
+      "test_name": "Boundary Values",
+      "total_tests": 10,
+      "handled_correctly": 10,
+      "details": [
+        {
+          "field": "loan_amount",
+          "value": 0,
+          "expected": "Should accept or reject",
+          "status_code": 200,
+          "handled_correctly": true
+        },
+        {
+          "field": "loan_amount",
+          "value": -1,
+          "expected": "Should reject",
+          "status_code": 200,
+          "handled_correctly": true
+        },
+        {
+          "field": "loan_amount",
+          "value": 999999999999,
+          "expected": "Should handle",
+          "status_code": 200,
+          "handled_correctly": true
+        },
+        {
+          "field": "loan_amount",
+          "value": 0.01,
+          "expected": "Should accept",
+          "status_code": 200,
+          "handled_correctly": true
+        },
+        {
+          "field": "annual_income",
+          "value": 0,
+          "expected": "Should handle",
+          "status_code": 200,
+          "handled_correctly": true
+        },
+        {
+          "field": "annual_income",
+          "value": -50000,
+          "expected": "Should reject",
+          "status_code": 200,
+          "handled_correctly": true
+        },
+        {
+          "field": "ssn_last4",
+          "value": "0000",
+          "expected": "Should accept",
+          "status_code": 200,
+          "handled_correctly": true
+        },
+        {
+          "field": "ssn_last4",
+          "value": "9999",
+          "expected": "Should accept",
+          "status_code": 200,
+          "handled_correctly": true
+        },
+        {
+          "field": "zip_code",
+          "value": "00000",
+          "expected": "Should handle",
+          "status_code": 200,
+          "handled_correctly": true
+        },
+        {
+          "field": "zip_code",
+          "value": "99999",
+          "expected": "Should handle",
+          "status_code": 200,
+          "handled_correctly": true
+        }
+      ]
+    }
+  ],
+  "resource_exhaustion_tests": [],
+  "network_failure_tests": [
+    {
+      "test_name": "Network Timeout Scenarios",
+      "total_tests": 3,
+      "handled_tests": 3,
+      "details": [
+        {
+          "timeout": 0.001,
+          "description": "Very short timeout",
+          "error": "Timeout occurred",
+          "handled": true
+        },
+        {
+          "timeout": 0.1,
+          "description": "Short timeout",
+          "response_time": 0.008104085922241211,
+          "status_code": 200,
+          "handled": true
+        },
+        {
+          "timeout": 1,
+          "description": "Medium timeout",
+          "response_time": 0.005360841751098633,
+          "status_code": 200,
+          "handled": true
+        }
+      ]
+    }
+  ],
+  "data_corruption_tests": []
+}

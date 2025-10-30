@@ -1156,3 +1156,6 @@ if __name__ == "__main__":
     print(f"Available providers: {service.get_signing_providers()}")
     print(f"Available templates: {list(service.get_signing_templates().keys())}")
     print(f"Verification settings: {service.get_verification_settings()}")
+
+
+

@@ -1,0 +1,149 @@
+{
+  "bank_statements": {
+    "account_holder": "Dr. Jennifer Martinez",
+    "account_number": "****1234",
+    "bank_name": "Wells Fargo Bank",
+    "statement_period": "September 2025",
+    "account_type": "checking",
+    "opening_balance": 42500.00,
+    "closing_balance": 45000.00,
+    "transactions": [
+      {
+        "date": "2025-09-01",
+        "description": "SALARY DEPOSIT - UCSF MEDICAL CENTER",
+        "amount": 23750.00,
+        "type": "deposit",
+        "balance": 66250.00
+      },
+      {
+        "date": "2025-09-02",
+        "description": "AUTO PAY - CHASE CREDIT CARD",
+        "amount": -2500.00,
+        "type": "withdrawal",
+        "balance": 63750.00
+      },
+      {
+        "date": "2025-09-05",
+        "description": "TRANSFER TO SAVINGS",
+        "amount": -5000.00,
+        "type": "withdrawal",
+        "balance": 58750.00
+      },
+      {
+        "date": "2025-09-08",
+        "description": "RENT PAYMENT - PACIFIC HEIGHTS",
+        "amount": -3500.00,
+        "type": "withdrawal",
+        "balance": 55250.00
+      },
+      {
+        "date": "2025-09-10",
+        "description": "UTILITIES - PG&E",
+        "amount": -180.00,
+        "type": "withdrawal",
+        "balance": 55070.00
+      },
+      {
+        "date": "2025-09-12",
+        "description": "INSURANCE - AUTO",
+        "amount": -120.00,
+        "type": "withdrawal",
+        "balance": 54950.00
+      },
+      {
+        "date": "2025-09-15",
+        "description": "STUDENT LOAN PAYMENT",
+        "amount": -800.00,
+        "type": "withdrawal",
+        "balance": 54150.00
+      },
+      {
+        "date": "2025-09-18",
+        "description": "GROCERIES - WHOLE FOODS",
+        "amount": -450.00,
+        "type": "withdrawal",
+        "balance": 53700.00
+      },
+      {
+        "date": "2025-09-20",
+        "description": "GAS STATION",
+        "amount": -85.00,
+        "type": "withdrawal",
+        "balance": 53615.00
+      },
+      {
+        "date": "2025-09-22",
+        "description": "RESTAURANT - MICHELIN STAR",
+        "amount": -320.00,
+        "type": "withdrawal",
+        "balance": 53295.00
+      },
+      {
+        "date": "2025-09-25",
+        "description": "ONLINE SHOPPING - AMAZON",
+        "amount": -150.00,
+        "type": "withdrawal",
+        "balance": 53145.00
+      },
+      {
+        "date": "2025-09-28",
+        "description": "PHARMACY - CVS",
+        "amount": -45.00,
+        "type": "withdrawal",
+        "balance": 53100.00
+      },
+      {
+        "date": "2025-09-30",
+        "description": "INTEREST EARNED",
+        "amount": 12.50,
+        "type": "deposit",
+        "balance": 53112.50
+      }
+    ],
+    "summary": {
+      "total_deposits": 23762.50,
+      "total_withdrawals": 31812.50,
+      "net_change": -8050.00,
+      "average_daily_balance": 51250.00,
+      "interest_earned": 12.50,
+      "fees_charged": 0.00
+    },
+    "account_analysis": {
+      "income_stability": "excellent",
+      "spending_patterns": "consistent",
+      "savings_rate": "high",
+      "debt_management": "excellent",
+      "overall_financial_health": "excellent"
+    }
+  },
+  "savings_account": {
+    "account_holder": "Dr. Jennifer Martinez",
+    "account_number": "****5678",
+    "bank_name": "Wells Fargo Bank",
+    "account_type": "savings",
+    "opening_balance": 120000.00,
+    "closing_balance": 125000.00,
+    "interest_rate": 4.25,
+    "monthly_interest": 443.75,
+    "transactions": [
+      {
+        "date": "2025-09-05",
+        "description": "TRANSFER FROM CHECKING",
+        "amount": 5000.00,
+        "type": "deposit"
+      },
+      {
+        "date": "2025-09-15",
+        "description": "INTEREST EARNED",
+        "amount": 443.75,
+        "type": "deposit"
+      }
+    ]
+  }
+}
+
+
+
+
+
+

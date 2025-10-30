@@ -675,3 +675,6 @@ async def get_ai_capabilities(
                 details={"error": str(e)}
             ).dict()
         )
+
+
+

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { fetchWithTimeout } from '@/utils/api';
 
 // Simple toast replacement
 const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -37,13 +38,15 @@ export default function TestUploadPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:8000/api/ingest-json', {
+      const response = await fetchWithTimeout('http://localhost:8000/api/ingest-json', {
         method: 'POST',
         body: formData,
         headers: {
           'loan_id': 'TEST-LOAN-001',
           'created_by': 'test-user'
-        }
+        },
+        timeoutMs: 15000,
+        retries: 1
       });
 
       const result = await response.json();
@@ -173,7 +176,7 @@ export default function TestUploadPage() {
               <Button 
                 onClick={async () => {
                   try {
-                    const response = await fetch('http://localhost:8000/api/health');
+                    const response = await fetchWithTimeout('http://localhost:8000/api/health', { timeoutMs: 5000 });
                     const data = await response.json();
                     if (response.ok) {
                       showToast('Backend is running!', 'success');

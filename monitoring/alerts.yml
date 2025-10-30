@@ -1,0 +1,230 @@
+# Prometheus Alert Rules for IntegrityX
+#
+# These rules define when to fire alerts based on metrics.
+# Alerts are sent to Alertmanager for notification.
+
+groups:
+  # =============================================================================
+  # Application Health Alerts
+  # =============================================================================
+  - name: application_health
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          rate(integrityx_errors_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: critical
+          component: application
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} errors/sec (threshold: 10)"
+          
+      - alert: HighRequestLatency
+        expr: |
+          histogram_quantile(0.95, 
+            rate(integrityx_http_request_duration_seconds_bucket[5m])
+          ) > 5
+        for: 10m
+        labels:
+          severity: warning
+          component: application
+        annotations:
+          summary: "High API request latency"
+          description: "95th percentile latency is {{ $value }}s (threshold: 5s)"
+      
+      - alert: APIDown
+        expr: |
+          up{job="integrityx-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: application
+        annotations:
+          summary: "IntegrityX API is down"
+          description: "The backend API has been unreachable for 1 minute"
+
+  # =============================================================================
+  # Blockchain Operation Alerts
+  # =============================================================================
+  - name: blockchain_operations
+    interval: 1m
+    rules:
+      - alert: HighBlockchainFailureRate
+        expr: |
+          rate(integrityx_blockchain_operations_total{status="failure"}[10m]) 
+          / 
+          rate(integrityx_blockchain_operations_total[10m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: blockchain
+        annotations:
+          summary: "High blockchain operation failure rate"
+          description: "{{ $value | humanizePercentage }} of blockchain operations are failing"
+      
+      - alert: SlowBlockchainOperations
+        expr: |
+          histogram_quantile(0.95,
+            rate(integrityx_blockchain_operation_duration_seconds_bucket[10m])
+          ) > 60
+        for: 15m
+        labels:
+          severity: warning
+          component: blockchain
+        annotations:
+          summary: "Blockchain operations are slow"
+          description: "95th percentile operation time is {{ $value }}s (threshold: 60s)"
+
+  # =============================================================================
+  # Database Performance Alerts
+  # =============================================================================
+  - name: database_performance
+    interval: 1m
+    rules:
+      - alert: HighDatabaseLatency
+        expr: |
+          histogram_quantile(0.95,
+            rate(integrityx_database_query_duration_seconds_bucket[5m])
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High database query latency"
+          description: "95th percentile query time is {{ $value }}s (threshold: 1s)"
+      
+      - alert: DatabaseConnectionsHigh
+        expr: |
+          integrityx_database_connections_active > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High number of database connections"
+          description: "{{ $value }} active connections (threshold: 80)"
+      
+      - alert: DatabaseDown
+        expr: |
+          up{job="postgres-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "Cannot reach PostgreSQL database"
+
+  # =============================================================================
+  # System Resource Alerts
+  # =============================================================================
+  - name: system_resources
+    interval: 1m
+    rules:
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value | humanize }}% (threshold: 80%)"
+      
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanize }}% (threshold: 85%)"
+      
+      - alert: DiskSpaceLow
+        expr: |
+          (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "Low disk space"
+          description: "Disk usage is {{ $value | humanize }}% (threshold: 85%)"
+      
+      - alert: DiskSpaceCritical
+        expr: |
+          (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 95
+        for: 1m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Critical disk space"
+          description: "Disk usage is {{ $value | humanize }}% (threshold: 95%)"
+
+  # =============================================================================
+  # Business Metrics Alerts
+  # =============================================================================
+  - name: business_metrics
+    interval: 5m
+    rules:
+      - alert: LowDocumentUploadRate
+        expr: |
+          rate(integrityx_documents_uploaded_total[1h]) < 1
+        for: 2h
+        labels:
+          severity: info
+          component: business
+        annotations:
+          summary: "Low document upload rate"
+          description: "Document upload rate is {{ $value }} docs/sec (expected: >1)"
+      
+      - alert: HighTamperedDocumentRate
+        expr: |
+          rate(integrityx_documents_verified_total{status="tampered"}[1h])
+          /
+          rate(integrityx_documents_verified_total[1h]) > 0.05
+        for: 30m
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: "High rate of tampered documents detected"
+          description: "{{ $value | humanizePercentage }} of verified documents show tampering"
+
+  # =============================================================================
+  # Rate Limiting Alerts (Redis)
+  # =============================================================================
+  - name: rate_limiting
+    interval: 1m
+    rules:
+      - alert: RedisDown
+        expr: |
+          up{job="redis-exporter"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Redis is down (rate limiting disabled)"
+          description: "Redis has been unreachable for 2 minutes. Rate limiting will gracefully degrade."
+      
+      - alert: HighRateLimitHitRate
+        expr: |
+          rate(integrityx_http_requests_total{status="429"}[5m]) > 50
+        for: 10m
+        labels:
+          severity: info
+          component: rate_limiting
+        annotations:
+          summary: "High rate limit hit rate"
+          description: "{{ $value }} requests/sec are being rate limited (threshold: 50)"
+
+
+

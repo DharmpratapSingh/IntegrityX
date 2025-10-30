@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { json as fetchJson } from '@/utils/api'
 import { BarChart3, TrendingUp, Shield, FileText, Users, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -24,14 +25,7 @@ interface AnalyticsData {
     low_risk_documents: number
     audit_trail_completeness: number
   }
-  business_intelligence: {
-    monthly_revenue: number
-    revenue_per_document: number
-    profit_margin: number
-    customer_retention_rate: number
-    customer_satisfaction_score: number
-    growth_rate: string
-  }
+  // Business intelligence metrics removed per product decision
 }
 
 export default function AnalyticsPage() {
@@ -51,56 +45,56 @@ export default function AnalyticsPage() {
       setLoading(true)
       console.log('🔍 Starting analytics fetch...')
 
-      const [financialResponse, complianceResponse] = await Promise.all([
-        fetch('http://localhost:8000/api/analytics/financial-documents', {
-          headers: { 'Accept': 'application/json' }
-        }),
-        fetch('http://localhost:8000/api/analytics/compliance-risk', {
-          headers: { 'Accept': 'application/json' }
-        })
+      // Use live endpoints and derive metrics locally
+      const [dailyRes, artifactsRes] = await Promise.all([
+        fetchJson<any>('http://localhost:8000/api/analytics/daily-activity', { timeoutMs: 8000 }),
+        fetchJson<any>('http://localhost:8000/api/artifacts', { timeoutMs: 8000 })
       ])
-      
-      console.log('📊 API responses received:', {
-        financial: financialResponse.status,
-        compliance: complianceResponse.status
-      })
 
-      const [financialData, complianceData] = await Promise.all([
-        financialResponse.json(),
-        complianceResponse.json()
-      ])
-      
-      console.log('📈 Parsed data:', {
-        financial: financialData,
-        compliance: complianceData
-      })
+      const dailyPayload = (dailyRes.data as any)?.data ?? dailyRes.data ?? {}
+      const verifiedToday = dailyPayload?.verified_today || 0
+
+      const artifactsEnvelope = (artifactsRes.data as any)?.data ?? artifactsRes.data ?? {}
+      const artifacts: any[] = artifactsEnvelope?.artifacts || []
+
+      const totalDocs = artifacts.length
+      const sealedDocs = artifacts.filter(a => !!(a.walacor_tx_id || a.blockchain_seal || a.local_metadata?.blockchain_proof?.transaction_id)).length
+      const sealingSuccessRate = totalDocs > 0 ? Math.round((sealedDocs / totalDocs) * 100) : 0
+      const blockchainConfirmationRate = sealingSuccessRate
+
+      let totalValue = 0
+      let countWithAmount = 0
+      for (const a of artifacts) {
+        const amt = a.local_metadata?.comprehensive_document?.loan_amount
+        if (typeof amt === 'number' && !Number.isNaN(amt) && amt > 0) {
+          totalValue += amt
+          countWithAmount += 1
+        }
+      }
+      const avgLoan = countWithAmount > 0 ? Math.round(totalValue / countWithAmount) : 0
+
+      const compliantDocs = sealedDocs
+      const pendingReview = totalDocs - compliantDocs
+      const overallCompliance = totalDocs > 0 ? Math.round((compliantDocs / totalDocs) * 100) : 0
 
       setAnalytics({
         financial_documents: {
-          documents_sealed_today: financialData.data?.analytics?.document_processing?.documents_sealed_today || 0,
-          documents_sealed_this_month: financialData.data?.analytics?.document_processing?.documents_sealed_this_month || 0,
-          total_documents_sealed: financialData.data?.analytics?.document_processing?.total_documents_sealed || 0,
-          total_loan_value_sealed: financialData.data?.analytics?.financial_metrics?.total_loan_value_sealed || 0,
-          average_loan_amount: financialData.data?.analytics?.financial_metrics?.average_loan_amount || 0,
-          sealing_success_rate: financialData.data?.analytics?.document_processing?.sealing_success_rate || 0,
-          blockchain_confirmation_rate: financialData.data?.analytics?.blockchain_activity?.blockchain_confirmation_rate || 0
+          documents_sealed_today: verifiedToday,
+          documents_sealed_this_month: totalDocs, // placeholder: can refine with date filter
+          total_documents_sealed: totalDocs,
+          total_loan_value_sealed: totalValue,
+          average_loan_amount: avgLoan,
+          sealing_success_rate: sealingSuccessRate,
+          blockchain_confirmation_rate: blockchainConfirmationRate
         },
         compliance_risk: {
-          documents_compliant: complianceData.data?.analytics?.compliance_status?.documents_compliant || 0,
-          documents_pending_review: complianceData.data?.analytics?.compliance_status?.documents_pending_review || 0,
-          overall_compliance_rate: complianceData.data?.analytics?.compliance_status?.overall_compliance_rate || 0,
-          high_risk_documents: complianceData.data?.analytics?.risk_assessment?.high_risk_documents || 0,
-          medium_risk_documents: complianceData.data?.analytics?.risk_assessment?.medium_risk_documents || 0,
-          low_risk_documents: complianceData.data?.analytics?.risk_assessment?.low_risk_documents || 0,
-          audit_trail_completeness: complianceData.data?.analytics?.compliance_status?.audit_trail_completeness || 0
-        },
-        business_intelligence: {
-          monthly_revenue: 0,
-          revenue_per_document: 0,
-          profit_margin: 0,
-          customer_retention_rate: 0,
-          customer_satisfaction_score: 0,
-          growth_rate: "0%"
+          documents_compliant: compliantDocs,
+          documents_pending_review: pendingReview,
+          overall_compliance_rate: overallCompliance,
+          high_risk_documents: 0,
+          medium_risk_documents: 0,
+          low_risk_documents: compliantDocs,
+          audit_trail_completeness: overallCompliance
         }
       })
       
@@ -257,17 +251,7 @@ export default function AnalyticsPage() {
                 </div>
               </div>
               
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-cyan-100">Total Value</p>
-                    <p className="text-3xl font-bold">${(analytics?.financial_documents.total_loan_value_sealed || 0).toLocaleString()}</p>
-                  </div>
-                  <div className="p-3 bg-green-500/20 text-white rounded-xl">
-                    <TrendingUp className="h-6 w-6" />
-                  </div>
-                </div>
-              </div>
+              {/* Total Value card removed per product decision */}
               
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
                 <div className="flex items-center justify-between">
@@ -312,17 +296,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Loan Value</p>
-              <p className="text-2xl font-bold text-gray-900">${(analytics?.financial_documents.total_loan_value_sealed || 0).toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
+        {/* Total Loan Value quick stat removed */}
 
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center">
@@ -397,38 +371,7 @@ export default function AnalyticsPage() {
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Financial Metrics</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <BarChart3 className="h-5 w-5 text-blue-600" />
-                      <span className="font-medium">Total Loan Value</span>
-                    </div>
-                    <span className="text-2xl font-bold text-gray-900">
-                      ${(analytics?.financial_documents.total_loan_value_sealed || 0).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Shield className="h-5 w-5 text-green-600" />
-                      <span className="font-medium">Average Loan Amount</span>
-                    </div>
-                    <span className="text-2xl font-bold text-gray-900">
-                      ${(analytics?.financial_documents.average_loan_amount || 0).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Users className="h-5 w-5 text-purple-600" />
-                      <span className="font-medium">Total Documents Sealed</span>
-                    </div>
-                    <span className="text-2xl font-bold text-gray-900">
-                      {analytics?.financial_documents.total_documents_sealed || 0}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              {/* Financial Metrics block removed */}
             </div>
           )}
 

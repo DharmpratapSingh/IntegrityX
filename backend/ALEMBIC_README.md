@@ -14,9 +14,9 @@ Alembic is a database migration tool for SQLAlchemy. It allows you to:
 
 Alembic has been configured with the following features:
 - ✅ Reads database URL from `DATABASE_URL` environment variable
-- ✅ Falls back to `sqlite:///./app.db` if `DATABASE_URL` is not set
+- ✅ Requires `DATABASE_URL` environment variable (PostgreSQL)
 - ✅ Imports models from `src.models` for autogenerate functionality
-- ✅ Configured for SQLite with proper transaction handling
+- ✅ Configured for PostgreSQL with proper transaction handling
 
 ## Quick Start
 
@@ -71,7 +71,7 @@ make history
 | Command | Description |
 |---------|-------------|
 | `make check-db` | Check database connection and show info |
-| `make show-tables` | Show database tables (SQLite only) |
+| `make show-tables` | Show database tables (PostgreSQL) |
 
 ## Workflow Examples
 
@@ -144,10 +144,7 @@ make downgrade
 The system reads the database URL from the `DATABASE_URL` environment variable:
 
 ```bash
-# SQLite (default)
-export DATABASE_URL="sqlite:///./integrityx.db"
-
-# PostgreSQL
+# PostgreSQL (required)
 export DATABASE_URL="postgresql://user:password@localhost:5432/integrityx"
 
 # MySQL
@@ -168,7 +165,7 @@ nano .env
 
 Example `.env` content:
 ```env
-DATABASE_URL=sqlite:///./integrityx.db
+DATABASE_URL=postgresql://user:password@localhost:5432/integrityx
 WALACOR_HOST=13.220.225.175
 WALACOR_USERNAME=Admin
 WALACOR_PASSWORD=Th!51s1T@gMu
@@ -187,7 +184,7 @@ backend/
 ├── Makefile                   # Convenient commands
 ├── src/
 │   └── models.py              # SQLAlchemy models
-└── integrityx.db              # SQLite database (created by migrations)
+└── walacor_integrity          # PostgreSQL database (created by migrations)
 ```
 
 ## Migration Files

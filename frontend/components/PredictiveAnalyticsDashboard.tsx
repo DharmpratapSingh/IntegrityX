@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { json as fetchJson, fetchWithTimeout } from '@/utils/api'
 
 interface RiskPrediction {
   document_id: string
@@ -70,10 +71,9 @@ const PredictiveAnalyticsDashboard: React.FC = () => {
 
   const loadModelStatistics = async () => {
     try {
-      const response = await fetch(`${API_BASE}/predictive-analytics/model-statistics`)
-      const data = await response.json()
-      if (data.ok) {
-        setModelStats(data.data.model_statistics)
+      const res = await fetchJson<any>(`${API_BASE}/predictive-analytics/model-statistics`, { timeoutMs: 8000 })
+      if (res.ok && res.data) {
+        setModelStats(res.data.data.model_statistics)
       }
     } catch (error) {
       console.error('Failed to load model statistics:', error)
@@ -83,7 +83,7 @@ const PredictiveAnalyticsDashboard: React.FC = () => {
   const testRiskPrediction = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE}/predictive-analytics/risk-prediction`, {
+      const response = await fetchWithTimeout(`${API_BASE}/predictive-analytics/risk-prediction`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -97,7 +97,9 @@ const PredictiveAnalyticsDashboard: React.FC = () => {
             provenance_links: [],
             events: []
           }
-        })
+        }),
+        timeoutMs: 10000,
+        retries: 1
       })
       const data = await response.json()
       if (data.ok) {
@@ -113,7 +115,7 @@ const PredictiveAnalyticsDashboard: React.FC = () => {
   const testComplianceForecast = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE}/predictive-analytics/compliance-forecast`, {
+      const response = await fetchWithTimeout(`${API_BASE}/predictive-analytics/compliance-forecast`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -136,7 +138,9 @@ const PredictiveAnalyticsDashboard: React.FC = () => {
               { event_type: 'compliance_check' }
             ]
           }
-        })
+        }),
+        timeoutMs: 10000,
+        retries: 1
       })
       const data = await response.json()
       if (data.ok) {
@@ -152,13 +156,15 @@ const PredictiveAnalyticsDashboard: React.FC = () => {
   const testPerformancePrediction = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE}/predictive-analytics/performance-prediction`, {
+      const response = await fetchWithTimeout(`${API_BASE}/predictive-analytics/performance-prediction`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           metric_name: 'api_response_time',
           historical_data: [120, 115, 125, 110, 118, 130, 105, 112, 108, 115]
-        })
+        }),
+        timeoutMs: 10000,
+        retries: 1
       })
       const data = await response.json()
       if (data.ok) {
@@ -174,7 +180,7 @@ const PredictiveAnalyticsDashboard: React.FC = () => {
   const testTrendAnalysis = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE}/predictive-analytics/trend-analysis`, {
+      const response = await fetchWithTimeout(`${API_BASE}/predictive-analytics/trend-analysis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -188,7 +194,9 @@ const PredictiveAnalyticsDashboard: React.FC = () => {
             { timestamp: '2025-10-06T00:00:00Z', value: 125 },
             { timestamp: '2025-10-07T00:00:00Z', value: 130 }
           ]
-        })
+        }),
+        timeoutMs: 10000,
+        retries: 1
       })
       const data = await response.json()
       if (data.ok) {

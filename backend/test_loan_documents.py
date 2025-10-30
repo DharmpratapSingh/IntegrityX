@@ -32,8 +32,8 @@ class TestLoanDocuments:
     @pytest.fixture(autouse=True)
     def setup_method(self):
         """Set up test database and client for each test."""
-        # Create in-memory SQLite database for testing
-        self.engine = create_engine("sqlite:///:memory:", echo=False)
+        # Create in-memory PostgreSQL database for testing
+        self.engine = create_engine("postgresql://test:test@localhost:5432/test_db", echo=False)
         self.session_local = sessionmaker(autoclose=False, autoflush=False, bind=self.engine)
         
         # Create tables
@@ -112,7 +112,7 @@ class TestLoanDocuments:
             "blockchain_proof": {
                 "transaction_id": "TX_test_123456789",
                 "blockchain_network": "walacor",
-                "etid": 100005,
+                "etid": 100001,
                 "seal_timestamp": datetime.now(timezone.utc).isoformat(),
                 "integrity_verified": True,
                 "immutability_established": True
@@ -145,7 +145,7 @@ class TestLoanDocuments:
             ).first()
             
             assert artifact is not None
-            assert artifact.etid == 100005  # Loan documents with borrower info ETID
+            assert artifact.etid == 100001  # Loan documents ETID (documented)
             assert artifact.walacor_tx_id == "TX_test_123456789"
             assert artifact.borrower_info is not None
             
@@ -222,7 +222,7 @@ class TestLoanDocuments:
             "blockchain_proof": {
                 "transaction_id": "TX_test_encryption",
                 "blockchain_network": "walacor",
-                "etid": 100005,
+                "etid": 100001,
                 "seal_timestamp": datetime.now(timezone.utc).isoformat(),
                 "integrity_verified": True,
                 "immutability_established": True
@@ -274,7 +274,7 @@ class TestLoanDocuments:
             "blockchain_proof": {
                 "transaction_id": "TX_test_audit",
                 "blockchain_network": "walacor",
-                "etid": 100005,
+                "etid": 100001,
                 "seal_timestamp": datetime.now(timezone.utc).isoformat(),
                 "integrity_verified": True,
                 "immutability_established": True
@@ -331,7 +331,7 @@ class TestLoanDocuments:
             "blockchain_proof": {
                 "transaction_id": "TX_test_search",
                 "blockchain_network": "walacor",
-                "etid": 100005,
+                "etid": 100001,
                 "seal_timestamp": datetime.now(timezone.utc).isoformat(),
                 "integrity_verified": True,
                 "immutability_established": True
@@ -388,7 +388,7 @@ class TestLoanDocuments:
             "blockchain_proof": {
                 "transaction_id": "TX_test_walacor",
                 "blockchain_network": "walacor",
-                "etid": 100005,
+                "etid": 100001,
                 "seal_timestamp": datetime.now(timezone.utc).isoformat(),
                 "integrity_verified": True,
                 "immutability_established": True
@@ -436,7 +436,7 @@ class TestLoanDocuments:
             "blockchain_proof": {
                 "transaction_id": "TX_test_verify",
                 "blockchain_network": "walacor",
-                "etid": 100005,
+                "etid": 100001,
                 "seal_timestamp": datetime.now(timezone.utc).isoformat(),
                 "integrity_verified": True,
                 "immutability_established": True
@@ -459,7 +459,7 @@ class TestLoanDocuments:
             
             # Test verification with correct hash
             verify_response = self.client.post("/api/verify", json={
-                "etid": 100005,
+                "etid": 100001,
                 "payloadHash": stored_hash
             })
             assert verify_response.status_code == 200
@@ -469,7 +469,7 @@ class TestLoanDocuments:
             
             # Test verification with incorrect hash (tamper detection)
             verify_response = self.client.post("/api/verify", json={
-                "etid": 100005,
+                "etid": 100001,
                 "payloadHash": "incorrect_hash_123456789"
             })
             assert verify_response.status_code == 200
@@ -520,7 +520,7 @@ class TestLoanDocuments:
             "blockchain_proof": {
                 "transaction_id": "TX_test_minimal",
                 "blockchain_network": "walacor",
-                "etid": 100005,
+                "etid": 100001,
                 "seal_timestamp": datetime.now(timezone.utc).isoformat(),
                 "integrity_verified": True,
                 "immutability_established": True
@@ -601,7 +601,7 @@ class TestLoanDocuments:
             "blockchain_proof": {
                 "transaction_id": "TX_test_audit_trail",
                 "blockchain_network": "walacor",
-                "etid": 100005,
+                "etid": 100001,
                 "seal_timestamp": datetime.now(timezone.utc).isoformat(),
                 "integrity_verified": True,
                 "immutability_established": True
@@ -643,7 +643,7 @@ class TestLoanDocuments:
             "blockchain_proof": {
                 "transaction_id": "TX_test_masking",
                 "blockchain_network": "walacor",
-                "etid": 100005,
+                "etid": 100001,
                 "seal_timestamp": datetime.now(timezone.utc).isoformat(),
                 "integrity_verified": True,
                 "immutability_established": True

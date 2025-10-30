@@ -1,0 +1,149 @@
+{
+  "loan_application": {
+    "application_id": "LOAN_APP_2025_001",
+    "application_date": "2025-10-23",
+    "loan_type": "residential_mortgage",
+    "loan_amount": 750000.00,
+    "loan_purpose": "primary_residence_purchase",
+    "loan_term_years": 30,
+    "interest_rate_type": "fixed",
+    "interest_rate": 6.85,
+    "down_payment": 150000.00,
+    "down_payment_percentage": 20.0,
+    "property_value": 750000.00,
+    "loan_to_value_ratio": 80.0,
+    "monthly_payment": 4912.34,
+    "debt_to_income_ratio": 32.1,
+    "credit_score": 780,
+    "employment_verification": "verified",
+    "income_verification": "verified",
+    "property_verification": "verified",
+    "insurance_required": true,
+    "private_mortgage_insurance": false,
+    "additional_notes": "High-value property in premium location. Borrower has excellent credit history and stable employment.",
+    "created_by": "senior_loan_officer@integrityx.com",
+    "status": "under_review",
+    "priority": "high",
+    "risk_level": "low",
+    "compliance_checks": {
+      "sox_compliance": true,
+      "gdpr_compliance": true,
+      "soc2_compliance": true,
+      "fair_lending_compliance": true,
+      "truth_in_lending_compliance": true
+    }
+  },
+  "borrower": {
+    "full_name": "Dr. Jennifer Martinez",
+    "date_of_birth": "1985-09-12",
+    "ssn": "***-**-4567",
+    "ssn_last4": "4567",
+    "email": "jennifer.martinez@email.com",
+    "phone": "555-234-5678",
+    "marital_status": "single",
+    "dependents": 0,
+    "citizenship_status": "us_citizen",
+    "address": {
+      "street": "456 Oak Ridge Drive",
+      "city": "San Francisco",
+      "state": "CA",
+      "zip_code": "94102",
+      "country": "United States",
+      "years_at_address": 2,
+      "address_type": "rental"
+    },
+    "employment": {
+      "employer_name": "UCSF Medical Center",
+      "job_title": "Chief of Cardiology",
+      "employment_type": "full_time",
+      "employment_status": "employed",
+      "years_employed": 8.5,
+      "annual_income": 285000.00,
+      "monthly_income": 23750.00,
+      "income_verification": "verified",
+      "employment_verification": "verified"
+    },
+    "financial_information": {
+      "assets": {
+        "checking_account": 45000.00,
+        "savings_account": 125000.00,
+        "investment_accounts": 85000.00,
+        "retirement_accounts": 180000.00,
+        "other_assets": 25000.00,
+        "total_assets": 460000.00
+      },
+      "liabilities": {
+        "credit_card_debt": 8500.00,
+        "auto_loan_balance": 0.00,
+        "student_loan_balance": 45000.00,
+        "other_debts": 0.00,
+        "total_liabilities": 53500.00
+      },
+      "net_worth": 406500.00,
+      "monthly_debt_payments": 1200.00,
+      "debt_to_income_ratio": 5.1
+    },
+    "credit_information": {
+      "credit_score": 780,
+      "credit_bureau": "experian",
+      "credit_report_date": "2025-10-20",
+      "credit_history_length": "excellent",
+      "recent_inquiries": 1,
+      "recent_accounts": 0,
+      "payment_history": "excellent",
+      "credit_utilization": 8.5
+    }
+  },
+  "property": {
+    "address": {
+      "street": "789 Pacific Heights Boulevard",
+      "city": "San Francisco",
+      "state": "CA",
+      "zip_code": "94115",
+      "county": "San Francisco County"
+    },
+    "property_type": "condominium",
+    "property_use": "primary_residence",
+    "property_value": 750000.00,
+    "purchase_price": 750000.00,
+    "down_payment": 150000.00,
+    "loan_amount": 600000.00,
+    "property_taxes_annual": 11250.00,
+    "homeowners_insurance_annual": 1800.00,
+    "hoa_fees_monthly": 450.00,
+    "property_features": {
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "square_footage": 1800,
+      "lot_size": "condo",
+      "year_built": 2018,
+      "garage": "1-car assigned",
+      "basement": "none",
+      "heating": "electric",
+      "cooling": "central_air"
+    }
+  },
+  "metadata": {
+    "application_source": "referral",
+    "referral_source": "real_estate_agent",
+    "marketing_campaign": "physician_loan_program",
+    "application_id": "APP-2025-001",
+    "loan_officer": "Maria Rodriguez",
+    "loan_officer_id": "LO-002",
+    "branch": "San Francisco Downtown",
+    "branch_id": "BR-002",
+    "processor": "David Chen",
+    "processor_id": "PR-002",
+    "created_timestamp": "2025-10-23T14:30:00Z",
+    "last_updated": "2025-10-23T16:15:00Z",
+    "version": "1.0",
+    "data_classification": "confidential",
+    "retention_period": "7_years"
+  }
+}
+
+
+
+
+
+

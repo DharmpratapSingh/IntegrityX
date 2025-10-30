@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { json as fetchJson, fetchWithTimeout } from '@/utils/api'
 import Link from 'next/link'
 import { Search, FileText, Eye, Plus, Filter, Calendar, Hash, AlertCircle, RefreshCw, Download, CheckSquare, Square, Shield, Lock, Zap, CheckCircle, TrendingUp } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -60,12 +61,21 @@ export default function DocumentsPage() {
 
   useEffect(() => {
     fetchDocuments()
+    
+    // Force load after 10 seconds maximum (backup timeout)
+    const maxLoadTimeout = setTimeout(() => {
+      setLoading(false)
+    }, 10000)
+    
+    return () => clearTimeout(maxLoadTimeout)
   }, [])
 
   const fetchDocuments = async (page: number = 1) => {
     try {
       setError(null)
       setLoading(true)
+
+      // Use unified fetch with timeout/retries
 
       // Build query parameters
       const params = new URLSearchParams()
@@ -80,26 +90,25 @@ export default function DocumentsPage() {
       params.append('limit', '20')
       params.append('offset', String((page - 1) * 20))
 
-      const response = await fetch(`http://localhost:8000/api/artifacts?${params.toString()}`, {
-        headers: {
-          'Accept': 'application/json',
-        },
-      })
+      const response = await fetchJson<any>(`http://localhost:8000/api/artifacts?${params.toString()}`, { timeoutMs: 8000, retries: 1 })
       
-      if (response.ok) {
-        const data = await response.json()
-        if (data.ok && data.data) {
-          setDocuments(data.data.artifacts || [])
-          setTotalCount(data.data.total_count || 0)
-          setHasMore(data.data.has_more || false)
-        }
-      } else if (response.status === 404) {
+      if (response && response.ok && response.data) {
+        const data = response.data
+        setDocuments(data.data?.artifacts || [])
+        setTotalCount(data.data?.total_count || 0)
+        setHasMore(!!data.data?.has_more)
+      } else if (response && response.status === 404) {
         // No documents yet - this is normal
         setDocuments([])
         setTotalCount(0)
         setHasMore(false)
-      } else {
+      } else if (response) {
         throw new Error(`Failed to fetch documents: ${response.status}`)
+      } else {
+        // Timeout occurred - show empty state
+        setDocuments([])
+        setTotalCount(0)
+        setHasMore(false)
       }
     } catch (error) {
       console.error('Failed to fetch documents:', error)
@@ -129,31 +138,37 @@ export default function DocumentsPage() {
     setVerificationResult(null)
 
     try {
-      const response = await fetch('http://localhost:8000/api/verify-by-document', {
+      // Add timeout to prevent infinite loading
+      const controller = new AbortController()
+      const response = await fetchWithTimeout('http://localhost:8000/api/verify-by-document', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           document_info: documentId
-        })
+        }),
+        timeoutMs: 5000,
+        signal: controller.signal
       })
 
-      const data = await response.json()
-      
-      if (response.ok && data.ok) {
-        setVerificationResult(data.data)
+      if (response) {
+        const data = await response.json()
         
-        // Show verification result in an alert for now
-        const status = data.data.status === 'sealed' ? '✅ VERIFIED' : '❌ TAMPERED'
-        const message = data.data.message
-        const borrowerName = data.data.document?.borrower_name || 'Unknown'
-        const loanId = data.data.document?.loan_id || 'Unknown'
-        const walacorTxId = data.data.document?.walacor_tx_id || 'N/A'
-        
-        alert(`${status}\n\nDocument: ${borrowerName} (${loanId})\nStatus: ${message}\nTransaction ID: ${walacorTxId}`)
-      } else {
-        alert(`❌ Verification Failed\n\nError: ${data.error || 'Unknown error'}`)
+        if (response.ok && data.ok) {
+          setVerificationResult(data.data)
+          
+          // Show verification result in an alert for now
+          const status = data.data.status === 'sealed' ? '✅ VERIFIED' : '❌ TAMPERED'
+          const message = data.data.message
+          const borrowerName = data.data.document?.borrower_name || 'Unknown'
+          const loanId = data.data.document?.loan_id || 'Unknown'
+          const walacorTxId = data.data.document?.walacor_tx_id || 'N/A'
+          
+          alert(`${status}\n\nDocument: ${borrowerName} (${loanId})\nStatus: ${message}\nTransaction ID: ${walacorTxId}`)
+        } else {
+          alert(`❌ Verification Failed\n\nError: ${data.error || 'Unknown error'}`)
+        }
       }
     } catch (error) {
       console.error('Verification error:', error)
@@ -533,11 +548,13 @@ export default function DocumentsPage() {
           ...(deleteReason && { deletion_reason: deleteReason || 'User requested deletion' })
         })
         
-        const response = await fetch(`http://localhost:8000/api/artifacts/${doc.id}?${params.toString()}`, {
+        const response = await fetchWithTimeout(`http://localhost:8000/api/artifacts/${doc.id}?${params.toString()}`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
           },
+          timeoutMs: 8000,
+          retries: 1
         })
         
         if (!response.ok) {

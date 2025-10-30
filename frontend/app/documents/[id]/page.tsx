@@ -7,7 +7,6 @@ import {
   ArrowLeft, 
   Calendar, 
   Shield, 
-  Download, 
   Copy,
   CheckCircle,
   AlertCircle,
@@ -16,12 +15,14 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { toast } from '@/components/ui/toast'
+import { json as fetchJson } from '@/utils/api'
 import { Skeleton } from '@/components/ui/skeleton'
 
 interface Document {
   id: string
   filename: string
-  hash: string
+  hash?: string
+  payload_sha256?: string
   created_at: string
   artifact_type: string
   loan_id?: string
@@ -31,34 +32,27 @@ interface Document {
   local_metadata?: any
 }
 
-interface Attestation {
-  id: string
-  artifactId: string
-  kind: string
-  details: any
-  createdAt: string
-  issuedBy: string
-}
+// Attestations removed as per product decision
 
 interface AuditEvent {
-  id: string
-  artifact_id: string
+  event_id: string
   event_type: string
-  created_at: string
-  created_by: string
-  payload_json?: string
+  timestamp: string
+  user_id?: string
+  ip_address?: string
+  details: Record<string, any>
 }
 
 export default function DocumentDetailPage() {
-  const params = useParams()
-  const documentId = params.id as string
+  const { id: routeId } = useParams() as { id: string }
+  const documentId = routeId
 
   const [document, setDocument] = useState<Document | null>(null)
-  const [attestations, setAttestations] = useState<Attestation[]>([])
+  // Attestations state removed
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  // actionLoading removed (no actions now)
   const [copiedHash, setCopiedHash] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const [borrower, setBorrower] = useState<any>(null)
@@ -77,7 +71,14 @@ export default function DocumentDetailPage() {
     try {
       const date = new Date(dateString)
       if (isNaN(date.getTime())) return 'Invalid Date'
-      return date.toLocaleString()
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
     } catch (error) {
       return 'Invalid Date'
     }
@@ -132,53 +133,31 @@ export default function DocumentDetailPage() {
       setLoading(true)
 
       // Fetch document details
-      const docResponse = await fetch(`http://localhost:8000/api/artifacts/${documentId}`, {
-        headers: { 'Accept': 'application/json' },
-      })
-      
-      if (docResponse.ok) {
-        const docData = await docResponse.json()
-        if (docData.ok && docData.data) {
-          setDocument(docData.data)
-        }
-      } else if (docResponse.status === 404) {
+      const docRes = await fetchJson<any>(`http://localhost:8000/api/artifacts/${documentId}`, { timeoutMs: 8000 })
+      const docPayload = (docRes.data as any)?.data ?? docRes.data
+      if (docRes.ok && docPayload) {
+        setDocument(docPayload)
+      } else if (docRes.status === 404) {
         setError('Document not found')
         return
       } else {
-        throw new Error(`Failed to fetch document: ${docResponse.status}`)
+        throw new Error(`Failed to fetch document: ${docRes.status}`)
       }
 
-      // Fetch attestations
-      const attResponse = await fetch(`http://localhost:8000/api/attestations?artifactId=${documentId}`, {
-        headers: { 'Accept': 'application/json' },
-      })
-      if (attResponse.ok) {
-        const attData = await attResponse.json()
-        if (attData.ok && attData.data) {
-          setAttestations(attData.data.attestations || [])
-        }
-      }
+      // Attestations removed
 
       // Fetch borrower info (masked)
-      const borrowerResponse = await fetch(`http://localhost:8000/api/loan-documents/${documentId}/borrower`, {
-        headers: { 'Accept': 'application/json' }
-      })
-      if (borrowerResponse.ok) {
-        const borrowerData = await borrowerResponse.json()
-        if (borrowerData.ok && borrowerData.data) {
-          setBorrower(borrowerData.data)
-        }
+      const borrowerRes = await fetchJson<any>(`http://localhost:8000/api/loan-documents/${documentId}/borrower`, { timeoutMs: 8000 })
+      const borrowerPayload = (borrowerRes.data as any)?.data ?? borrowerRes.data
+      if (borrowerRes.ok && borrowerPayload) {
+        setBorrower(borrowerPayload)
       }
 
       // Fetch audit events
-      const auditResponse = await fetch(`http://localhost:8000/api/loan-documents/${documentId}/audit-trail`, {
-        headers: { 'Accept': 'application/json' },
-      })
-      if (auditResponse.ok) {
-        const auditData = await auditResponse.json()
-        if (auditData.ok && auditData.data) {
-          setAuditEvents(auditData.data.events || [])
-        }
+      const auditRes = await fetchJson<any>(`http://localhost:8000/api/loan-documents/${documentId}/audit-trail`, { timeoutMs: 8000 })
+      const auditPayload = (auditRes.data as any)?.data ?? auditRes.data
+      if (auditRes.ok && auditPayload) {
+        setAuditEvents(auditPayload.events || [])
       }
     } catch (error) {
       console.error('Failed to fetch document details:', error)
@@ -216,65 +195,9 @@ export default function DocumentDetailPage() {
     }
   }
 
-  const handleCreateAttestation = async () => {
-    setActionLoading('attestation')
-    try {
-      const response = await fetch('http://localhost:8000/api/attestations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          artifactId: documentId,
-          etid: '100001',
-          kind: 'compliance',
-          issuedBy: 'user@example.com',
-          details: {
-            verified: true,
-            compliance_standard: 'ISO 27001',
-            verified_by: 'system',
-            notes: 'Document integrity verified'
-          }
-        })
-      })
+  // Attestation creation removed
 
-      if (response.ok) {
-        toast.success('Attestation created successfully')
-        fetchDocumentDetails() // Refresh data
-      } else {
-        toast.error('Failed to create attestation')
-      }
-    } catch (error) {
-      toast.error('Failed to create attestation')
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
-  const handleGenerateDisclosurePack = async () => {
-    setActionLoading('disclosure')
-    try {
-      const response = await fetch(`http://localhost:8000/api/disclosure-pack?id=${documentId}`)
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `disclosure-pack-${documentId}.zip`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-        toast.success('Disclosure pack downloaded')
-      } else {
-        toast.error('Failed to generate disclosure pack')
-      }
-    } catch (error) {
-      toast.error('Failed to generate disclosure pack')
-    } finally {
-      setActionLoading(null)
-    }
-  }
+  // Disclosure pack generation removed per product decision
 
 
   if (loading) {
@@ -485,10 +408,10 @@ export default function DocumentDetailPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Document Hash</label>
                 <div className="flex items-start space-x-2">
                   <div className="flex-1 p-2 bg-gray-50 rounded border font-mono text-sm break-all overflow-hidden">
-                    {document.payload_sha256}
+                    {document.payload_sha256 || document.hash}
                   </div>
                   <button
-                    onClick={() => copyToClipboard(document.payload_sha256, 'hash')}
+                    onClick={() => copyToClipboard((document.payload_sha256 || document.hash) as string, 'hash')}
                     className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
                   >
                     {copiedHash ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
@@ -601,55 +524,9 @@ export default function DocumentDetailPage() {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button
-                onClick={handleCreateAttestation}
-                disabled={actionLoading === 'attestation'}
-                className="flex items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                <Shield className="h-5 w-5 mr-2 text-green-600" />
-                <span>Create Attestation</span>
-              </button>
-              <button
-                onClick={handleGenerateDisclosurePack}
-                disabled={actionLoading === 'disclosure'}
-                className="flex items-center justify-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                <Download className="h-5 w-5 mr-2 text-blue-600" />
-                <span>Generate Disclosure Pack</span>
-              </button>
-            </div>
-          </div>
+          {/* Actions removed per product decision */}
 
-          {/* Attestations */}
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Attestations</h2>
-            {attestations.length > 0 ? (
-              <div className="space-y-4">
-                {attestations.map((att) => (
-                  <div key={att.id} className="p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-gray-900">{att.kind}</span>
-                      <span className="text-sm text-gray-500">
-                        {formatDateOnly(att.createdAt)}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      <pre className="whitespace-pre-wrap">{JSON.stringify(att.details, null, 2)}</pre>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No attestations yet</p>
-              </div>
-            )}
-          </div>
+          {/* Attestations section removed */}
         </div>
 
         {/* Sidebar */}
@@ -665,10 +542,7 @@ export default function DocumentDetailPage() {
                   Verified
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Attestations</span>
-                <span className="text-sm font-medium text-gray-900">{attestations.length}</span>
-              </div>
+              {/* Attestations removed */}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Audit Events</span>
                 <span className="text-sm font-medium text-gray-900">{auditEvents.length}</span>
@@ -682,14 +556,14 @@ export default function DocumentDetailPage() {
             {auditEvents.length > 0 ? (
               <div className="space-y-3">
                 {auditEvents.slice(0, 5).map((event) => (
-                  <div key={event.id} className="flex items-start space-x-3">
+                  <div key={event.event_id} className="flex items-start space-x-3">
                     <div className="p-1 bg-blue-100 rounded-full">
                       <Clock className="h-3 w-3 text-blue-600" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">{event.event_type}</p>
                       <p className="text-xs text-gray-500">
-                        {formatDate(event.created_at)}
+                        {formatDate(event.timestamp)}
                       </p>
                     </div>
                   </div>

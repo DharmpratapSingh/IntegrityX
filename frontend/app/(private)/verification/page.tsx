@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Search, Hash, FileText, AlertTriangle, CheckCircle, XCircle, Clock, Copy, Shield } from 'lucide-react'
 import { toast } from '@/components/ui/toast'
+import { fetchWithTimeout } from '@/utils/api'
 
 interface VerificationResult {
   status: 'sealed' | 'tampered' | 'not_found' | 'error'
@@ -48,14 +49,16 @@ export default function VerificationPage() {
     setResult(null)
 
     try {
-      const response = await fetch('http://localhost:8000/api/verify-by-document', {
+      const response = await fetchWithTimeout('http://localhost:8000/api/verify-by-document', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           document_info: artifactId
-        })
+        }),
+        timeoutMs: 8000,
+        retries: 1
       })
 
       const data = await response.json()
@@ -95,24 +98,28 @@ export default function VerificationPage() {
     try {
       let response
       if (verificationType === 'hash') {
-        response = await fetch('http://localhost:8000/api/verify-by-hash', {
+        response = await fetchWithTimeout('http://localhost:8000/api/verify-by-hash', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             hash: hashInput.trim()
-          })
+          }),
+          timeoutMs: 8000,
+          retries: 1
         })
       } else {
-        response = await fetch('http://localhost:8000/api/verify-by-document', {
+        response = await fetchWithTimeout('http://localhost:8000/api/verify-by-document', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             document_info: documentInput.trim()
-          })
+          }),
+          timeoutMs: 8000,
+          retries: 1
         })
       }
 

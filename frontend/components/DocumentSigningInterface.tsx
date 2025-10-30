@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { json as fetchJson, fetchWithTimeout } from '@/utils/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -89,11 +90,9 @@ export default function DocumentSigningInterface() {
 
   const fetchSigningProviders = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/signing/providers')
-      const data = await response.json()
-      
-      if (data.ok) {
-        setProviders(data.data.signing_providers.map((p: string) => ({
+      const res = await fetchJson<any>('http://localhost:8000/api/signing/providers', { timeoutMs: 8000 })
+      if (res.ok && res.data) {
+        setProviders(res.data.data.signing_providers.map((p: string) => ({
           id: p,
           name: p.charAt(0).toUpperCase() + p.slice(1).replace('_', ' '),
           status: 'active',
@@ -107,11 +106,9 @@ export default function DocumentSigningInterface() {
 
   const fetchSigningTemplates = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/signing/templates')
-      const data = await response.json()
-      
-      if (data.ok) {
-        setTemplates(data.data.signing_templates)
+      const res = await fetchJson<any>('http://localhost:8000/api/signing/templates', { timeoutMs: 8000 })
+      if (res.ok && res.data) {
+        setTemplates(res.data.data.signing_templates)
       }
     } catch (err) {
       console.error('Failed to fetch signing templates:', err)
@@ -147,7 +144,7 @@ export default function DocumentSigningInterface() {
     setError(null)
 
     try {
-      const response = await fetch('http://localhost:8000/api/signing/create-envelope', {
+      const response = await fetchWithTimeout('http://localhost:8000/api/signing/create-envelope', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -159,7 +156,9 @@ export default function DocumentSigningInterface() {
           signing_fields: signingFields,
           template_type: templateType,
           provider: provider
-        })
+        }),
+        timeoutMs: 12000,
+        retries: 1
       })
 
       const data = await response.json()
@@ -183,7 +182,7 @@ export default function DocumentSigningInterface() {
   const sendEnvelope = async (envelopeId: string) => {
     setLoading(true)
     try {
-      const response = await fetch(`http://localhost:8000/api/signing/send-envelope?envelope_id=${envelopeId}&provider=${provider}`)
+      const response = await fetchWithTimeout(`http://localhost:8000/api/signing/send-envelope?envelope_id=${envelopeId}&provider=${provider}`, { timeoutMs: 10000 })
       const data = await response.json()
       
       if (data.ok) {
@@ -427,3 +426,6 @@ export default function DocumentSigningInterface() {
     </div>
   )
 }
+
+
+
