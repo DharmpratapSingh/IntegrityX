@@ -1,0 +1,319 @@
+ Looking at D1 again with fresh eyes and the rubric requirements in mind - it's too dense for a presentation. Judges need to grasp your architecture in 30 seconds, and D1 currently has:
+
+  - 5+ distinct layers
+  - Multiple service components in each layer
+  - Walacor primitives box
+  - Forensic services
+  - Monitoring stack
+  - Storage layers
+  - Numerous connections
+
+  Result: Information overload. Judges' eyes will glaze over.
+
+  ---
+  🚨 The Problem with Current D1
+
+  Rubric says: "Make where Walacor sits unmistakable"
+  Current D1: Walacor is shown but buried among 50+ other elements
+
+  What judges want:
+  - See the architecture in one glance
+  - Immediately spot where Walacor is
+  - Understand the flow in 10 seconds
+
+  What they get with current D1:
+  - Too much detail
+  - Have to hunt for Walacor
+  - Confused about what's important
+
+  ---
+  ✅ Solution: Create D1-Simple (NEW)
+
+  Replace your current D1 with a simplified version for presentations, and keep the detailed one for documentation.
+
+  D1-Simple Template (Create This)
+
+  ┌────────────────────────────────────────────────────────────────┐
+  │         INTEGRITYX - HIGH-LEVEL ARCHITECTURE                   │
+  │         (Where Walacor Sits - Unmistakable)                    │
+  └────────────────────────────────────────────────────────────────┘
+
+  ┌──────────────────────────────────────────────────────────────┐
+  │                      USER LAYER                              │
+  │  ┌────────────┐  ┌────────────┐  ┌────────────┐            │
+  │  │ Web App    │  │ Mobile App │  │ Third Party│            │
+  │  │ (Next.js)  │  │ (Future)   │  │ Verifier   │            │
+  │  └────────────┘  └────────────┘  └────────────┘            │
+  └──────────────────────┬───────────────────────────────────────┘
+                         │
+                         │ HTTPS/TLS 1.3
+                         │
+  ┌──────────────────────▼───────────────────────────────────────┐
+  │                   FRONTEND LAYER                             │
+  │  ┌──────────────────────────────────────────────────────┐   │
+  │  │  Next.js 14 Application                              │   │
+  │  │  • Document Upload UI                                │   │
+  │  │  • Verification Portal (Public - No Auth!)           │   │
+  │  │  • Forensic Diff Viewer                              │   │
+  │  │  • Analytics Dashboard                               │   │
+  │  └──────────────────────────────────────────────────────┘   │
+  └──────────────────────┬───────────────────────────────────────┘
+                         │
+                         │ REST API (JSON)
+                         │
+  ┌──────────────────────▼───────────────────────────────────────┐
+  │                   BACKEND LAYER                              │
+  │  ┌─────────────────────────────────────────────────────┐    │
+  │  │  FastAPI Application (Python 3.11+)                 │    │
+  │  │  • Document Ingestion API                           │    │
+  │  │  • Verification Service                             │    │
+  │  │  • Forensic Analysis Engine 🔬                      │    │
+  │  │  • Attestation Management                           │    │
+  │  │  • Audit Logging                                    │    │
+  │  └─────────────────────────────────────────────────────┘    │
+  └──────────────┬────────────────────┬─────────────────────────┘
+                 │                    │
+                 │                    │
+                 ▼                    ▼
+  ┌──────────────────────┐  ┌────────────────────────────────────┐
+  │                      │  │                                    │
+  │  ⛓️ WALACOR         │  │  💾 HYBRID STORAGE                │
+  │  BLOCKCHAIN          │  │                                    │
+  │                      │  │  ┌──────────────────────────────┐ │
+  │  5 PRIMITIVES:       │  │  │ PostgreSQL 16                │ │
+  │  1️⃣ HASH - Seal     │  │  │ • Metadata                   │ │
+  │     document hash    │  │  │ • Proof bundles              │ │
+  │                      │  │  │ • Audit logs                 │ │
+  │  2️⃣ LOG - Immutable │  │  └──────────────────────────────┘ │
+  │     audit trail      │  │                                    │
+  │                      │  │  ┌──────────────────────────────┐ │
+  │  3️⃣ PROVENANCE -    │  │  │ AWS S3 (or equivalent)       │ │
+  │     Document lineage │  │  │ • Large files (PDFs, etc)    │ │
+  │                      │  │  │ • Scalable storage           │ │
+  │  4️⃣ ATTEST -        │  │  └──────────────────────────────┘ │
+  │     Digital certs    │  │                                    │
+  │                      │  │  ┌──────────────────────────────┐ │
+  │  5️⃣ VERIFY - Public │  │  │ Redis 7                      │ │
+  │     verification     │  │  │ • Rate limiting              │ │
+  │                      │  │  │ • Caching                    │ │
+  │  📁 walacor_         │  │  └──────────────────────────────┘ │
+  │     service.py       │  │                                    │
+  │                      │  │                                    │
+  └──────────────────────┘  └────────────────────────────────────┘
+
+  ┌──────────────────────────────────────────────────────────────┐
+  │  🎯 KEY DIFFERENTIATOR: CSI-GRADE FORENSICS                  │
+  │  When tampering is detected, IntegrityX doesn't just say     │
+  │  "document tampered" - it shows:                             │
+  │  • WHAT changed (visual diff)                                │
+  │  • WHEN it was modified (timeline)                           │
+  │  • HOW risky it is (risk score 0.0-1.0)                      │
+  │  • WHY it matters (pattern detection)                        │
+  │                                                               │
+  │  📊 4 Forensic Modules:                                       │
+  │  1. Visual Diff Engine (side-by-side comparison)             │
+  │  2. Document DNA (4-layer fingerprinting)                    │
+  │  3. Timeline Analysis (modification history)                 │
+  │  4. Pattern Detector (cross-doc fraud detection)             │
+  └──────────────────────────────────────────────────────────────┘
+
+  ┌──────────────────────────────────────────────────────────────┐
+  │  LEGEND                                                       │
+  │  ⛓️ = Walacor Blockchain    🔬 = Forensic Analysis          │
+  │  💾 = Storage Layer          🟡 = Blockchain interaction     │
+  │  🟢 = Verified               🔴 = Tampered                   │
+  └──────────────────────────────────────────────────────────────┘
+
+  ---
+  🎯 What Changed? (Simplified)
+
+  Removed from D1:
+
+  ❌ Detailed service breakdown (move to separate diagram)
+  ❌ Individual microservice components
+  ❌ Detailed monitoring stack (D6 covers this)
+  ❌ Granular backend services (too many boxes)
+  ❌ Internal connections (clutters diagram)
+
+  Kept in D1-Simple:
+
+  ✅ 3 clear layers: Frontend → Backend → Walacor/Storage
+  ✅ Walacor box PROMINENT - impossible to miss
+  ✅ All 5 primitives listed clearly
+  ✅ Hybrid storage shown (S3 + Postgres + Redis)
+  ✅ Forensic differentiator highlighted at bottom
+  ✅ Legend for quick understanding
+  ✅ File reference (walacor_service.py)
+
+  ---
+  📁 New File Structure
+
+  Diagrams_Walacor/
+  ├── 01-system-architecture-SIMPLE.png      ← NEW - Use for presentation
+  ├── 01-system-architecture-DETAILED.png    ← Rename current D1 - Use for docs
+  ├── 02-walacor-integration-OVERVIEW.png    ← NEW (from v2 guide)
+  ├── 02a-walacor-hash-log.png
+  ├── 02b-walacor-attest-provenance.png
+  ├── 02c-walacor-verify-forensics.png
+  ├── 02-walacor-integration-COMPLETE.png    ← Detailed version
+  ├── 03-forensic-engine-architecture.png
+  ├── 04-document-lifecycle-provenance.png
+  ├── 05-security-cryptography-layers.png
+  ├── 06-deployment-infrastructure.png
+  └── 07-demo-operations-guide.png           ← NEW (from v2 guide)
+
+  ---
+  🎨 Visual Design for D1-Simple
+
+  Layout:
+
+  Top:    User Layer (3 small boxes)
+          ↓
+  Layer 2: Frontend (1 consolidated box)
+          ↓
+  Layer 3: Backend (1 consolidated box)
+          ↓
+  Split:  Left: Walacor (GOLD BOX)  |  Right: Storage (GRAY BOX)
+
+  Bottom: Forensic Differentiator (PURPLE BOX)
+          Legend
+
+  Color Strategy:
+
+  - Walacor box: BRIGHT GOLD/YELLOW background - impossible to miss!
+  - Frontend: Light blue
+  - Backend: Light orange
+  - Storage: Gray
+  - Forensics: Purple
+
+  Font Sizes:
+
+  - Diagram title: 24pt
+  - Layer headers: 18pt
+  - "5 PRIMITIVES": 16pt BOLD
+  - Primitive list: 14pt
+  - Details: 12pt
+
+  Key Visual Elements:
+
+  1. Make Walacor box 50% larger than other boxes
+  2. Add border glow to Walacor box (2-3px gold border)
+  3. Use numbered emojis for primitives (1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣)
+  4. Show file reference under Walacor box
+  5. Make forensics section visually distinct at bottom
+
+  ---
+  🎤 Updated Presentation Flow
+
+  Slide 2: D1-Simple (60 seconds)
+
+  Script:
+  "Here's our complete architecture at-a-glance. Three layers: Frontend, Backend, and here—" [point to gold box] "—this is where Walacor sits. We use all 5 primitives: Hash for sealing, Log for audit trail, Provenance for lineage, Attest 
+  for certifications, and Verify for public verification. And this—" [point to purple box] "—is our unique CSI-grade forensics that no competitor has."
+
+  Why this works:
+  - Judges see Walacor immediately (gold box)
+  - All 5 primitives visible at once
+  - Forensic differentiator highlighted
+  - Simple enough to digest in 30 seconds
+
+  Then Show D2-Overview (30 seconds)
+
+  "Let me show you the data flow in detail..."
+
+  Result: Judges get high-level first, then detail. Clear storytelling.
+
+  ---
+  📊 Comparison: Before vs After
+
+  | Current D1 (Detailed)           | D1-Simple (NEW)               |
+  |---------------------------------|-------------------------------|
+  | 50+ elements                    | 15 elements                   |
+  | 7+ service boxes                | 3 layer boxes                 |
+  | Walacor shown but not prominent | Walacor UNMISSABLE (gold box) |
+  | Hard to see what matters        | Clear hierarchy               |
+  | Good for documentation          | Perfect for presentation      |
+  | 3-5 min to understand           | 30 seconds to grasp           |
+  | Information overload            | Information clarity           |
+
+  ---
+  ⏱️ Implementation Plan
+
+  Option A: Start Fresh (RECOMMENDED - 45 min)
+
+  1. Create D1-Simple from scratch using template above
+  2. Make Walacor box PROMINENT (gold, large, centered)
+  3. Keep only 3 main layers
+  4. Rename current D1 to D1-Detailed
+
+  Option B: Simplify Current (30 min)
+
+  1. Open current D1 in Eraser.io
+  2. Delete all detailed service boxes
+  3. Consolidate into 3 layers
+  4. Make Walacor box 2x bigger and gold
+  5. Add forensics callout at bottom
+
+  Recommendation: Go with Option A. Trying to simplify the current diagram will be harder than starting fresh with the simplified template.
+
+  ---
+  🎯 What to Do with Current D1
+
+  Don't delete it! Rename it:
+  - Current: D1.png
+  - Rename to: 01-system-architecture-DETAILED.png
+  - Use it in: Documentation (README, ARCHITECTURE.md)
+  - Purpose: Developers who need deep technical understanding
+
+  Create new:
+  - New: 01-system-architecture-SIMPLE.png
+  - Use it in: Presentations, judge reviews, executive summaries
+  - Purpose: Quick architectural overview
+
+  ---
+  ✅ Updated Priority List
+
+  CRITICAL (Do These First - 2.5 hours):
+  1. ⭐ Create D1-Simple (45 min) - Make Walacor unmissable - 30 pts
+  2. ⭐ Create D2-Overview (40 min) - Simple 5-step flow - 50 pts
+  3. ⭐ Create Proof Bundle diagram (40 min) - Before/After - 45 pts
+  4. ⭐ Create D7 Demo Guide (30 min) - Exact commands - 15 pts
+
+  Total: 2.5 hours = 140 points!
+
+  ---
+  📋 D1-Simple Checklist
+
+  When creating D1-Simple, make sure you:
+  - Only 3 main layers (Frontend, Backend, Walacor/Storage)
+  - Walacor box is GOLD and 2x size of other boxes
+  - All 5 primitives listed with emojis (1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣)
+  - File reference shown (walacor_service.py)
+  - Forensic differentiator in separate box at bottom
+  - Hybrid storage pattern mentioned (S3 + Postgres)
+  - Legend at bottom
+  - Total elements < 20 (keep it simple!)
+  - Can be understood in 30 seconds ✅
+
+  ---
+  💡 Your Instinct Was Right
+
+  You correctly identified that D1 is too complex. This is a critical insight because:
+
+  1. Rubric alignment: "Make where Walacor sits unmistakable" - Can't be unmistakable if buried in detail
+  2. Presentation effectiveness: Simpler diagrams = clearer message
+  3. Judge experience: They review dozens of submissions - simple wins
+  4. Cognitive load: 30 seconds to impress, not 5 minutes to decipher
+
+  Your question just saved you potential lost points! 🎯
+
+  ---
+  Would you like me to:
+  1. Create a more detailed ASCII template for D1-Simple that you can implement in Eraser.io?
+  2. Show you exactly which elements to remove from current D1?
+  3. Create a visual comparison guide (what stays vs. what goes)?
+
+  This simplification, combined with D2-Overview, will make your Walacor integration crystal clear to judges! 🏆
+
+------------------------------------------------------------------------------------------------------------------------------------------
+

@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react'
 import { json as fetchJson } from '@/utils/api'
+import { getCurrentEasternTime, formatEasternTimeWithTZ } from '@/utils/timezone'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { 
-  FileSignature, 
-  Brain, 
+import {
+  Brain,
   Layers,
   Shield,
   CheckCircle,
@@ -17,14 +17,13 @@ import {
 } from 'lucide-react'
 
 // Import our components
-import DocumentSigningInterface from '@/components/DocumentSigningInterface'
 import AIDocumentProcessingInterface from '@/components/AIDocumentProcessingInterface'
 import BulkOperationsInterface from '@/components/BulkOperationsInterface'
 import AnalyticsDashboard from '@/components/AnalyticsDashboard'
 
 interface DashboardStats {
   totalDocuments: number
-  activeSigningEnvelopes: number
+  sealedDocuments: number
   aiProcessingCount: number
   bulkOperationsCount: number
   systemHealth: 'healthy' | 'warning' | 'critical'
@@ -32,12 +31,12 @@ interface DashboardStats {
   performanceMetrics: {
     apiResponseTime: number
     documentProcessing: number
-    signingSuccessRate: number
+    blockchainSuccessRate: number
     aiAccuracy: number
   }
   trends: {
     documents: { value: number; change: number }
-    signing: { value: number; change: number }
+    sealed: { value: number; change: number }
     ai: { value: number; change: number }
     bulk: { value: number; change: number }
   }
@@ -48,20 +47,20 @@ export default function IntegratedDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats>({
     totalDocuments: 0,
-    activeSigningEnvelopes: 0,
+    sealedDocuments: 0,
     aiProcessingCount: 0,
     bulkOperationsCount: 0,
     systemHealth: 'healthy',
-    lastUpdated: new Date().toLocaleString(),
+    lastUpdated: getCurrentEasternTime(),
     performanceMetrics: {
       apiResponseTime: 0,
       documentProcessing: 0,
-      signingSuccessRate: 0,
+      blockchainSuccessRate: 0,
       aiAccuracy: 0
     },
     trends: {
       documents: { value: 0, change: 0 },
-      signing: { value: 0, change: 0 },
+      sealed: { value: 0, change: 0 },
       ai: { value: 0, change: 0 },
       bulk: { value: 0, change: 0 }
     }
@@ -180,23 +179,23 @@ export default function IntegratedDashboard() {
         // Update stats with real data
         setStats({
           totalDocuments: totalDocs,
-          // Verified today (sealed today)
-          activeSigningEnvelopes: verifiedToday,
+          // Sealed/verified today
+          sealedDocuments: verifiedToday,
           // Unique borrowers across all artifacts (proxy for AI processing diversity)
           aiProcessingCount: uniqueBorrowers,
           // Deleted today
           bulkOperationsCount: deletedToday,
           systemHealth,
-          lastUpdated: new Date().toLocaleString(),
+          lastUpdated: getCurrentEasternTime(),
           performanceMetrics: {
             apiResponseTime: healthData?.total_duration_ms || 0,
             documentProcessing: processingPct,
-            signingSuccessRate,
+            blockchainSuccessRate: signingSuccessRate,
             aiAccuracy
           },
           trends: {
             documents: { value: totalDocs, change: docGrowth },
-            signing: { value: 0, change: 0 },
+            sealed: { value: 0, change: 0 },
             ai: { value: 0, change: 0 },
             bulk: { value: 0, change: 0 }
           }
@@ -348,7 +347,7 @@ export default function IntegratedDashboard() {
             </CardContent>
           </Card>
 
-          {/* Active Signatures Card */}
+          {/* Sealed Documents Card */}
           <Card className="group relative bg-white border-0 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" style={{ padding: '2px' }}>
               <div className="h-full w-full bg-white rounded-xl" />
@@ -358,18 +357,18 @@ export default function IntegratedDashboard() {
             <CardContent className="relative p-6">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-gray-600">Active Signatures</p>
-                  <p className="text-4xl font-bold bg-gradient-to-br from-purple-600 to-pink-600 bg-clip-text text-transparent">{stats.activeSigningEnvelopes}</p>
+                  <p className="text-sm font-medium text-gray-600">Sealed Documents</p>
+                  <p className="text-4xl font-bold bg-gradient-to-br from-purple-600 to-pink-600 bg-clip-text text-transparent">{stats.sealedDocuments}</p>
                   <div className="flex items-center gap-1">
                     <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-full">
                       <ArrowUpRight className="h-3 w-3 text-green-600" />
-                      <span className="text-xs font-semibold text-green-600">+{stats.trends.signing.change}%</span>
+                      <span className="text-xs font-semibold text-green-600">+{stats.trends.sealed.change}%</span>
                     </div>
                     <span className="text-xs text-gray-500">this week</span>
                   </div>
                 </div>
                 <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <FileSignature className="h-6 w-6 text-white" />
+                  <Shield className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
@@ -461,12 +460,12 @@ export default function IntegratedDashboard() {
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-600">Signing Success</span>
+                  <span className="text-sm font-medium text-gray-600">Blockchain Success</span>
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 </div>
-                <div className="text-3xl font-bold text-gray-900">{Math.round(stats.performanceMetrics.signingSuccessRate)}%</div>
+                <div className="text-3xl font-bold text-gray-900">{Math.round(stats.performanceMetrics.blockchainSuccessRate)}%</div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full" style={{ width: `${Math.min(100, Math.round(stats.performanceMetrics.signingSuccessRate))}%` }}></div>
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full" style={{ width: `${Math.min(100, Math.round(stats.performanceMetrics.blockchainSuccessRate))}%` }}></div>
                 </div>
               </div>
 
@@ -499,15 +498,6 @@ export default function IntegratedDashboard() {
                   <span className="relative z-10 flex items-center justify-center gap-2">
                     <Shield className="h-4 w-4" />
                     Overview
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="signing" 
-                  className="relative flex-1 rounded-2xl px-6 py-4 font-semibold transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-50 data-[state=inactive]:hover:border-gray-300"
-                >
-                  <span className="relative z-10 flex items-center justify-center gap-2">
-                    <FileSignature className="h-4 w-4" />
-                    Document Signing
                   </span>
                 </TabsTrigger>
                 <TabsTrigger 
@@ -558,17 +548,6 @@ export default function IntegratedDashboard() {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-4 p-5 rounded-xl bg-purple-50 hover:bg-purple-100 transition-colors border border-purple-100">
-                      <div className="p-2 bg-purple-600 rounded-lg">
-                        <FileSignature className="h-5 w-5 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">Signature Requested</p>
-                        <p className="text-sm text-gray-600 mt-1">New signing envelope created for credit agreement</p>
-                        <p className="text-xs text-gray-500 mt-2">15 minutes ago</p>
-                      </div>
-                    </div>
-
                     <div className="flex items-start gap-4 p-5 rounded-xl bg-pink-50 hover:bg-pink-100 transition-colors border border-pink-100">
                       <div className="p-2 bg-pink-600 rounded-lg">
                         <Brain className="h-5 w-5 text-white" />
@@ -591,14 +570,6 @@ export default function IntegratedDashboard() {
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="signing">
-              <Card className="bg-gradient-to-br from-white via-purple-50/20 to-pink-50/20 border border-purple-100/30 shadow-2xl rounded-3xl">
-                <CardContent className="p-8">
-                  <DocumentSigningInterface />
                 </CardContent>
               </Card>
             </TabsContent>

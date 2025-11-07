@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { json as fetchJson, fetchWithTimeout } from '@/utils/api'
+import { formatEasternTimeWithTZ, formatForFilename, getCurrentEasternTime } from '@/utils/timezone'
 import Link from 'next/link'
-import { Search, FileText, Eye, Plus, Filter, Calendar, Hash, AlertCircle, RefreshCw, Download, CheckSquare, Square, Shield, Lock, Zap, CheckCircle, TrendingUp } from 'lucide-react'
+import { Search, FileText, Eye, Plus, Filter, Calendar, Hash, AlertCircle, RefreshCw, Download, CheckSquare, Square, Shield, Lock, Zap, CheckCircle, TrendingUp, MoreVertical, Trash2 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import jsPDF from 'jspdf'
 import Papa from 'papaparse'
 import JSZip from 'jszip'
@@ -94,7 +96,16 @@ export default function DocumentsPage() {
       
       if (response && response.ok && response.data) {
         const data = response.data
-        setDocuments(data.data?.artifacts || [])
+        const artifacts = data.data?.artifacts || []
+        // Ensure all borrower names and emails are cleaned (backend should do this, but double-check)
+        const cleanedArtifacts = artifacts.map((doc: any) => ({
+          ...doc,
+          borrower_name: cleanBorrowerName(doc.borrower_name || ''),
+          borrower_email: doc.borrower_email && /^[a-zA-Z0-9+/=]{20,}$/.test(doc.borrower_email) 
+            ? '' // Don't show Base64 strings
+            : (doc.borrower_email || '')
+        }))
+        setDocuments(cleanedArtifacts)
         setTotalCount(data.data?.total_count || 0)
         setHasMore(!!data.data?.has_more)
       } else if (response && response.status === 404) {
@@ -247,29 +258,67 @@ export default function DocumentsPage() {
   }
 
   const cleanBorrowerName = (name: string) => {
-    // If the name contains very long text (likely encoded data), extract just the readable part
-    if (name.length > 50) {
-      // Split by spaces and filter out very long parts (likely encoded data)
-      const parts = name.split(' ')
-      const readableParts = parts.filter(part => {
-        // Keep parts that are reasonably short and contain mostly letters/spaces
-        return part.length <= 25 && /^[a-zA-Z\s]+$/.test(part)
-      })
-      
-      if (readableParts.length > 0) {
-        return readableParts.join(' ')
-      }
-      
-      // If no readable parts found, try to extract just the first few words
-      const firstWords = name.split(' ').slice(0, 2).join(' ')
-      if (firstWords.length <= 30) {
-        return firstWords
-      }
-      
-      // Last resort: just truncate
-      return name.substring(0, 25) + '...'
+    if (!name) return ''
+    
+    // Remove any newlines/carriage returns first
+    let cleaned = name.replace(/[\n\r]/g, ' ').trim()
+    
+    // Find the position of ANY alphanumeric string that's 8+ chars (encoded data usually starts early)
+    // This catches base64, hex, and other encoded strings
+    const encodedStartMatch = cleaned.match(/[a-zA-Z0-9+/=]{8,}/)
+    
+    // If we found any encoded-like data, only take everything before it
+    if (encodedStartMatch && encodedStartMatch.index !== undefined && encodedStartMatch.index > 0) {
+      cleaned = cleaned.substring(0, encodedStartMatch.index).trim()
     }
-    return name
+    
+    // Split by whitespace
+    const parts = cleaned.split(/\s+/)
+    
+    // ONLY keep the first 1-2 parts that are PURE alphabetical names (no numbers, no special chars except apostrophe/hyphen)
+    const nameParts: string[] = []
+    for (const part of parts) {
+      // Strict: Only letters, apostrophes, hyphens, and 1-25 chars
+      if (/^[a-zA-Z'-]+$/.test(part) && part.length >= 2 && part.length <= 25) {
+        // Make sure it has at least 2 letters (not just special chars)
+        if (part.replace(/[^a-zA-Z]/g, '').length >= 2) {
+          nameParts.push(part)
+          // Stop after getting first name + last name (2 parts)
+          if (nameParts.length >= 2) {
+            break
+          }
+        }
+      } else {
+        // If we hit something that's not a pure name, stop
+        // This ensures we don't accidentally include encoded data
+        if (nameParts.length > 0) {
+          break
+        }
+      }
+    }
+    
+    if (nameParts.length > 0) {
+      return nameParts.join(' ')
+    }
+    
+    // If nothing found, return 'Unknown'
+    return 'Unknown'
+  }
+  
+  const cleanLoanId = (loanId: string) => {
+    if (!loanId) return ''
+    // If it contains very long alphanumeric parts, extract just the readable loan ID
+    // Loan IDs are typically like "LOAN_2025_1001" or "LOAN-2025-1001"
+    const match = loanId.match(/LOAN[_\-]?\d{4}[_\-\s]?\d+/i)
+    if (match) {
+      return match[0]
+    }
+    // If it's a short ID, return as is
+    if (loanId.length <= 30) {
+      return loanId
+    }
+    // Otherwise, truncate and show first part
+    return loanId.substring(0, 30) + '...'
   }
 
   // Export functionality
@@ -291,57 +340,57 @@ export default function DocumentsPage() {
     }
   }
 
-  const generatePDFReport = async (document: Document) => {
+  const generatePDFReport = async (doc: Document) => {
     const pdf = new jsPDF()
     
     // Header
     pdf.setFontSize(20)
     pdf.text('Loan Document Audit Report', 20, 30)
     pdf.setFontSize(12)
-    pdf.text(`Generated: ${new Date().toLocaleString()}`, 20, 45)
+    pdf.text(`Generated: ${getCurrentEasternTime()}`, 20, 45)
     
     // Loan Details Section
     pdf.setFontSize(16)
     pdf.text('Loan Details', 20, 65)
     pdf.setFontSize(10)
-    pdf.text(`Loan ID: ${document.loan_id}`, 20, 80)
-    pdf.text(`Document Type: ${document.document_type}`, 20, 90)
-    pdf.text(`Upload Date: ${formatDate(document.upload_date)}`, 20, 100)
-    pdf.text(`Created By: ${document.created_by}`, 20, 110)
+    pdf.text(`Loan ID: ${doc.loan_id}`, 20, 80)
+    pdf.text(`Document Type: ${doc.document_type}`, 20, 90)
+    pdf.text(`Upload Date: ${formatDate(doc.upload_date)}`, 20, 100)
+    pdf.text(`Created By: ${doc.created_by}`, 20, 110)
     
     // Borrower Information Section
     pdf.setFontSize(16)
     pdf.text('Borrower Information', 20, 130)
     pdf.setFontSize(10)
-    pdf.text(`Name: ${document.borrower_name}`, 20, 145)
-    pdf.text(`Email: ${document.borrower_email}`, 20, 155)
+    pdf.text(`Name: ${doc.borrower_name}`, 20, 145)
+    pdf.text(`Email: ${doc.borrower_email}`, 20, 155)
     
     // Verification Status Section
     pdf.setFontSize(16)
     pdf.text('Verification Status', 20, 175)
     pdf.setFontSize(10)
-    pdf.text(`Status: ${document.sealed_status}`, 20, 190)
-    pdf.text(`Security Level: ${document.security_level}`, 20, 200)
-    pdf.text(`Walacor TX ID: ${document.walacor_tx_id}`, 20, 210)
-    pdf.text(`Artifact ID: ${document.id}`, 20, 220)
+    pdf.text(`Status: ${doc.sealed_status}`, 20, 190)
+    pdf.text(`Security Level: ${doc.security_level}`, 20, 200)
+    pdf.text(`Walacor TX ID: ${doc.walacor_tx_id}`, 20, 210)
+    pdf.text(`Artifact ID: ${doc.id}`, 20, 220)
     
     // Blockchain Proof Section
     pdf.setFontSize(16)
     pdf.text('Blockchain Proof', 20, 240)
     pdf.setFontSize(10)
-    pdf.text(`Transaction ID: ${document.walacor_tx_id}`, 20, 255)
-    pdf.text(`Sealed Date: ${formatDate(document.upload_date)}`, 20, 265)
+    pdf.text(`Transaction ID: ${doc.walacor_tx_id}`, 20, 255)
+    pdf.text(`Sealed Date: ${formatDate(doc.upload_date)}`, 20, 265)
     pdf.text('Document hash is cryptographically sealed in Walacor blockchain', 20, 275)
     pdf.text('This document has not been tampered with since sealing', 20, 285)
     
     return pdf
   }
 
-  const exportToPDF = async (document: Document) => {
+  const exportToPDF = async (doc: Document) => {
     try {
       setIsExporting(true)
-      const pdf = await generatePDFReport(document)
-      pdf.save(`loan-audit-${document.loan_id}-${new Date().toISOString().split('T')[0]}.pdf`)
+      const pdf = await generatePDFReport(doc)
+      pdf.save(`loan-audit-${doc.loan_id}-${formatForFilename()}.pdf`)
     } catch (error) {
       console.error('Error generating PDF:', error)
       alert('Error generating PDF report')
@@ -350,29 +399,30 @@ export default function DocumentsPage() {
     }
   }
 
-  const exportToJSON = (document: Document) => {
+  const exportToJSON = (doc: Document) => {
     try {
+      setIsExporting(true)
       const exportData = {
         loan_details: {
-          loan_id: document.loan_id,
-          document_type: document.document_type,
-          loan_amount: document.loan_amount,
-          upload_date: document.upload_date,
-          created_by: document.created_by
+          loan_id: doc.loan_id,
+          document_type: doc.document_type,
+          loan_amount: doc.loan_amount,
+          upload_date: doc.upload_date,
+          created_by: doc.created_by
         },
         borrower_information: {
-          name: document.borrower_name,
-          email: document.borrower_email
+          name: doc.borrower_name,
+          email: doc.borrower_email
         },
         verification_status: {
-          status: document.sealed_status,
-          security_level: document.security_level,
-          walacor_tx_id: document.walacor_tx_id,
-          artifact_id: document.id
+          status: doc.sealed_status,
+          security_level: doc.security_level,
+          walacor_tx_id: doc.walacor_tx_id,
+          artifact_id: doc.id
         },
         blockchain_proof: {
-          transaction_id: document.walacor_tx_id,
-          sealed_date: document.upload_date,
+          transaction_id: doc.walacor_tx_id,
+          sealed_date: doc.upload_date,
           integrity_verified: true,
           tamper_proof: true
         },
@@ -385,51 +435,68 @@ export default function DocumentsPage() {
       
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
+      const a = window.document.createElement('a')
       a.href = url
-      a.download = `loan-audit-${document.loan_id}-${new Date().toISOString().split('T')[0]}.json`
-      document.body.appendChild(a)
+      a.download = `loan-audit-${doc.loan_id}-${formatForFilename()}.json`
+      window.document.body.appendChild(a)
       a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      
+      // Small delay before cleanup to ensure download starts
+      setTimeout(() => {
+        window.document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        setIsExporting(false)
+      }, 100)
     } catch (error) {
       console.error('Error exporting JSON:', error)
       alert('Error exporting JSON report')
+      setIsExporting(false)
     }
   }
 
-  const exportToCSV = (document: Document) => {
+  const exportToCSV = (doc: Document) => {
     try {
+      setIsExporting(true)
       const csvData = [
         {
-          'Loan ID': document.loan_id,
-          'Document Type': document.document_type,
-          'Loan Amount': document.loan_amount,
-          'Upload Date': document.upload_date,
-          'Created By': document.created_by,
-          'Borrower Name': document.borrower_name,
-          'Borrower Email': document.borrower_email,
-          'Sealed Status': document.sealed_status,
-          'Security Level': document.security_level,
-          'Walacor TX ID': document.walacor_tx_id,
-          'Artifact ID': document.id,
+          'Loan ID': doc.loan_id,
+          'Document Type': doc.document_type,
+          'Loan Amount': doc.loan_amount,
+          'Upload Date': doc.upload_date,
+          'Created By': doc.created_by,
+          'Borrower Name': doc.borrower_name,
+          'Borrower Email': doc.borrower_email,
+          'Sealed Status': doc.sealed_status,
+          'Security Level': doc.security_level,
+          'Walacor TX ID': doc.walacor_tx_id,
+          'Artifact ID': doc.id,
           'Export Date': new Date().toISOString()
         }
       ]
       
+      if (typeof Papa === 'undefined') {
+        throw new Error('PapaParse library not loaded')
+      }
+      
       const csv = Papa.unparse(csvData)
-      const blob = new Blob([csv], { type: 'text/csv' })
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
+      const a = window.document.createElement('a')
       a.href = url
-      a.download = `loan-audit-${document.loan_id}-${new Date().toISOString().split('T')[0]}.csv`
-      document.body.appendChild(a)
+      a.download = `loan-audit-${doc.loan_id}-${formatForFilename()}.csv`
+      window.document.body.appendChild(a)
       a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      
+      // Small delay before cleanup to ensure download starts
+      setTimeout(() => {
+        window.document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        setIsExporting(false)
+      }, 100)
     } catch (error) {
       console.error('Error exporting CSV:', error)
-      alert('Error exporting CSV report')
+      alert(`Error exporting CSV report: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setIsExporting(false)
     }
   }
 
@@ -456,7 +523,7 @@ export default function DocumentsPage() {
         const url = URL.createObjectURL(zipBlob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `loan-audit-bulk-${new Date().toISOString().split('T')[0]}.zip`
+        a.download = `loan-audit-bulk-${formatForFilename()}.zip`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
@@ -491,7 +558,7 @@ export default function DocumentsPage() {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `loan-audit-bulk-${new Date().toISOString().split('T')[0]}.json`
+        a.download = `loan-audit-bulk-${formatForFilename()}.json`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
@@ -516,7 +583,7 @@ export default function DocumentsPage() {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `loan-audit-bulk-${new Date().toISOString().split('T')[0]}.csv`
+        a.download = `loan-audit-bulk-${formatForFilename()}.csv`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
@@ -581,6 +648,44 @@ export default function DocumentsPage() {
     }
   }
 
+  const handleDeleteDocument = async (doc: Document) => {
+    if (!confirm(`Are you sure you want to delete document "${doc.loan_id}"?\n\nThis action will remove the document from the active list, but all metadata will be preserved for audit purposes.`)) {
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      // Build query parameters for DELETE request
+      const params = new URLSearchParams({
+        deleted_by: 'current_user', // In a real app, this would be the actual user ID from Clerk auth
+        deletion_reason: 'Deleted from actions dropdown'
+      })
+      
+      const response = await fetchWithTimeout(`http://localhost:8000/api/artifacts/${doc.id}?${params.toString()}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeoutMs: 8000,
+        retries: 1
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Delete failed:', errorData)
+        throw new Error(`Failed to delete document: ${errorData.detail || response.statusText}`)
+      }
+
+      // Refresh the documents list
+      await fetchDocuments()
+      alert(`Document "${doc.loan_id}" has been deleted successfully. All information has been preserved for audit purposes.`)
+    } catch (error) {
+      console.error('Delete failed:', error)
+      alert(`Delete failed: ${error instanceof Error ? error.message : 'Please try again.'}`)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -929,7 +1034,7 @@ export default function DocumentsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Security Level
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                     Actions
                   </th>
                 </tr>
@@ -950,20 +1055,24 @@ export default function DocumentsPage() {
                       </button>
                     </td>
                     <td className="px-6 py-4 w-32">
-                          <div className="text-sm font-medium text-gray-900 truncate" title={doc.loan_id}>
-                        {doc.loan_id}
-                          </div>
-                          <div className="text-sm text-gray-500 truncate" title={doc.document_type}>
-                        {doc.document_type}
+                      <div className="text-sm font-medium text-gray-900 truncate" title={doc.loan_id}>
+                        {cleanLoanId(doc.loan_id)}
                       </div>
+                      {doc.document_type && (
+                        <div className="text-xs text-gray-400 mt-0.5 truncate" title={doc.document_type}>
+                          {doc.document_type}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 w-48">
-                      <div className="text-sm font-medium text-gray-900 truncate" title={doc.borrower_name}>
+                      <div className="text-sm font-medium text-gray-900 truncate" title={cleanBorrowerName(doc.borrower_name)}>
                         {cleanBorrowerName(doc.borrower_name)}
                       </div>
-                      <div className="text-sm text-gray-500 truncate" title={doc.borrower_email}>
-                        {doc.borrower_email}
-                      </div>
+                      {doc.borrower_email && (
+                        <div className="text-xs text-gray-400 mt-0.5 truncate" title={doc.borrower_email}>
+                          {doc.borrower_email.split(/\s+/)[0]} {/* Only show first part of email if it contains spaces */}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 w-32 text-sm text-gray-500">
                       <div className="flex items-center">
@@ -983,66 +1092,101 @@ export default function DocumentsPage() {
                     <td className="px-6 py-4 w-32">
                       {getSecurityLevelBadge(doc.security_level)}
                     </td>
-                    <td className="px-6 py-4 w-32 text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                      <Link
-                        href={`/documents/${doc.id}`}
-                        className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        View
-                      </Link>
-                        <button
-                          onClick={() => handleVerifyDocument(doc.id)}
-                          disabled={isVerifying}
-                          className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors disabled:opacity-50"
-                        >
-                          {isVerifying ? (
-                            <>
-                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
-                              Verifying...
-                            </>
-                          ) : (
-                            <>
-                              <Hash className="h-3 w-3 mr-1" />
-                              Verify
-                            </>
-                          )}
-                        </button>
-                        <div className="relative group">
+                    <td className="px-6 py-4 text-sm font-medium">
+                      <Popover>
+                        <PopoverTrigger asChild>
                           <button
-                            onClick={() => exportToPDF(doc)}
-                            disabled={isExporting}
-                            className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md text-red-700 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            aria-label="Actions"
                           >
-                            <Download className="h-3 w-3 mr-1" />
-                            Export
+                            <MoreVertical className="h-4 w-4 text-gray-600" />
                           </button>
-                          <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                            <div className="py-1">
-                              <button
-                                onClick={() => exportToPDF(doc)}
-                                disabled={isExporting}
-                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-                              >
-                                Export as PDF
-                              </button>
-                              <button
-                                onClick={() => exportToJSON(doc)}
-                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                              >
-                                Export as JSON
-                              </button>
-                              <button
-                                onClick={() => exportToCSV(doc)}
-                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                              >
-                                Export as CSV
-                              </button>
-                            </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-1" align="end">
+                          <div className="space-y-1">
+                            <Link
+                              href={`/documents/${doc.id}`}
+                              className="flex items-center w-full px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
+                            >
+                              <Eye className="h-4 w-4 mr-2 text-gray-500" />
+                              View Document
+                            </Link>
+                            <button
+                              onClick={() => handleVerifyDocument(doc.id)}
+                              disabled={isVerifying}
+                              className="flex items-center w-full px-3 py-2 text-sm text-blue-700 rounded-md hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isVerifying ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                                  Verifying...
+                                </>
+                              ) : (
+                                <>
+                                  <Hash className="h-4 w-4 mr-2 text-blue-500" />
+                                  Verify
+                                </>
+                              )}
+                            </button>
+                            <Link
+                              href={`/forensics?document=${doc.id}`}
+                              className="flex items-center w-full px-3 py-2 text-sm text-purple-700 rounded-md hover:bg-purple-50 transition-colors"
+                            >
+                              <Search className="h-4 w-4 mr-2 text-purple-500" />
+                              Forensic Analysis
+                            </Link>
+                            <div className="border-t border-gray-200 my-1"></div>
+                            <button
+                              onClick={() => exportToPDF(doc)}
+                              disabled={isExporting}
+                              className="flex items-center w-full px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <Download className="h-4 w-4 mr-2 text-gray-500" />
+                              Export as PDF
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                exportToJSON(doc)
+                              }}
+                              className="flex items-center w-full px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
+                            >
+                              <Download className="h-4 w-4 mr-2 text-gray-500" />
+                              Export as JSON
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                exportToCSV(doc)
+                              }}
+                              className="flex items-center w-full px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
+                            >
+                              <Download className="h-4 w-4 mr-2 text-gray-500" />
+                              Export as CSV
+                            </button>
+                            <div className="border-t border-gray-200 my-1"></div>
+                            <button
+                              onClick={() => handleDeleteDocument(doc)}
+                              disabled={isDeleting}
+                              className="flex items-center w-full px-3 py-2 text-sm text-red-700 rounded-md hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isDeleting ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
+                                  Deleting...
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 className="h-4 w-4 mr-2 text-red-500" />
+                                  Delete
+                                </>
+                              )}
+                            </button>
                           </div>
-                        </div>
-                      </div>
+                        </PopoverContent>
+                      </Popover>
                     </td>
                   </tr>
                 ))}

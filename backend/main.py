@@ -25,8 +25,9 @@ API Endpoints:
 import os
 from dotenv import load_dotenv
 
-# Load from root .env file (go up one directory from backend/)
+# Load from multiple .env files (root first, then backend/)
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 # Demo mode configuration
 DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
@@ -89,13 +90,11 @@ from src.json_handler import JSONHandler
 from src.manifest_handler import ManifestHandler
 from src.repositories import AttestationRepository, ProvenanceRepository
 from src.verification_portal import VerificationPortal
-from src.voice_service import VoiceCommandProcessor
 from src.analytics_service import AnalyticsService
 from src.bulk_operations_analytics import BulkOperationsAnalytics
 from src.advanced_security import AdvancedSecurityService
 from src.quantum_safe_security import HybridSecurityService, quantum_safe_hashing, quantum_safe_signatures
 from src.ai_anomaly_detector import AIAnomalyDetector
-from src.time_machine import TimeMachine
 from src.smart_contracts import SmartContractsService
 from src.predictive_analytics import PredictiveAnalyticsService
 from src.document_intelligence import DocumentIntelligenceService
@@ -118,7 +117,7 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize services at startup and cleanup at shutdown."""
-    global db, doc_handler, wal_service, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, voice_processor, analytics_service, ai_anomaly_detector, time_machine, smart_contracts, predictive_analytics, document_intelligence, advanced_security, hybrid_security
+    global db, doc_handler, wal_service, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service, ai_anomaly_detector, smart_contracts, predictive_analytics, document_intelligence, advanced_security, hybrid_security
     
     try:
         mode_text = "DEMO" if DEMO_MODE else "FULL"
@@ -173,10 +172,7 @@ async def lifespan(app: FastAPI):
         analytics_service = AnalyticsService(db_service=db)
         _bulk_operations_analytics = BulkOperationsAnalytics(db_service=db)
         logger.info("✅ Analytics service initialized")
-        
-        time_machine = TimeMachine(db_service=db)
-        logger.info("✅ Time machine service initialized")
-        
+
         # Initialize optional services only in FULL mode
         if not DEMO_MODE:
             # Initialize Advanced Security service
@@ -194,11 +190,7 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 logger.error(f"❌ Quantum-Safe Security service initialization failed: {e}")
                 hybrid_security = None
-            
-            # Initialize voice command processor
-            voice_processor = VoiceCommandProcessor()
-            logger.info("✅ Voice command processor initialized")
-            
+
             # Initialize AI anomaly detector
             ai_anomaly_detector = AIAnomalyDetector(db_service=db)
             logger.info("✅ AI anomaly detector initialized")
@@ -218,7 +210,6 @@ async def lifespan(app: FastAPI):
             # Set optional services to None in demo mode
             advanced_security = None
             hybrid_security = None
-            voice_processor = None
             ai_anomaly_detector = None
             smart_contracts = None
             predictive_analytics = None
@@ -355,11 +346,9 @@ manifest_handler = None
 attestation_repo = None
 provenance_repo = None
 verification_portal = None
-voice_processor = None
 analytics_service = None
 bulk_operations_analytics = None
 ai_anomaly_detector = None
-time_machine = None
 smart_contracts = None
 predictive_analytics = None
 document_intelligence = None
@@ -678,7 +667,7 @@ class VerificationResponse(BaseModel):
 def get_services():
     """Get initialized services."""
     # Check core services (always required)
-    core_services = [db, doc_handler, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service, time_machine]
+    core_services = [db, doc_handler, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service]
     if not all(core_services):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -695,11 +684,9 @@ def get_services():
         "attestation_repo": attestation_repo,
         "provenance_repo": provenance_repo,
         "verification_portal": verification_portal,
-        "voice_processor": voice_processor,
         "analytics_service": analytics_service,
         "bulk_operations_analytics": bulk_operations_analytics,
         "ai_anomaly_detector": ai_anomaly_detector,
-        "time_machine": time_machine,
         "smart_contracts": smart_contracts,
         "predictive_analytics": predictive_analytics,
         "document_intelligence": document_intelligence,
@@ -1647,13 +1634,11 @@ async def get_mode():
                     "attestation_repo",
                     "provenance_repo",
                     "verification_portal",
-                    "analytics_service",
-                    "time_machine"
+                    "analytics_service"
                 ],
                 "optional_services": [
                     "advanced_security",
                     "ai_anomaly_detector",
-                    "voice_processor",
                     "smart_contracts",
                     "predictive_analytics",
                     "document_intelligence"
@@ -1662,7 +1647,6 @@ async def get_mode():
             "services_loaded": {
                 "advanced_security": advanced_security is not None,
                 "ai_anomaly_detector": ai_anomaly_detector is not None,
-                "voice_processor": voice_processor is not None,
                 "smart_contracts": smart_contracts is not None,
                 "predictive_analytics": predictive_analytics is not None,
                 "document_intelligence": document_intelligence is not None
@@ -1961,7 +1945,7 @@ async def ingest_packet(
             "artifact_id": artifact_id,
             "hash": manifest_result['hash'],
             "file_count": len(files),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": get_eastern_now_iso()
         }
         return create_success_response(ingest_data)
         
@@ -2025,7 +2009,7 @@ async def extract_document_data(
                 "filename": file.filename,
                 "content_type": file.content_type,
                 "file_size": len(content),
-                "extraction_timestamp": datetime.now(timezone.utc).isoformat()
+                "extraction_timestamp": get_eastern_now_iso()
             }
         }
         
@@ -2065,7 +2049,7 @@ async def verify_manifest(
             "is_valid": result['is_valid'],
             "hash": result['hash'],
             "errors": result['errors'],
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": get_eastern_now_iso()
         }
         return create_success_response(verify_data)
         
@@ -2161,12 +2145,79 @@ async def get_artifacts(
                 if artifact.local_metadata:
                     security_level = artifact.local_metadata.get('security_level', 'standard')
                 
+                # Clean borrower name - remove encoded base64 strings but KEEP the actual name
+                def clean_borrower_name(name: str) -> str:
+                    """Remove encoded base64/hex strings from borrower name, keeping only the readable name."""
+                    if not name:
+                        return ''
+                    import re
+                    # Remove newlines and normalize whitespace
+                    cleaned = re.sub(r'[\n\r]+', ' ', name).strip()
+                    # Find position of first Base64-like string (8+ alphanumeric chars, possibly with + / =)
+                    # Base64 strings typically start with patterns like Z0FBQUFBQnBB...
+                    match = re.search(r'[a-zA-Z0-9+/=]{10,}', cleaned)
+                    if match:
+                        # Keep only the text BEFORE the Base64 string
+                        before_base64 = cleaned[:match.start()].strip()
+                        # Extract only readable name parts (letters, spaces, apostrophes, hyphens)
+                        name_parts = []
+                        for part in before_base64.split():
+                            # Keep only parts that are actual names (pure letters, 2-25 chars)
+                            if re.match(r'^[a-zA-Z\'-]+$', part) and 2 <= len(part) <= 25:
+                                if sum(1 for c in part if c.isalpha()) >= 2:  # At least 2 letters
+                                    name_parts.append(part)
+                        if name_parts:
+                            return ' '.join(name_parts)
+                    # If no Base64 found or already cleaned, try to extract name parts
+                    parts = cleaned.split()
+                    name_parts = []
+                    for part in parts:
+                        if re.match(r'^[a-zA-Z\'-]+$', part) and 2 <= len(part) <= 25:
+                            if sum(1 for c in part if c.isalpha()) >= 2:
+                                name_parts.append(part)
+                                if len(name_parts) >= 3:  # First, middle, last name max
+                                    break
+                        elif len(part) >= 10 and re.match(r'^[a-zA-Z0-9+/=]+$', part):
+                            # This looks like Base64, stop here
+                            break
+                    return ' '.join(name_parts) if name_parts else (cleaned[:50] if len(cleaned) <= 50 else 'Unknown')
+                
+                cleaned_name = clean_borrower_name(borrower.get('full_name', ''))
+                
+                # Decrypt and clean borrower email (it may be encrypted Base64)
+                raw_email = borrower.get('email', '')
+                cleaned_email = ''
+                if raw_email:
+                    try:
+                        # Try to decrypt if it's encrypted
+                        encryption_service = get_encryption_service()
+                        try:
+                            decrypted_email = encryption_service.decrypt_field(str(raw_email))
+                            cleaned_email = decrypted_email
+                        except Exception:
+                            # If decryption fails, it's probably not encrypted or already decrypted
+                            # Check if it's a Base64 string (long alphanumeric)
+                            import re
+                            if re.match(r'^[a-zA-Z0-9+/=]{20,}$', raw_email):
+                                # It's a Base64 string but decryption failed - don't show it
+                                cleaned_email = ''
+                            else:
+                                # It's a normal email, use it
+                                cleaned_email = raw_email
+                    except Exception:
+                        # Encryption service not available or error - try to detect Base64
+                        import re
+                        if re.match(r'^[a-zA-Z0-9+/=]{20,}$', raw_email):
+                            cleaned_email = ''  # Don't show Base64 strings
+                        else:
+                            cleaned_email = raw_email
+                
                 # Create response object with borrower information
                 artifact_data = {
                     "id": artifact.id,
                     "loan_id": artifact.loan_id,
-                    "borrower_name": borrower.get('full_name', ''),
-                    "borrower_email": borrower.get('email', ''),
+                    "borrower_name": cleaned_name,
+                    "borrower_email": cleaned_email,
                     "loan_amount": borrower.get('annual_income', 0),  # Use annual income as loan amount proxy
                     "document_type": artifact.artifact_type,
                     "upload_date": artifact.created_at.isoformat(),
@@ -2351,7 +2402,7 @@ async def get_stats(services: dict = Depends(get_services)):
             "total_events": total_events,
             "artifacts_by_type": artifacts_by_type,
             "recent_activity": recent_activity,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": get_eastern_now_iso()
         }
         
         return create_success_response(stats_data)
@@ -2740,7 +2791,7 @@ async def get_proof(
             "proof_bundle": proof_bundle,
             "artifact_id": id,
             "etid": artifact.etid,
-            "retrieved_at": datetime.now(timezone.utc).isoformat()
+            "retrieved_at": get_eastern_now_iso()
         }
         return create_success_response(proof_data)
         
@@ -2836,7 +2887,7 @@ async def presign_s3_upload(
             )
             
             object_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{request.key}"
-            expires_at = (datetime.now(timezone.utc) + timedelta(seconds=expires_in)).isoformat()
+            expires_at = (get_eastern_now() + timedelta(seconds=expires_in)).isoformat()
             
             logger.info(f"✅ S3 presigned URL generated for: {request.key}")
             
@@ -2887,7 +2938,7 @@ async def get_dashboard_aggregate(period: str, services: dict):
                 days = 7
         
         # Calculate date range
-        end_date = datetime.now(timezone.utc)
+        end_date = get_eastern_now()
         start_date = end_date - timedelta(days=days)
         
         # Get events for the period
@@ -2971,7 +3022,7 @@ async def get_dashboard_aggregate(period: str, services: dict):
                 "series": daily_tamper
             },
             "period": f"{days}d",
-            "lastUpdated": datetime.now(timezone.utc).isoformat()
+            "lastUpdated": get_eastern_now_iso()
         }
         
         logger.info(f"✅ Dashboard aggregate calculated for {days} days")
@@ -3522,7 +3573,7 @@ async def get_disclosure_pack(
             # 5. Manifest
             manifest_data = {
                 "disclosure_pack_version": "1.0",
-                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "generated_at": get_eastern_now_iso(),
                 "artifact_id": id,
                 "artifact_hash": artifact.payload_sha256,
                 "artifact_etid": artifact.etid,
@@ -3740,7 +3791,7 @@ async def global_exception_handler(request, exc):
             error="Internal Server Error",
             message="An unexpected error occurred",
             details=str(exc),
-            timestamp=datetime.now(timezone.utc).isoformat()
+            timestamp=get_eastern_now_iso()
         ).dict()
     )
 
@@ -3811,113 +3862,6 @@ async def root():
         "docs": "/docs",
         "health": "/api/health"
     }
-
-
-# =============================================================================
-# VOICE COMMAND ENDPOINTS
-# =============================================================================
-
-class VoiceCommandRequest(BaseModel):
-    """Voice command request model."""
-    command: str = Field(..., description="The voice command text")
-    user_id: str = Field(default="voice_user", description="User ID issuing the command")
-    language: str = Field(default="en", description="Language of the command")
-
-
-class VoiceCommandResponse(BaseModel):
-    """Voice command response model."""
-    success: bool = Field(..., description="Whether the command was processed successfully")
-    operation: str = Field(..., description="The operation that was identified")
-    message: str = Field(..., description="Human-readable response message")
-    action: Optional[str] = Field(None, description="The action to be performed")
-    parameters: Optional[Dict[str, Any]] = Field(None, description="Parameters for the action")
-    api_endpoint: Optional[str] = Field(None, description="API endpoint to call")
-    method: Optional[str] = Field(None, description="HTTP method to use")
-    suggestions: Optional[List[str]] = Field(None, description="Suggested commands if help was requested")
-
-
-@app.post("/api/voice/process-command", response_model=StandardResponse)
-async def process_voice_command(
-    request: VoiceCommandRequest,
-    services: dict = Depends(get_services)
-):
-    """
-    Process a voice command and return the corresponding API operation.
-    
-    This endpoint takes a voice command text and converts it into a structured
-    API operation that can be executed by the frontend.
-    """
-    try:
-        # Process the voice command
-        result = services["voice_processor"].process_voice_command(
-            command_text=request.command,
-            user_id=request.user_id
-        )
-        
-        # Log the voice command processing (skip if db doesn't support None artifact_id)
-        try:
-            services["db"].insert_event(
-                artifact_id="voice_command",
-                event_type="voice_command_processed",
-                payload_json=json.dumps({
-                    "command": request.command,
-                    "user_id": request.user_id,
-                    "operation": result.get("operation"),
-                    "success": result.get("success")
-                }),
-                created_by=request.user_id
-            )
-        except Exception as log_error:
-            logger.warning(f"Could not log voice command event: {log_error}")
-        
-        logger.info(f"✅ Voice command processed: '{request.command}' -> {result.get('operation')}")
-        
-        return create_success_response({
-            "voice_response": VoiceCommandResponse(**result).dict()
-        })
-        
-    except Exception as e:
-        logger.error(f"Failed to process voice command: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=create_error_response(
-                code="VOICE_COMMAND_PROCESSING_FAILED",
-                message="Failed to process voice command",
-                details={"error": str(e)}
-            ).dict()
-        )
-
-
-@app.get("/api/voice/available-commands", response_model=StandardResponse)
-async def get_available_voice_commands(
-    services: dict = Depends(get_services)
-):
-    """
-    Get a list of available voice commands and their examples.
-    
-    Returns all supported voice commands with examples and descriptions.
-    """
-    try:
-        commands = services["voice_processor"].get_available_commands()
-        
-        logger.info("✅ Retrieved available voice commands")
-        
-        return create_success_response({
-            "commands": commands,
-            "total_commands": len(commands)
-        })
-        
-    except Exception as e:
-        logger.error(f"Failed to get available voice commands: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=create_error_response(
-                code="VOICE_COMMANDS_RETRIEVAL_FAILED",
-                message="Failed to retrieve available voice commands",
-                details={"error": str(e)}
-            ).dict()
-        )
 
 
 # =============================================================================
@@ -4014,8 +3958,8 @@ async def get_daily_activity(
         db = services["db"]
         session = db._ensure_session()
 
-        # Today boundaries in UTC
-        today_start = datetime.now(timezone.utc).date().strftime("%Y-%m-%d")
+        # Today boundaries in Eastern Time
+        today_start = get_eastern_now().date().strftime("%Y-%m-%d")
 
         # Count verified today (sealed artifacts created today)
         verified_sql = text(
@@ -4099,7 +4043,7 @@ async def get_verification_metrics(
         session = db._ensure_session()
 
         # 24h cutoff
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+        cutoff = get_eastern_now() - timedelta(hours=24)
 
         # Fetch counts
         counts_sql = text(
@@ -4270,8 +4214,9 @@ async def get_financial_document_analytics(
         loan_documents = [a for a in artifacts if a.artifact_type in ['loan_document', 'financial_statement']]
         
         # Calculate metrics
-        documents_sealed_today = len([a for a in loan_documents if a.created_at.date() == datetime.now().date()])
-        documents_sealed_month = len([a for a in loan_documents if a.created_at.month == datetime.now().month])
+        eastern_now = get_eastern_now()
+        documents_sealed_today = len([a for a in loan_documents if a.created_at.date() == eastern_now.date()])
+        documents_sealed_month = len([a for a in loan_documents if a.created_at.month == eastern_now.month])
         
         # Calculate total loan value
         total_loan_value = 0
@@ -4445,7 +4390,8 @@ async def get_business_intelligence(
         loan_documents = [a for a in artifacts if a.artifact_type in ['loan_document', 'financial_statement']]
         
         # Revenue metrics
-        documents_this_month = len([a for a in loan_documents if a.created_at.month == datetime.now().month])
+        eastern_now = get_eastern_now()
+        documents_this_month = len([a for a in loan_documents if a.created_at.month == eastern_now.month])
         revenue_per_document = 25.00  # $25 per document sealed
         monthly_revenue = documents_this_month * revenue_per_document
         
@@ -4479,8 +4425,9 @@ async def get_business_intelligence(
         
         # Seasonal trends (last 6 months)
         seasonal_trends = []
+        eastern_now = get_eastern_now()
         for i in range(6):
-            month = datetime.now().month - i
+            month = eastern_now.month - i
             if month <= 0:
                 month += 12
             month_docs = len([a for a in loan_documents if a.created_at.month == month])
@@ -5194,172 +5141,6 @@ async def get_anomaly_summary(
         )
 
 
-# Time Machine Endpoints
-
-class StateSnapshotRequest(BaseModel):
-    """Request model for creating state snapshots."""
-    document_id: str = Field(..., description="ID of the document")
-    state_data: Dict[str, Any] = Field(..., description="Current state data")
-    description: str = Field(default="", description="Description of the snapshot")
-    tags: List[str] = Field(default=[], description="Tags for categorization")
-
-
-@app.post("/api/time-machine/snapshot", response_model=StandardResponse)
-async def create_state_snapshot(
-    request: StateSnapshotRequest,
-    created_by: str = Query("system", description="User creating the snapshot"),
-    services: dict = Depends(get_services)
-):
-    """
-    Create a snapshot of the current document state.
-    
-    Creates a point-in-time snapshot that can be used for time travel
-    and state restoration.
-    """
-    try:
-        snapshot = services["time_machine"].create_state_snapshot(
-            document_id=request.document_id,
-            state_data=request.state_data,
-            created_by=created_by,
-            description=request.description,
-            tags=request.tags
-        )
-        
-        logger.info(f"✅ State snapshot created: {snapshot.snapshot_id}")
-        
-        return create_success_response({
-            "snapshot": {
-                "snapshot_id": snapshot.snapshot_id,
-                "document_id": snapshot.document_id,
-                "version": snapshot.version,
-                "timestamp": snapshot.timestamp.isoformat(),
-                "description": snapshot.description,
-                "tags": snapshot.tags,
-                "created_by": snapshot.created_by
-            }
-        })
-        
-    except Exception as e:
-        logger.error(f"Failed to create state snapshot: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=create_error_response(
-                code="SNAPSHOT_CREATION_FAILED",
-                message="Failed to create state snapshot",
-                details={"error": str(e)}
-            ).dict()
-        )
-
-
-@app.get("/api/time-machine/timeline/{document_id}", response_model=StandardResponse)
-async def get_document_timeline(
-    document_id: str,
-    start_time: Optional[str] = Query(None, description="Start time (ISO format)"),
-    end_time: Optional[str] = Query(None, description="End time (ISO format)"),
-    services: dict = Depends(get_services)
-):
-    """
-    Get the timeline of document states within a time range.
-    
-    Returns the complete history of document state changes,
-    allowing users to see how the document evolved over time.
-    """
-    try:
-        # Parse time parameters
-        start_dt = None
-        end_dt = None
-        
-        if start_time:
-            start_dt = datetime.fromisoformat(start_time.replace('Z', TZ_UTC_SUFFIX))
-        if end_time:
-            end_dt = datetime.fromisoformat(end_time.replace('Z', TZ_UTC_SUFFIX))
-        
-        timeline = services["time_machine"].get_document_timeline(
-            document_id=document_id,
-            start_time=start_dt,
-            end_time=end_dt
-        )
-        
-        logger.info(f"✅ Document timeline retrieved: {len(timeline)} states")
-        
-        return create_success_response({
-            "document_id": document_id,
-            "timeline": [
-                {
-                    "state_id": state.state_id,
-                    "version": state.version,
-                    "timestamp": state.timestamp.isoformat(),
-                    "change_type": state.change_type.value,
-                    "changed_by": state.changed_by,
-                    "change_description": state.change_description,
-                    "parent_state_id": state.parent_state_id
-                }
-                for state in timeline
-            ],
-            "total_states": len(timeline)
-        })
-        
-    except Exception as e:
-        logger.error(f"Failed to get document timeline: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=create_error_response(
-                code="TIMELINE_RETRIEVAL_FAILED",
-                message="Failed to get document timeline",
-                details={"error": str(e)}
-            ).dict()
-        )
-
-
-@app.post("/api/time-machine/restore/{document_id}", response_model=StandardResponse)
-async def restore_document_state(
-    document_id: str,
-    target_state_id: str = Query(..., description="ID of the state to restore to"),
-    restored_by: str = Query("system", description="User performing the restore"),
-    restore_reason: str = Query("", description="Reason for restoration"),
-    services: dict = Depends(get_services)
-):
-    """
-    Restore a document to a previous state.
-    
-    Allows users to travel back in time and restore a document
-    to any previous state in its history.
-    """
-    try:
-        restored_state = services["time_machine"].restore_document_state(
-            document_id=document_id,
-            target_state_id=target_state_id,
-            restored_by=restored_by,
-            restore_reason=restore_reason
-        )
-        
-        logger.info(f"✅ Document {document_id} restored to state {target_state_id}")
-        
-        return create_success_response({
-            "restored_state": {
-                "state_id": restored_state.state_id,
-                "document_id": restored_state.document_id,
-                "version": restored_state.version,
-                "timestamp": restored_state.timestamp.isoformat(),
-                "change_type": restored_state.change_type.value,
-                "changed_by": restored_state.changed_by,
-                "change_description": restored_state.change_description,
-                "parent_state_id": restored_state.parent_state_id
-            }
-        })
-        
-    except Exception as e:
-        logger.error(f"Failed to restore document state: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=create_error_response(
-                code="STATE_RESTORATION_FAILED",
-                message="Failed to restore document state",
-                details={"error": str(e)}
-            ).dict()
-        )
-
-
 # Smart Contracts Endpoints
 
 class SmartContractRequest(BaseModel):
@@ -5757,7 +5538,7 @@ async def seal_loan_document(
             "additional_notes": request.additional_notes,
             "borrower": encrypted_borrower_data,
             "created_by": request.created_by,
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": get_eastern_now_iso()
         }
         
         # Calculate SHA-256 hash of the comprehensive document
@@ -5780,7 +5561,7 @@ async def seal_loan_document(
             "filename": f"loan-{request.loan_id}.json",
             "file_type": "application/json",
             "file_size": len(document_json.encode('utf-8')),
-            "upload_timestamp": datetime.now(timezone.utc).isoformat(),
+            "upload_timestamp": get_eastern_now_iso(),
             "content_hash": document_hash
         }]
         
@@ -5804,7 +5585,7 @@ async def seal_loan_document(
                 "comprehensive_document": comprehensive_document,
                 "comprehensive_hash": walacor_result.get("document_hash", document_hash),
                 "includes_borrower_info": True,
-                "sealed_at": walacor_result.get("sealed_timestamp", datetime.now(timezone.utc).isoformat()),
+                "sealed_at": walacor_result.get("sealed_timestamp", get_eastern_now_iso()),
                 "walacor_envelope": walacor_result.get("envelope_metadata", {}),
                 "blockchain_proof": walacor_result.get("blockchain_proof", {})
             },
@@ -5846,7 +5627,7 @@ async def seal_loan_document(
                 artifact_id=artifact_id,
                 walacor_tx_id=walacor_result.get("walacor_tx_id", f"TX_{int(time.time() * 1000)}_{document_hash[:8]}"),
                 hash=walacor_result.get("document_hash", document_hash),
-                sealed_at=walacor_result.get("sealed_timestamp", datetime.now(timezone.utc).isoformat())
+                sealed_at=walacor_result.get("sealed_timestamp", get_eastern_now_iso())
             ).dict()
         )
         
@@ -5893,7 +5674,7 @@ async def seal_loan_document_maximum_security(
             "additional_notes": request.additional_notes,
             "borrower": encrypted_borrower_data,
             "created_by": request.created_by,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": get_eastern_now_iso(),
             "security_level": "maximum"
         }
         
@@ -5920,7 +5701,7 @@ async def seal_loan_document_maximum_security(
             "filename": f"loan-{request.loan_id}-secure.json",
             "file_type": "application/json",
             "file_size": len(json.dumps(comprehensive_document).encode('utf-8')),
-            "upload_timestamp": datetime.now(timezone.utc).isoformat(),
+            "upload_timestamp": get_eastern_now_iso(),
             "content_hash": primary_hash
         }]
         
@@ -5947,7 +5728,7 @@ async def seal_loan_document_maximum_security(
                 "security_level": "maximum",
                 "tamper_resistance": "high",
                 "verification_methods": ["multi_hash", "pki_signature", "content_integrity", "blockchain_seal"],
-                "sealed_at": walacor_result.get("sealed_timestamp", datetime.now(timezone.utc).isoformat()),
+                "sealed_at": walacor_result.get("sealed_timestamp", get_eastern_now_iso()),
                 "walacor_envelope": walacor_result.get("envelope_metadata", {}),
                 "blockchain_proof": walacor_result.get("blockchain_proof", {})
             },
@@ -5997,7 +5778,7 @@ async def seal_loan_document_maximum_security(
                     }
                 },
                 "hash": primary_hash,
-                "sealed_at": walacor_result.get("sealed_timestamp", datetime.now(timezone.utc).isoformat()),
+                "sealed_at": walacor_result.get("sealed_timestamp", get_eastern_now_iso()),
                 "blockchain_proof": walacor_result.get("blockchain_proof", {})
             }
         )
@@ -6247,7 +6028,7 @@ async def verify_maximum_security_document(
                     "verification_methods": comprehensive_seal.get('security_metadata', {}).get('verification_methods', []),
                     "algorithms_used": comprehensive_seal.get('security_metadata', {}).get('algorithms_used', [])
                 },
-                "verification_timestamp": datetime.now(timezone.utc).isoformat()
+                "verification_timestamp": get_eastern_now_iso()
             }
         )
         
@@ -6294,7 +6075,7 @@ async def seal_loan_document_quantum_safe(
             "additional_notes": request.additional_notes,
             "borrower": encrypted_borrower_data,
             "created_by": request.created_by,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": get_eastern_now_iso(),
             "security_level": "quantum_safe"
         }
         
@@ -6321,7 +6102,7 @@ async def seal_loan_document_quantum_safe(
             "filename": f"loan-{request.loan_id}-quantum-safe.json",
             "file_type": "application/json",
             "file_size": len(json.dumps(comprehensive_document).encode('utf-8')),
-            "upload_timestamp": datetime.now(timezone.utc).isoformat(),
+            "upload_timestamp": get_eastern_now_iso(),
             "content_hash": primary_hash
         }]
         
@@ -6347,7 +6128,7 @@ async def seal_loan_document_quantum_safe(
                 "security_level": "quantum_safe",
                 "quantum_resistance": "high",
                 "algorithms_used": quantum_safe_seal['metadata']['algorithms_used'],
-                "sealed_at": walacor_result.get("sealed_timestamp", datetime.now(timezone.utc).isoformat()),
+                "sealed_at": walacor_result.get("sealed_timestamp", get_eastern_now_iso()),
                 "walacor_envelope": walacor_result.get("envelope_metadata", {}),
                 "blockchain_proof": walacor_result.get("blockchain_proof", {})
             },
@@ -6400,7 +6181,7 @@ async def seal_loan_document_quantum_safe(
                     }
                 },
                 "hash": primary_hash,
-                "sealed_at": walacor_result.get("sealed_timestamp", datetime.now(timezone.utc).isoformat()),
+                "sealed_at": walacor_result.get("sealed_timestamp", get_eastern_now_iso()),
                 "blockchain_proof": walacor_result.get("blockchain_proof", {})
             }
         )
@@ -7316,247 +7097,432 @@ async def verify_by_document(
 
 
 # =============================================================================
-# DOCUMENT SIGNING ENDPOINTS
+# FORENSIC ANALYSIS ENDPOINTS
 # =============================================================================
 
-from src.document_signing_service import DocumentSigningService, Signer, SigningField, SigningProvider
+from src.visual_forensic_engine import get_forensic_engine, VisualForensicEngine
+from src.document_dna import get_dna_service, DocumentDNA
+from src.forensic_timeline import get_timeline_service, ForensicTimeline
+from src.pattern_detector import get_pattern_detector, PatternDetector
 
-# Initialize signing service
-signing_service = DocumentSigningService()
+# Initialize forensic services
+forensic_engine = get_forensic_engine(db_service=db)
+dna_service = get_dna_service(db_service=db)
+timeline_service = get_timeline_service(db_service=db)
+pattern_detector = get_pattern_detector(db_service=db)
 
-# Pydantic models for signing
-class SignerRequest(BaseModel):
-    """Request model for signer information."""
-    email: str = Field(..., description="Signer email address")
-    name: str = Field(..., description="Signer full name")
-    role: str = Field(default="signer", description="Signer role")
-    order: int = Field(default=1, description="Signing order")
-    phone_number: Optional[str] = Field(None, description="Signer phone number")
-    access_code: Optional[str] = Field(None, description="Access code for signing")
+logger.info("✅ Forensic analysis services initialized")
 
-class SigningFieldRequest(BaseModel):
-    """Request model for signing field configuration."""
-    field_type: str = Field(..., description="Field type (signature, initial, date, text, checkbox)")
-    page_number: int = Field(..., description="Page number for the field")
-    x_position: float = Field(..., description="X position of the field")
-    y_position: float = Field(..., description="Y position of the field")
-    width: float = Field(..., description="Width of the field")
-    height: float = Field(..., description="Height of the field")
-    recipient_id: str = Field(..., description="Recipient ID for the field")
-    required: bool = Field(default=True, description="Whether the field is required")
-    tab_label: Optional[str] = Field(None, description="Tab label for the field")
-    value: Optional[str] = Field(None, description="Default value for the field")
 
-class CreateEnvelopeRequest(BaseModel):
-    """Request model for creating a signing envelope."""
-    document_id: str = Field(..., description="ID of the document to be signed")
-    document_name: str = Field(..., description="Name of the document")
-    signers: List[SignerRequest] = Field(..., description="List of signers")
-    signing_fields: List[SigningFieldRequest] = Field(..., description="List of signing fields")
-    template_type: str = Field(default="loan_application", description="Type of signing template")
-    provider: str = Field(default="docusign", description="Signing provider to use")
-    custom_config: Optional[Dict[str, Any]] = Field(None, description="Custom configuration")
+# Visual Forensics Endpoints
 
-@app.post("/api/signing/create-envelope", response_model=StandardResponse)
-async def create_signing_envelope(
-    request: CreateEnvelopeRequest,
+class ForensicDiffRequest(BaseModel):
+    """Request model for forensic document comparison."""
+    artifact_id_1: str = Field(..., description="First document ID")
+    artifact_id_2: str = Field(..., description="Second document ID")
+    include_overlay: bool = Field(default=True, description="Include visual diff overlay")
+
+
+@app.post("/api/forensics/diff", response_model=StandardResponse)
+async def forensic_diff_comparison(
+    request: ForensicDiffRequest,
     services: dict = Depends(get_services)
 ):
-    """Create a document signing envelope."""
+    """
+    Perform forensic comparison between two documents.
+
+    Returns detailed analysis of differences, risk assessment,
+    and visual diff overlay data.
+    """
     try:
-        # Convert request models to service models
-        signers = [
-            Signer(
-                email=signer.email,
-                name=signer.name,
-                role=signer.role,
-                order=signer.order,
-                phone_number=signer.phone_number,
-                access_code=signer.access_code
-            )
-            for signer in request.signers
-        ]
-        
-        signing_fields = [
-            SigningField(
-                field_type=field.field_type,
-                page_number=field.page_number,
-                x_position=field.x_position,
-                y_position=field.y_position,
-                width=field.width,
-                height=field.height,
-                recipient_id=field.recipient_id,
-                required=field.required,
-                tab_label=field.tab_label,
-                value=field.value
-            )
-            for field in request.signing_fields
-        ]
-        
-        # Convert provider string to enum
-        provider = SigningProvider(request.provider)
-        
-        # Create signing envelope
-        result = await signing_service.create_signing_envelope(
-            document_id=request.document_id,
-            document_name=request.document_name,
-            signers=signers,
-            signing_fields=signing_fields,
-            template_type=request.template_type,
-            provider=provider,
-            custom_config=request.custom_config
+        # Fetch both documents
+        artifact1 = services["db"].get_artifact_by_id(request.artifact_id_1)
+        artifact2 = services["db"].get_artifact_by_id(request.artifact_id_2)
+
+        if not artifact1 or not artifact2:
+            raise HTTPException(status_code=404, detail="One or both documents not found")
+
+        # Get document payloads
+        doc1 = artifact1.local_metadata or {}
+        doc2 = artifact2.local_metadata or {}
+
+        # Perform forensic comparison
+        diff_result = forensic_engine.compare_documents(
+            doc1=doc1,
+            doc2=doc2,
+            doc1_id=request.artifact_id_1,
+            doc2_id=request.artifact_id_2,
+            metadata1={'created_at': artifact1.created_at},
+            metadata2={'created_at': artifact2.created_at}
         )
-        
-        logger.info(f"✅ Created signing envelope {result.envelope_id} with provider {provider.value}")
-        
+
+        # Generate visual overlay if requested
+        overlay = None
+        if request.include_overlay:
+            overlay = forensic_engine.generate_diff_overlay(doc1, doc2)
+
+        # Extract modification metadata
+        metadata = forensic_engine.extract_modification_metadata(diff_result)
+
+        logger.info(f"✅ Forensic diff completed: {diff_result.total_changes} changes, risk={diff_result.risk_score}")
+
         return create_success_response({
-            "signing_result": {
-                "success": result.success,
-                "envelope_id": result.envelope_id,
-                "signing_url": result.signing_url,
-                "status": result.status.value,
-                "error_message": result.error_message,
-                "processing_time": result.processing_time,
-                "provider_response": result.provider_response
-            }
+            "diff_result": diff_result.to_dict(),
+            "visual_overlay": overlay,
+            "metadata": metadata
         })
-        
+
     except Exception as e:
-        logger.error(f"Failed to create signing envelope: {e}")
+        logger.error(f"Forensic diff failed: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=500,
             detail=create_error_response(
-                code="ENVELOPE_CREATION_FAILED",
-                message="Failed to create signing envelope",
+                code="FORENSIC_DIFF_FAILED",
+                message="Failed to perform forensic comparison",
                 details={"error": str(e)}
             ).dict()
         )
 
-@app.post("/api/signing/send-envelope", response_model=StandardResponse)
-async def send_signing_envelope(
-    envelope_id: str = Query(..., description="ID of the envelope to send"),
-    provider: str = Query(default="docusign", description="Signing provider"),
+
+@app.get("/api/forensics/timeline/{artifact_id}", response_model=StandardResponse)
+async def get_forensic_timeline(
+    artifact_id: str,
+    start_time: Optional[str] = Query(None, description="Start time (ISO format)"),
+    end_time: Optional[str] = Query(None, description="End time (ISO format)"),
     services: dict = Depends(get_services)
 ):
-    """Send a signing envelope to signers."""
+    """
+    Get complete forensic timeline for a document.
+
+    Returns all events, snapshots, suspicious patterns, and risk assessment.
+    """
     try:
-        # Convert provider string to enum
-        provider_enum = SigningProvider(provider)
-        
-        # Send signing envelope
-        result = await signing_service.send_signing_envelope(
-            envelope_id=envelope_id,
-            provider=provider_enum
+        # Parse time parameters
+        start_dt = None
+        end_dt = None
+
+        if start_time:
+            start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+        if end_time:
+            end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+
+        # Build timeline
+        timeline = timeline_service.build_timeline(
+            artifact_id=artifact_id,
+            start_time=start_dt,
+            end_time=end_dt
         )
-        
-        logger.info(f"✅ Sent signing envelope {envelope_id} with provider {provider}")
-        
-        return create_success_response({
-            "signing_result": {
-                "success": result.success,
-                "envelope_id": result.envelope_id,
-                "signing_url": result.signing_url,
-                "status": result.status.value,
-                "error_message": result.error_message,
-                "processing_time": result.processing_time,
-                "provider_response": result.provider_response
-            }
-        })
-        
+
+        logger.info(f"✅ Forensic timeline generated: {timeline['total_events']} events")
+
+        return create_success_response(timeline)
+
     except Exception as e:
-        logger.error(f"Failed to send signing envelope: {e}")
+        logger.error(f"Timeline generation failed: {e}")
         raise HTTPException(
             status_code=500,
             detail=create_error_response(
-                code="ENVELOPE_SENDING_FAILED",
-                message="Failed to send signing envelope",
+                code="TIMELINE_GENERATION_FAILED",
+                message="Failed to generate forensic timeline",
                 details={"error": str(e)}
             ).dict()
         )
 
-@app.get("/api/signing/providers", response_model=StandardResponse)
-async def get_signing_providers(
+
+@app.post("/api/forensics/analyze-tamper", response_model=StandardResponse)
+async def analyze_tampering(
+    artifact_id: str = Query(..., description="Document ID to analyze"),
+    original_artifact_id: Optional[str] = Query(None, description="Original document ID for comparison"),
     services: dict = Depends(get_services)
 ):
-    """Get available signing providers."""
+    """
+    Analyze document for tampering using forensic techniques.
+
+    Combines visual forensics, DNA analysis, and timeline analysis.
+    """
     try:
-        providers = signing_service.get_signing_providers()
-        
-        provider_info = {
-            "docusign": {
-                "name": "DocuSign",
-                "description": "Industry-leading electronic signature platform",
-                "features": ["eSignatures", "Workflow automation", "Compliance", "Integration"],
-                "supported_formats": ["PDF", "Word", "Excel", "Images"],
-                "api_version": "v2.1"
+        # Get document
+        artifact = services["db"].get_artifact_by_id(artifact_id)
+        if not artifact:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        doc = artifact.local_metadata or {}
+
+        # Create DNA fingerprint
+        fingerprint = dna_service.fingerprint(doc, artifact_id)
+
+        # Get timeline
+        timeline = timeline_service.build_timeline(artifact_id)
+
+        # Analyze for partial tampering if original provided
+        tampering_analysis = None
+        if original_artifact_id:
+            original_artifact = services["db"].get_artifact_by_id(original_artifact_id)
+            if original_artifact:
+                original_doc = original_artifact.local_metadata or {}
+                original_fp = dna_service.fingerprint(original_doc, original_artifact_id)
+
+                tampering_analysis = dna_service.detect_partial_tampering(original_fp, fingerprint)
+
+        result = {
+            "artifact_id": artifact_id,
+            "fingerprint": fingerprint.to_dict(),
+            "timeline_summary": {
+                "total_events": timeline['total_events'],
+                "suspicious_patterns": len(timeline['suspicious_patterns']),
+                "risk_assessment": timeline['risk_assessment']
             },
-            "adobe_sign": {
-                "name": "Adobe Sign",
-                "description": "Adobe's electronic signature solution",
-                "features": ["eSignatures", "Document management", "Mobile signing", "Analytics"],
-                "supported_formats": ["PDF", "Word", "Excel", "Images"],
-                "api_version": "v6"
-            },
-            "hello_sign": {
-                "name": "HelloSign",
-                "description": "Dropbox's electronic signature platform",
-                "features": ["eSignatures", "Template management", "Team collaboration", "API"],
-                "supported_formats": ["PDF", "Word", "Excel"],
-                "api_version": "v3"
-            },
-            "internal": {
-                "name": "Internal Signing",
-                "description": "Internal document signing system",
-                "features": ["Custom workflows", "Internal verification", "Audit trails", "Integration"],
-                "supported_formats": ["PDF", "Word", "Excel", "Images"],
-                "api_version": "v1"
-            }
+            "tampering_analysis": tampering_analysis
         }
-        
-        logger.info("✅ Retrieved signing providers")
-        
-        return create_success_response({
-            "signing_providers": providers,
-            "provider_info": provider_info,
-            "total_providers": len(providers)
-        })
-        
+
+        logger.info(f"✅ Tamper analysis completed for {artifact_id}")
+
+        return create_success_response(result)
+
     except Exception as e:
-        logger.error(f"Failed to get signing providers: {e}")
+        logger.error(f"Tamper analysis failed: {e}")
         raise HTTPException(
             status_code=500,
             detail=create_error_response(
-                code="PROVIDERS_RETRIEVAL_FAILED",
-                message="Failed to get signing providers",
+                code="TAMPER_ANALYSIS_FAILED",
+                message="Failed to analyze tampering",
                 details={"error": str(e)}
             ).dict()
         )
 
-@app.get("/api/signing/templates", response_model=StandardResponse)
-async def get_signing_templates(
+
+# Document DNA Endpoints
+
+@app.post("/api/dna/fingerprint", response_model=StandardResponse)
+async def create_document_fingerprint(
+    artifact_id: str = Query(..., description="Document ID"),
     services: dict = Depends(get_services)
 ):
-    """Get available signing templates."""
+    """
+    Create multi-layered DNA fingerprint for a document.
+    """
     try:
-        templates = signing_service.get_signing_templates()
-        
-        logger.info("✅ Retrieved signing templates")
-        
+        # Get document
+        artifact = services["db"].get_artifact_by_id(artifact_id)
+        if not artifact:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        doc = artifact.local_metadata or {}
+
+        # Create fingerprint
+        fingerprint = dna_service.fingerprint(doc, artifact_id)
+
+        logger.info(f"✅ DNA fingerprint created: {fingerprint.combined_hash}")
+
         return create_success_response({
-            "signing_templates": templates,
-            "total_templates": len(templates)
+            "fingerprint": fingerprint.to_dict()
         })
-        
+
     except Exception as e:
-        logger.error(f"Failed to get signing templates: {e}")
+        logger.error(f"Fingerprint creation failed: {e}")
         raise HTTPException(
             status_code=500,
             detail=create_error_response(
-                code="TEMPLATES_RETRIEVAL_FAILED",
-                message="Failed to get signing templates",
+                code="FINGERPRINT_FAILED",
+                message="Failed to create document fingerprint",
                 details={"error": str(e)}
             ).dict()
         )
+
+
+@app.get("/api/dna/similarity/{artifact_id}", response_model=StandardResponse)
+async def find_similar_documents(
+    artifact_id: str,
+    threshold: float = Query(0.7, description="Similarity threshold (0.0-1.0)"),
+    limit: int = Query(10, description="Maximum number of results"),
+    services: dict = Depends(get_services)
+):
+    """
+    Find documents similar to the target document using DNA matching.
+    """
+    try:
+        # Get target document
+        artifact = services["db"].get_artifact_by_id(artifact_id)
+        if not artifact:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        doc = artifact.local_metadata or {}
+        target_fp = dna_service.fingerprint(doc, artifact_id)
+
+        # Get all other documents
+        all_artifacts = services["db"].get_all_artifacts_paginated(page=1, page_size=1000)
+
+        # Create fingerprints for comparison
+        candidate_fps = []
+        for candidate in all_artifacts:
+            if candidate.id == artifact_id:
+                continue
+            candidate_doc = candidate.local_metadata or {}
+            candidate_fp = dna_service.fingerprint(candidate_doc, str(candidate.id))
+            candidate_fps.append(candidate_fp)
+
+        # Find similar documents
+        similar_docs = dna_service.find_similar_documents(
+            target_fingerprint=target_fp,
+            candidate_fingerprints=candidate_fps,
+            threshold=threshold
+        )
+
+        # Limit results
+        similar_docs = similar_docs[:limit]
+
+        logger.info(f"✅ Found {len(similar_docs)} similar documents")
+
+        return create_success_response({
+            "target_document_id": artifact_id,
+            "threshold": threshold,
+            "found_count": len(similar_docs),
+            "similar_documents": [sim.to_dict() for sim in similar_docs]
+        })
+
+    except Exception as e:
+        logger.error(f"Similarity search failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=create_error_response(
+                code="SIMILARITY_SEARCH_FAILED",
+                message="Failed to find similar documents",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+
+# Pattern Detection Endpoints
+
+@app.get("/api/patterns/detect", response_model=StandardResponse)
+async def detect_patterns(
+    limit: int = Query(100, description="Number of recent documents to analyze"),
+    services: dict = Depends(get_services)
+):
+    """
+    Detect suspicious patterns across document corpus.
+
+    Analyzes recent documents for:
+    - Duplicate signatures
+    - Amount manipulations
+    - Identity reuse
+    - Coordinated tampering
+    - Template fraud
+    - Rapid submissions
+    """
+    try:
+        # Get recent documents
+        all_artifacts = services["db"].get_all_artifacts()
+        artifacts = all_artifacts[:limit]
+
+        # Prepare documents for analysis
+        documents = []
+        for artifact in artifacts:
+            doc_data = {
+                'id': str(artifact.id),
+                'artifact_id': str(artifact.id),
+                'created_by': artifact.created_by if hasattr(artifact, 'created_by') else 'unknown',
+                'created_at': artifact.created_at.isoformat() if hasattr(artifact.created_at, 'isoformat') else str(artifact.created_at),
+                'local_metadata': artifact.local_metadata or {},
+                'events': []  # Would fetch from DB in real implementation
+            }
+            documents.append(doc_data)
+
+        # Run pattern detection
+        patterns = pattern_detector.detect_all_patterns(documents)
+
+        # Group by severity
+        by_severity = {
+            'critical': [p for p in patterns if p.severity == 'critical'],
+            'high': [p for p in patterns if p.severity == 'high'],
+            'medium': [p for p in patterns if p.severity == 'medium'],
+            'low': [p for p in patterns if p.severity == 'low']
+        }
+
+        logger.info(f"✅ Pattern detection completed: {len(patterns)} patterns found")
+
+        return create_success_response({
+            "analyzed_documents": len(documents),
+            "total_patterns": len(patterns),
+            "by_severity": {k: len(v) for k, v in by_severity.items()},
+            "patterns": [p.to_dict() for p in patterns],
+            "critical_patterns": [p.to_dict() for p in by_severity['critical']],
+            "high_priority_patterns": [p.to_dict() for p in by_severity['high'][:5]]
+        })
+
+    except Exception as e:
+        logger.error(f"Pattern detection failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=create_error_response(
+                code="PATTERN_DETECTION_FAILED",
+                message="Failed to detect patterns",
+                details={"error": str(e)}
+            ).dict()
+        )
+
+
+@app.get("/api/patterns/duplicate-signatures", response_model=StandardResponse)
+async def detect_duplicate_signatures_endpoint(
+    limit: int = Query(100, description="Number of documents to analyze"),
+    services: dict = Depends(get_services)
+):
+    """Detect duplicate signatures across documents."""
+    try:
+        all_artifacts = services["db"].get_all_artifacts()
+        artifacts = all_artifacts[:limit]
+
+        documents = [{
+            'id': str(a.id),
+            'local_metadata': a.local_metadata or {}
+        } for a in artifacts]
+
+        patterns = pattern_detector.detect_duplicate_signatures(documents)
+
+        logger.info(f"✅ Found {len(patterns)} duplicate signature patterns")
+
+        return create_success_response({
+            "analyzed_documents": len(documents),
+            "patterns_found": len(patterns),
+            "patterns": [p.to_dict() for p in patterns]
+        })
+
+    except Exception as e:
+        logger.error(f"Duplicate signature detection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/patterns/amount-manipulations", response_model=StandardResponse)
+async def detect_amount_manipulations_endpoint(
+    limit: int = Query(100, description="Number of documents to analyze"),
+    services: dict = Depends(get_services)
+):
+    """Detect amount manipulation patterns."""
+    try:
+        all_artifacts = services["db"].get_all_artifacts()
+        artifacts = all_artifacts[:limit]
+
+        documents = [{
+            'id': str(a.id),
+            'local_metadata': a.local_metadata or {},
+            'events': []  # Would fetch events in real implementation
+        } for a in artifacts]
+
+        patterns = pattern_detector.detect_amount_manipulations(documents)
+
+        logger.info(f"✅ Found {len(patterns)} amount manipulation patterns")
+
+        return create_success_response({
+            "analyzed_documents": len(documents),
+            "patterns_found": len(patterns),
+            "patterns": [p.to_dict() for p in patterns]
+        })
+
+    except Exception as e:
+        logger.error(f"Amount manipulation detection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # =============================================================================
 # AI DOCUMENT PROCESSING ENDPOINTS
@@ -7877,7 +7843,7 @@ async def upload_document(
             "employment_status": request.employment_status,
             "document_type": request.document_type,
             "submission_date": request.submission_date,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": get_eastern_now_iso(),
             "status": "uploaded"
         }
         

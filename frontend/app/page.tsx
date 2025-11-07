@@ -11,6 +11,8 @@ export default function HomePage() {
 
   useEffect(() => {
     if (isLoaded) {
+      // Always check authentication status and redirect accordingly
+      // This ensures authentication is verified on every page load
       if (isSignedIn) {
         router.push('/integrated-dashboard')
       } else {
@@ -23,7 +25,7 @@ export default function HomePage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
         <LoadingSpinner size="lg" className="mx-auto mb-4" />
-        <p className="text-gray-600">Redirecting...</p>
+        <p className="text-gray-600">Checking authentication...</p>
       </div>
     </div>
   )

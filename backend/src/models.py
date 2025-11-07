@@ -308,7 +308,7 @@ class ProvenanceLink(Base):
     
     # Relationship data
     relation = mapped_column(String(64), nullable=False)  # "contains" | "derived_from" | "supersedes" | ...
-    created_at = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = mapped_column(DateTime(timezone=True), default=eastern_datetime_default, nullable=False)
     
     # Relationships
     parent_artifact = relationship("Artifact", foreign_keys=[parent_artifact_id])
@@ -384,7 +384,7 @@ class DeletedDocument(Base):
     original_created_by = Column(String(255), nullable=False)
     
     # Deletion information
-    deleted_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    deleted_at = Column(DateTime(timezone=True), default=eastern_datetime_default, nullable=False)
     deleted_by = Column(String(255), nullable=False)
     deletion_reason = Column(Text, nullable=True)
     

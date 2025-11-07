@@ -657,23 +657,56 @@ class Database:
             logger.error(f"Database error retrieving all artifacts: {e}")
             raise
 
+    def get_all_artifacts_paginated(self, page: int = 1, page_size: int = 100) -> List[Artifact]:
+        """
+        Get paginated artifacts from the database for DNA similarity analysis.
+
+        Args:
+            page: Page number (1-indexed, default: 1)
+            page_size: Number of artifacts per page (default: 100)
+
+        Returns:
+            List[Artifact]: List of Artifact objects
+
+        Raises:
+            SQLAlchemyError: If database operation fails
+        """
+        try:
+            session = self._ensure_session()
+
+            # Calculate offset from page number
+            offset = (page - 1) * page_size
+
+            artifacts = session.query(Artifact)\
+                .order_by(Artifact.created_at.desc())\
+                .limit(page_size)\
+                .offset(offset)\
+                .all()
+
+            logger.debug(f"Retrieved {len(artifacts)} paginated artifacts (page={page}, page_size={page_size})")
+            return artifacts
+
+        except SQLAlchemyError as e:
+            logger.error(f"Database error retrieving paginated artifacts: {e}")
+            raise
+
     def get_artifact_by_loan_id(self, loan_id: str) -> List[Artifact]:
         """
         Get all artifacts for a specific loan ID.
-        
+
         Args:
             loan_id: The loan ID to search for
-        
+
         Returns:
             List[Artifact]: List of artifacts for the loan, ordered by creation date
-        
+
         Raises:
             ValueError: If loan_id is empty
             SQLAlchemyError: If database operation fails
         """
         if not loan_id:
             raise ValueError("loan_id is required")
-        
+
         try:
             session = self._ensure_session()
             

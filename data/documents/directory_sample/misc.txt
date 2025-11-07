@@ -1,5 +1,0 @@
-This directory is intended for testing click-to-select Directory Upload.
-Select the directory in the Upload page (Directory mode).
-
-
-

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
-import { Menu, X, Home, Upload, FileText, BarChart3, Mic, Shield } from 'lucide-react'
+import { Menu, X, Home, Upload, FileText, BarChart3, Shield, Search } from 'lucide-react'
 
 export default function MainNav() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -15,6 +15,7 @@ export default function MainNav() {
     { name: 'Upload', href: '/upload', icon: Upload },
     { name: 'Documents', href: '/documents', icon: FileText },
     { name: 'Verification', href: '/verification', icon: Shield },
+    { name: 'Forensics', href: '/forensics', icon: Search },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   ]
 
@@ -62,14 +63,6 @@ export default function MainNav() {
 
           {/* User Button and Mobile Menu */}
           <div className="flex items-center space-x-4">
-            {/* Voice Command Button */}
-            <button
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-              title="Voice Commands"
-            >
-              <Mic className="h-5 w-5" />
-            </button>
-
             {/* User Button */}
             <UserButton />
 

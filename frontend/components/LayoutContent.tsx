@@ -2,8 +2,8 @@
 
 import { usePathname } from 'next/navigation'
 import MainNav from '@/components/MainNav'
-import VoiceCommandButton from '@/components/VoiceCommandButton'
 import { SimpleToastContainer as ToastContainer } from '@/components/ui/simple-toast'
+import { ForceAuth } from '@/components/ForceAuth'
 
 export function LayoutContent({ children }: Readonly<{ children: React.ReactNode }>) {
   const pathname = usePathname()
@@ -16,14 +16,13 @@ export function LayoutContent({ children }: Readonly<{ children: React.ReactNode
     pathname === '/landing'
 
   return (
-    <>
+    <ForceAuth>
       {!isPublicRoute && <MainNav />}
       <main className={isPublicRoute ? "" : "min-h-screen bg-gray-50"}>
         {children}
       </main>
-      {!isPublicRoute && <VoiceCommandButton />}
       <ToastContainer />
-    </>
+    </ForceAuth>
   )
 }
 
