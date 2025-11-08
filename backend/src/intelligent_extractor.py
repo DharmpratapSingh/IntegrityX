@@ -98,32 +98,41 @@ class IntelligentExtractor:
             'loan_id': [
                 ['loan_details', 'loan_id'],
                 ['application', 'id'],
-                ['metadata', 'loan_id']
+                ['metadata', 'loan_id'],
+                ['loan_id']  # Also check root level
             ],
             'borrower_name': [
                 ['borrower_information', 'personal_details', 'full_name'],
+                ['borrower', 'full_name'],  # Common in FakerAPI format
                 ['borrower', 'name'],
                 ['applicant', 'name'],
-                ['personal_details', 'name']
+                ['applicant', 'full_name'],
+                ['personal_details', 'name'],
+                ['personal_details', 'full_name']
             ],
             'property_address': [
                 ['property_information', 'property_address', 'street'],
                 ['property', 'address'],
-                ['collateral', 'address']
+                ['collateral', 'address'],
+                ['property_address']  # Also check root level
             ],
             'loan_amount': [
                 ['loan_details', 'loan_amount'],
                 ['financial_information', 'loan_amount'],
+                ['loan_amount'],  # Also check root level
                 ['amount']
             ],
             'interest_rate': [
                 ['loan_details', 'interest_rate'],
-                ['rate_information', 'interest_rate']
+                ['rate_information', 'interest_rate'],
+                ['interest_rate']  # Also check root level
             ],
             'loan_term': [
                 ['loan_details', 'loan_term_months'],
                 ['loan_details', 'term'],
-                ['term_information', 'months']
+                ['term_information', 'months'],
+                ['loan_term_months'],  # Also check root level
+                ['loan_term']
             ]
         }
 
