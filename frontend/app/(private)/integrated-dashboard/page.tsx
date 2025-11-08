@@ -1,25 +1,28 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { json as fetchJson } from '@/utils/api'
 import { getCurrentEasternTime, formatEasternTimeWithTZ } from '@/utils/timezone'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import {
+  ArrowRight,
   Brain,
+  FileText,
+  CheckCircle,
   Layers,
   Shield,
-  CheckCircle,
-  Activity,
-  Zap,
-  ArrowUpRight
+  Zap
 } from 'lucide-react'
 
 // Import our components
 import AIDocumentProcessingInterface from '@/components/AIDocumentProcessingInterface'
 import BulkOperationsInterface from '@/components/BulkOperationsInterface'
 import AnalyticsDashboard from '@/components/AnalyticsDashboard'
+import { DemoModeButton } from '@/components/DemoModeButton'
+import { Button } from '@/components/ui/button'
 
 interface DashboardStats {
   totalDocuments: number
@@ -40,6 +43,15 @@ interface DashboardStats {
     ai: { value: number; change: number }
     bulk: { value: number; change: number }
   }
+}
+
+interface DocumentSummary {
+  id: string
+  title: string
+  createdAt: string
+  loanId?: string
+  status: 'sealed' | 'processing'
+  createdBy?: string
 }
 
 export default function IntegratedDashboard() {
@@ -65,6 +77,7 @@ export default function IntegratedDashboard() {
       bulk: { value: 0, change: 0 }
     }
   })
+  const [recentDocuments, setRecentDocuments] = useState<DocumentSummary[]>([])
   const [serviceStatus, setServiceStatus] = useState({
     postgres: false,
     walacor: false,
@@ -99,6 +112,36 @@ export default function IntegratedDashboard() {
           const analyticsData = (analyticsRes as any).data
           systemMetrics = analyticsData?.data || null
         }
+
+        const sortedDocs = [...documentsList].sort((a, b) => {
+          const aTime = new Date(a.created_at).getTime()
+          const bTime = new Date(b.created_at).getTime()
+          return bTime - aTime
+        })
+
+        setRecentDocuments(
+          sortedDocs.slice(0, 10).map((doc: any) => {
+            const fallbackTitle = doc.id ? `Document ${String(doc.id).slice(0, 8)}` : 'Untitled Document'
+            const title =
+              doc.filename ||
+              doc.document_name ||
+              doc.local_metadata?.comprehensive_document?.document_title ||
+              doc.local_metadata?.comprehensive_document?.document_type ||
+              fallbackTitle
+
+            const status: 'sealed' | 'processing' =
+              doc.walacor_tx_id || doc.blockchain_seal ? 'sealed' : 'processing'
+
+            return {
+              id: doc.id,
+              title,
+              createdAt: doc.created_at,
+              loanId: doc.loan_id,
+              status,
+              createdBy: doc.created_by
+            }
+          })
+        )
 
         let healthData = null
         if (healthRes?.ok) {
@@ -203,6 +246,7 @@ export default function IntegratedDashboard() {
 
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error)
+        setRecentDocuments([])
       } finally {
         setIsLoading(false)
       }
@@ -222,6 +266,29 @@ export default function IntegratedDashboard() {
       clearTimeout(maxLoadTimeout)
     }
   }, [])
+
+  const formatTimeAgo = (dateString: string | undefined): string => {
+    if (!dateString) return 'Unknown'
+    const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) return 'Unknown'
+
+    const diffMs = Date.now() - date.getTime()
+    const minute = 60 * 1000
+    const hour = 60 * minute
+    const day = 24 * hour
+
+    if (diffMs < minute) return 'Just now'
+    if (diffMs < hour) {
+      const minutes = Math.round(diffMs / minute)
+      return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+    }
+    if (diffMs < day) {
+      const hours = Math.round(diffMs / hour)
+      return `${hours} hour${hours === 1 ? '' : 's'} ago`
+    }
+    const days = Math.round(diffMs / day)
+    return `${days} day${days === 1 ? '' : 's'} ago`
+  }
 
   if (isLoading) {
     return (
@@ -261,16 +328,6 @@ export default function IntegratedDashboard() {
         
         <div className="relative max-w-7xl mx-auto px-6 py-16">
           <div className="space-y-4">
-            {/* Status Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20 shadow-lg">
-              <div className="relative">
-                <div className="h-2 w-2 bg-green-400 rounded-full animate-pulse"></div>
-                <div className="absolute inset-0 h-2 w-2 bg-green-400 rounded-full animate-ping"></div>
-              </div>
-              <span className="text-sm font-semibold">System Status: All Systems Operational</span>
-              <CheckCircle className="h-4 w-4 text-green-400" />
-            </div>
-
             {/* Service status chips */}
             <div className="flex flex-wrap gap-2 pt-3">
               <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${serviceStatus.postgres ? 'bg-green-500/20 border border-green-400/40 text-green-100' : 'bg-red-500/20 border border-red-400/40 text-red-100'}`}>
@@ -290,24 +347,41 @@ export default function IntegratedDashboard() {
               </div>
             </div>
             
-            <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent">
+            <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent leading-tight md:leading-tight drop-shadow-lg">
               IntegrityX Platform
             </h1>
             
             <p className="text-xl text-blue-50 max-w-2xl leading-relaxed">
               Enterprise-grade document verification powered by blockchain technology and AI-driven security analytics
             </p>
-            
-            <div className="flex items-center gap-4 pt-2">
-              <div className="text-sm text-blue-100 flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                Last updated: {stats.lastUpdated}
-              </div>
-              <div className="h-4 w-px bg-white/20"></div>
-              <div className="text-sm text-blue-100 flex items-center gap-2">
-                <Zap className="h-4 w-4 text-yellow-300" />
-                Real-time monitoring active
-              </div>
+
+            {/* Demo Mode and Quick Actions */}
+            <div className="flex flex-wrap items-center gap-4 pt-6">
+              <DemoModeButton />
+              <Link href="/upload">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="bg-white/10 hover:bg-white/20 text-white border-white/30"
+                >
+                  Upload Document
+                </Button>
+              </Link>
+              <Link href="/verification">
+                <Button
+                  size="lg"
+                  variant="ghost"
+                  className="text-white hover:bg-white/10"
+                >
+                  Verify Document
+                </Button>
+              </Link>
+            </div>
+
+            <div className="flex items-center gap-3 pt-6 text-sm text-blue-100 flex-wrap">
+              <Zap className="h-4 w-4 text-yellow-300" />
+              <span>Real-time metrics refreshed</span>
+              <span className="opacity-80">({stats.lastUpdated})</span>
             </div>
           </div>
         </div>
@@ -332,13 +406,6 @@ export default function IntegratedDashboard() {
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-gray-600">Total Documents</p>
                   <p className="text-4xl font-bold bg-gradient-to-br from-blue-600 to-purple-600 bg-clip-text text-transparent">{stats.totalDocuments.toLocaleString()}</p>
-                  <div className="flex items-center gap-1">
-                    <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-full">
-                      <ArrowUpRight className="h-3 w-3 text-green-600" />
-                      <span className="text-xs font-semibold text-green-600">+{stats.trends.documents.change}%</span>
-                    </div>
-                    <span className="text-xs text-gray-500">this month</span>
-                  </div>
                 </div>
                 <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <Shield className="h-6 w-6 text-white" />
@@ -359,13 +426,6 @@ export default function IntegratedDashboard() {
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-gray-600">Sealed Documents</p>
                   <p className="text-4xl font-bold bg-gradient-to-br from-purple-600 to-pink-600 bg-clip-text text-transparent">{stats.sealedDocuments}</p>
-                  <div className="flex items-center gap-1">
-                    <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-full">
-                      <ArrowUpRight className="h-3 w-3 text-green-600" />
-                      <span className="text-xs font-semibold text-green-600">+{stats.trends.sealed.change}%</span>
-                    </div>
-                    <span className="text-xs text-gray-500">this week</span>
-                  </div>
                 </div>
                 <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <Shield className="h-6 w-6 text-white" />
@@ -386,13 +446,6 @@ export default function IntegratedDashboard() {
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-gray-600">AI Processing</p>
                   <p className="text-4xl font-bold bg-gradient-to-br from-pink-600 to-orange-600 bg-clip-text text-transparent">{stats.aiProcessingCount}</p>
-                  <div className="flex items-center gap-1">
-                    <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-full">
-                      <ArrowUpRight className="h-3 w-3 text-green-600" />
-                      <span className="text-xs font-semibold text-green-600">+{stats.trends.ai.change}%</span>
-                    </div>
-                    <span className="text-xs text-gray-500">this week</span>
-                  </div>
                 </div>
                 <div className="p-3 bg-gradient-to-br from-pink-500 to-orange-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <Brain className="h-6 w-6 text-white" />
@@ -413,13 +466,6 @@ export default function IntegratedDashboard() {
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-gray-600">Bulk Operations</p>
                   <p className="text-4xl font-bold bg-gradient-to-br from-cyan-600 to-blue-600 bg-clip-text text-transparent">{stats.bulkOperationsCount}</p>
-                  <div className="flex items-center gap-1">
-                    <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-full">
-                      <ArrowUpRight className="h-3 w-3 text-green-600" />
-                      <span className="text-xs font-semibold text-green-600">+{stats.trends.bulk.change}%</span>
-                    </div>
-                    <span className="text-xs text-gray-500">this week</span>
-                  </div>
                 </div>
                 <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <Layers className="h-6 w-6 text-white" />
@@ -430,54 +476,55 @@ export default function IntegratedDashboard() {
         </div>
 
         {/* Performance Metrics */}
-        <Card className="mb-12 bg-gradient-to-br from-white via-blue-50/20 to-purple-50/20 border border-blue-100/30 shadow-2xl rounded-3xl">
-          <CardHeader className="border-b border-blue-100/50 bg-white/50 backdrop-blur-sm">
-            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Performance Metrics</CardTitle>
+        <Card className="mb-8 bg-gradient-to-br from-white via-blue-50/15 to-purple-50/15 border border-blue-100/40 shadow-xl rounded-3xl">
+          <CardHeader className="border-b border-blue-100/40 bg-white/60 backdrop-blur-sm">
+            <CardTitle className="text-xl font-semibold text-gray-900">Performance Metrics</CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
-            <div className="grid gap-8 md:grid-cols-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-600">API Response</span>
-                  <Zap className="h-4 w-4 text-yellow-500" />
+          <CardContent className="pt-5">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="p-4 rounded-2xl bg-white/85 backdrop-blur-md border border-blue-100/60 shadow-sm">
+                <div className="flex items-center justify-between text-xs uppercase tracking-wide text-blue-700 font-semibold">
+                  API Response
+                  <Zap className="h-4 w-4 text-yellow-400" />
                 </div>
-                <div className="text-3xl font-bold text-gray-900">{Math.round(stats.performanceMetrics.apiResponseTime)}ms</div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full" style={{ width: '92%' }}></div>
+                <div className="mt-2 text-2xl font-bold text-gray-900">{Math.round(stats.performanceMetrics.apiResponseTime)}ms</div>
+                <div className="mt-3 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-green-400 to-green-500"
+                    style={{ width: `${Math.min(100, Math.max(15, 100 - Math.min(90, stats.performanceMetrics.apiResponseTime)))}%` }}
+                  />
                 </div>
+                <p className="mt-2 text-xs text-blue-900/70">Latency over the last minute</p>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-600">Processing</span>
-                  <Activity className="h-4 w-4 text-blue-500" />
-                </div>
-                <div className="text-3xl font-bold text-gray-900">{Math.round(stats.performanceMetrics.documentProcessing)}%</div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full" style={{ width: `${Math.min(100, Math.round(stats.performanceMetrics.documentProcessing))}%` }}></div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-600">Blockchain Success</span>
+              <div className="p-4 rounded-2xl bg-white/85 backdrop-blur-md border border-blue-100/60 shadow-sm">
+                <div className="flex items-center justify-between text-xs uppercase tracking-wide text-blue-700 font-semibold">
+                  Blockchain Success
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 </div>
-                <div className="text-3xl font-bold text-gray-900">{Math.round(stats.performanceMetrics.blockchainSuccessRate)}%</div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full" style={{ width: `${Math.min(100, Math.round(stats.performanceMetrics.blockchainSuccessRate))}%` }}></div>
+                <div className="mt-2 text-2xl font-bold text-gray-900">{Math.round(stats.performanceMetrics.blockchainSuccessRate)}%</div>
+                <div className="mt-3 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-green-400 to-green-600"
+                    style={{ width: `${Math.min(100, Math.round(stats.performanceMetrics.blockchainSuccessRate))}%` }}
+                  />
                 </div>
+                <p className="mt-2 text-xs text-blue-900/70">Successful seals across Walacor</p>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-600">AI Accuracy</span>
+              <div className="p-4 rounded-2xl bg-white/85 backdrop-blur-md border border-blue-100/60 shadow-sm">
+                <div className="flex items-center justify-between text-xs uppercase tracking-wide text-blue-700 font-semibold">
+                  AI Accuracy
                   <Brain className="h-4 w-4 text-purple-500" />
                 </div>
-                <div className="text-3xl font-bold text-gray-900">{Math.round(stats.performanceMetrics.aiAccuracy)}%</div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full" style={{ width: `${Math.min(100, Math.round(stats.performanceMetrics.aiAccuracy))}%` }}></div>
+                <div className="mt-2 text-2xl font-bold text-gray-900">{Math.round(stats.performanceMetrics.aiAccuracy)}%</div>
+                <div className="mt-3 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-400 to-purple-600"
+                    style={{ width: `${Math.min(100, Math.round(stats.performanceMetrics.aiAccuracy))}%` }}
+                  />
                 </div>
+                <p className="mt-2 text-xs text-blue-900/70">Model precision on document extraction</p>
               </div>
             </div>
           </CardContent>
@@ -490,10 +537,10 @@ export default function IntegratedDashboard() {
               {/* Background gradient glow */}
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-3xl" />
               
-              <TabsList className="relative bg-white/90 backdrop-blur-md border border-gray-200 shadow-2xl p-2 rounded-3xl flex w-full">
+              <TabsList className="relative flex w-full rounded-full bg-gradient-to-r from-blue-500/15 via-purple-500/15 to-pink-500/15 backdrop-blur-xl border border-white/20 shadow-xl p-1 overflow-hidden">
                 <TabsTrigger 
                   value="overview" 
-                  className="relative flex-1 rounded-2xl px-6 py-4 font-semibold transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-50 data-[state=inactive]:hover:border-gray-300"
+                  className="relative flex-1 rounded-full px-6 py-4 font-semibold transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:bg-transparent data-[state=inactive]:text-white/70 data-[state=inactive]:hover:bg-white/10 data-[state=inactive]:hover:text-white data-[state=inactive]:shadow-none"
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2">
                     <Shield className="h-4 w-4" />
@@ -502,7 +549,7 @@ export default function IntegratedDashboard() {
                 </TabsTrigger>
                 <TabsTrigger 
                   value="ai" 
-                  className="relative flex-1 rounded-2xl px-6 py-4 font-semibold transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-600 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-50 data-[state=inactive]:hover:border-gray-300"
+                  className="relative flex-1 rounded-full px-6 py-4 font-semibold transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-600 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:bg-transparent data-[state=inactive]:text-white/70 data-[state=inactive]:hover:bg-white/10 data-[state=inactive]:hover:text-white data-[state=inactive]:shadow-none"
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2">
                     <Brain className="h-4 w-4" />
@@ -511,26 +558,106 @@ export default function IntegratedDashboard() {
                 </TabsTrigger>
                 <TabsTrigger 
                   value="bulk" 
-                  className="relative flex-1 rounded-2xl px-6 py-4 font-semibold transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-50 data-[state=inactive]:hover:border-gray-300"
+                  className="relative flex-1 rounded-full px-6 py-4 font-semibold transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:bg-transparent data-[state=inactive]:text-white/70 data-[state=inactive]:hover:bg-white/10 data-[state=inactive]:hover:text-white data-[state=inactive]:shadow-none"
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2">
                     <Layers className="h-4 w-4" />
                     Bulk Operations
                   </span>
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="analytics" 
-                  className="relative flex-1 rounded-2xl px-6 py-4 font-semibold transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=inactive]:bg-white data-[state=inactive]:text-gray-600 data-[state=inactive]:border data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-50 data-[state=inactive]:hover:border-gray-300"
-                >
-                  <span className="relative z-10 flex items-center justify-center gap-2">
-                    <Activity className="h-4 w-4" />
-                    Analytics
-                  </span>
-                </TabsTrigger>
               </TabsList>
             </div>
 
             <TabsContent value="overview" className="space-y-8">
+              <Card className="bg-gradient-to-br from-white via-blue-50/30 to-purple-50/20 border border-blue-100/30 shadow-2xl rounded-3xl">
+                <CardHeader className="border-b border-blue-100/50 bg-white/50 backdrop-blur-sm">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                      Recent Documents
+                    </CardTitle>
+                    <Badge className="bg-white/60 border border-white/80 text-blue-700">
+                      {recentDocuments.length ? `${recentDocuments.length} listed` : 'No documents yet'}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4">
+                  {recentDocuments.length > 0 ? (
+                    <>
+                      <div className="space-y-4">
+                        {recentDocuments.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-white/80 backdrop-blur-sm border border-white/70 shadow-sm hover:shadow-lg transition-shadow"
+                          >
+                            <div className="flex items-center gap-4 min-w-0">
+                              <div className="p-3 bg-blue-500/10 rounded-xl">
+                                <FileText className="h-5 w-5 text-blue-600" />
+                              </div>
+                              <div className="min-w-0 space-y-1">
+                                <Link
+                                  href={`/documents/${doc.id}`}
+                                  className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors truncate block"
+                                  title={doc.title}
+                                >
+                                  {doc.title}
+                                </Link>
+                                <p className="text-xs text-gray-500 truncate font-mono">
+                                  {doc.id}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {doc.loanId ? `Loan ${doc.loanId}` : 'Loan ID unavailable'} · {formatTimeAgo(doc.createdAt)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Badge
+                                className={`rounded-full px-3 py-1 ${
+                                  doc.status === 'sealed'
+                                    ? 'bg-green-100 text-green-700 border border-green-200'
+                                    : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                                }`}
+                              >
+                                {doc.status === 'sealed' ? 'Sealed' : 'Processing'}
+                              </Badge>
+                              {doc.createdBy && (
+                                <span className="text-xs text-gray-500">
+                                  by {doc.createdBy}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="pt-2 flex justify-end">
+                        <Link
+                          href="/documents"
+                          className="inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                        >
+                          View all documents
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-center py-8 space-y-3">
+                      <div className="p-4 bg-blue-500/10 rounded-full">
+                        <FileText className="h-6 w-6 text-blue-500" />
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        No recent documents yet. Upload a document to see it appear here instantly.
+                      </p>
+                      <Link
+                        href="/documents"
+                        className="inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                      >
+                        Go to documents
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               <Card className="bg-gradient-to-br from-white via-purple-50/20 to-pink-50/20 border border-purple-100/30 shadow-2xl rounded-3xl">
                 <CardHeader className="border-b border-purple-100/50 bg-white/50 backdrop-blur-sm">
                   <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Recent Activity</CardTitle>

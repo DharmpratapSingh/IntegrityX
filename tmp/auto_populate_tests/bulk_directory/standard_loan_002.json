@@ -1,0 +1,37 @@
+{
+  "loan_id": "STANDARD-002-5557",
+  "document_type": "loan_application",
+  "loan_details": {
+    "loan_amount": 504374,
+    "loan_term_months": 180,
+    "interest_rate": 6.77,
+    "purpose": "purchase"
+  },
+  "property_information": {
+    "property_address": {
+      "street": "7024 Pine Blvd",
+      "city": "Seattle",
+      "state": "WA",
+      "zip_code": "54118",
+      "country": "US"
+    }
+  },
+  "borrower_information": {
+    "personal_details": {
+      "full_name": "Alex Morgan",
+      "email": "borrower2@example.com",
+      "phone": "+1-555-194-7224",
+      "date_of_birth": "1973-06-28",
+      "ssn_last4": "5635"
+    },
+    "identification": {
+      "id_type": "drivers_license",
+      "id_last4": "9891"
+    },
+    "employment": {
+      "status": "self_employed",
+      "employer": "Acme Corp",
+      "annual_income": 190435
+    }
+  }
+}

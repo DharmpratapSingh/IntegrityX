@@ -1,0 +1,37 @@
+{
+  "loan_id": "STANDARD-003-9785",
+  "document_type": "loan_application",
+  "loan_details": {
+    "loan_amount": 145444,
+    "loan_term_months": 360,
+    "interest_rate": 3.57,
+    "purpose": "refinance"
+  },
+  "property_information": {
+    "property_address": {
+      "street": "6025 Maple St",
+      "city": "Austin",
+      "state": "WA",
+      "zip_code": "47930",
+      "country": "US"
+    }
+  },
+  "borrower_information": {
+    "personal_details": {
+      "full_name": "Alex Morgan",
+      "email": "borrower3@example.com",
+      "phone": "+1-555-975-4814",
+      "date_of_birth": "1973-07-09",
+      "ssn_last4": "7428"
+    },
+    "identification": {
+      "id_type": "drivers_license",
+      "id_last4": "5977"
+    },
+    "employment": {
+      "status": "employed",
+      "employer": "Initech",
+      "annual_income": 163132
+    }
+  }
+}

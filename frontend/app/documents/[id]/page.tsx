@@ -223,6 +223,10 @@ export default function DocumentDetailPage() {
                   <Skeleton className="h-10 w-full" />
                 </div>
                 <div>
+                  <Skeleton className="h-4 w-20 mb-2" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div>
                   <Skeleton className="h-4 w-16 mb-2" />
                   <Skeleton className="h-6 w-20" />
                 </div>
@@ -376,6 +380,20 @@ export default function DocumentDetailPage() {
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Document Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Document ID</label>
+                <div className="flex items-start space-x-2">
+                  <div className="flex-1 p-2 bg-gray-50 rounded border font-mono text-sm break-all overflow-hidden">
+                    {document.id}
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(document.id, 'Document ID')}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Loan ID</label>
                 <div className="p-2 bg-gray-50 rounded border text-sm">

@@ -1,0 +1,44 @@
+{
+  "loan_id": "79ee2427-c0b6-3e9f-b8c4-55520186a042",
+  "loanId": "79ee2427-c0b6-3e9f-b8c4-55520186a042",
+  "document_type": "loan_application",
+  "loan_amount": 50000,
+  "loan_amount_value": "$50,000.00",
+  "loan_term_months": 480,
+  "interest_rate": 7.69,
+  "interest_rate_percent": "7.69%",
+  "property_address": "8302 Douglas Mill Apt. 666, Herzogtown, New Mexico 85620, South Africa",
+  "borrower_information": {
+    "personal_details": {
+      "full_name": "Joany Grimes",
+      "email": "kautzer.dortha@hotmail.com",
+      "phone": "+1-185-787-3699",
+      "date_of_birth": "1988-06-22",
+      "ssn_last4": "8581"
+    },
+    "identification": {
+      "id_type": "drivers_license",
+      "id_last4": "9286"
+    },
+    "employment": {
+      "status": "employed",
+      "employer": "Independent",
+      "annual_income": 182285
+    },
+    "address": {
+      "street": "8302 Douglas Mill Apt. 666",
+      "city": "Herzogtown",
+      "state": "New Mexico",
+      "zip_code": "85620",
+      "country": "South Africa"
+    }
+  },
+  "loan_details": {
+    "loan_term_months": 480,
+    "interest_rate": 7.69,
+    "loan_amount": 50000,
+    "purpose": "Primary residence purchase",
+    "notes": "Animi sint quisquam omnis."
+  },
+  "additional_notes": "Animi sint quisquam omnis."
+}

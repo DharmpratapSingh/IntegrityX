@@ -1,0 +1,29 @@
+{
+  "loan_id": "f86770d7-d769-3f4a-98f8-cc540199ad07",
+  "loanId": "f86770d7-d769-3f4a-98f8-cc540199ad07",
+  "document_type": "loan_application",
+  "loan_amount": 50000,
+  "loan_term_months": 60,
+  "interest_rate": 4.8,
+  "property_address": "4269 Schaden Path Apt. 295, Port Era, New Jersey 28983, Senegal",
+  "additional_notes": "Laudantium itaque maxime rerum.",
+  "borrower": {
+    "full_name": "Alexandria Kilback",
+    "email": "mswift@hotmail.com",
+    "phone": "+1-167-862-8591",
+    "date_of_birth": "1975-07-06",
+    "ssn_last4": "3076",
+    "id_type": "drivers_license",
+    "id_last4": "9894",
+    "employment_status": "employed",
+    "annual_income": 204247,
+    "co_borrower_name": null,
+    "address": {
+      "street": "4269 Schaden Path Apt. 295",
+      "city": "Port Era",
+      "state": "New Jersey",
+      "zip_code": "28983",
+      "country": "Senegal"
+    }
+  }
+}

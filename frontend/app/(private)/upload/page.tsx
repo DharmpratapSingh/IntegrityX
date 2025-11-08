@@ -12,6 +12,7 @@ import { AccessibleDropzone } from '@/components/ui/accessible-dropzone';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Hash, Shield, ArrowLeft, ChevronDown, ChevronUp, User, HelpCircle, AlertCircle, X, RefreshCw, Mail, Download, UserCheck, FileCheck, AlertTriangle, Info } from 'lucide-react';
 import { simpleToast as toast } from '@/components/ui/simple-toast';
 import { sealLoanDocument, sealLoanDocumentMaximumSecurity, sealLoanDocumentQuantumSafe, type LoanData, type BorrowerInfo } from '@/lib/api/loanDocuments';
@@ -39,6 +40,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { buildAutoPopulateMetadata, type AutoPopulateMetadata } from '@/utils/loanAutoPopulate'
+import { SuccessCelebration } from '@/components/SuccessCelebration'
+import { ProgressSteps, CompactProgressSteps } from '@/components/ui/progress-steps'
+import { HelpTooltip, SecurityLevelTooltips, KYCTooltips, BlockchainTooltips } from '@/components/ui/help-tooltip'
 
 interface UploadResult {
   artifactId: string;
@@ -46,6 +51,11 @@ interface UploadResult {
   sealedAt: string;
   proofBundle: any;
 }
+
+type BulkUploadResult = {
+  fileName: string;
+  result: UploadResult;
+};
 
 interface VerifyResult {
   is_valid: boolean;
@@ -160,6 +170,7 @@ export default function UploadPage() {
   const [quantumSafeMode, setQuantumSafeMode] = useState(false); // Quantum-safe mode
   const [isAutoFilling, setIsAutoFilling] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(0);
+  const skipLoanAutoFillRef = useRef(false);
 
   // Individual form field states for better reactivity
   const [formData, setFormData] = useState({
@@ -241,12 +252,27 @@ export default function UploadPage() {
   
   // Bulk/Directory upload state
   const [uploadMode, setUploadMode] = useState<'single' | 'bulk' | 'directory'>('single');
+
+  // Progress tracking for upload flow
+  const [currentStep, setCurrentStep] = useState(1);
+  const uploadSteps = [
+    { number: 1, label: 'Upload', description: 'Select your document' },
+    { number: 2, label: 'Extract', description: 'Auto-fill form data' },
+    { number: 3, label: 'Review', description: 'Verify information' },
+    { number: 4, label: 'Seal', description: 'Secure on blockchain' }
+  ];
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [validationResults, setValidationResults] = useState<{valid: File[], invalid: File[], reasons: Record<string, string>}>({
     valid: [],
     invalid: [],
     reasons: {}
   });
+  const [bulkFileMetadata, setBulkFileMetadata] = useState<Record<string, AutoPopulateMetadata>>({});
+  const [allSelectedFiles, setAllSelectedFiles] = useState<Record<string, File>>({});
+  const [editingBulkFileName, setEditingBulkFileName] = useState<string | null>(null);
+  const [editingMetadata, setEditingMetadata] = useState<AutoPopulateMetadata | null>(null);
+const [showMetadataEditor, setShowMetadataEditor] = useState(false);
+const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([]);
 
   // Duplicate detection handlers
   const handleDuplicateFound = (response: DuplicateCheckResponse) => {
@@ -422,6 +448,7 @@ export default function UploadPage() {
   const autoFillFromJSON = async (file: File): Promise<void> => {
     try {
       console.log('🚀 autoFillFromJSON function called with file:', file.name);
+      skipLoanAutoFillRef.current = true;
       setIsAutoFilling(true);
       const text = await file.text();
       console.log('📄 File text content:', text.substring(0, 200) + '...');
@@ -429,116 +456,85 @@ export default function UploadPage() {
       
       console.log('📄 Auto-filling form from JSON:', jsonData);
       
-      // Extract loan information
-      const loanId = jsonData.loan_id || jsonData.loanId || '';
-      const documentType = jsonData.document_type || jsonData.documentType || 'loan_application';
-      const loanAmount = jsonData.loan_amount || jsonData.loanAmount || 0;
-      const borrowerName = jsonData.borrower_name || jsonData.borrowerName || '';
-      const additionalNotes = jsonData.additional_notes || jsonData.additionalNotes || '';
-      
-      // Extract borrower information
-      const borrower = jsonData.borrower || {};
-      const fullName = borrower.full_name || borrower.fullName || '';
-      const email = borrower.email || '';
-      const phone = borrower.phone || '';
-      const dateOfBirth = borrower.date_of_birth || borrower.dateOfBirth || '';
-      
-      // Extract address information
-      const address = borrower.address || {};
-      const streetAddress = address.street || address.street_address || '';
-      const city = address.city || '';
-      const state = address.state || '';
-      const zipCode = address.zip_code || address.zipCode || '';
-      const country = address.country || 'US';
-      
-      // Extract identity information
-      const ssnLast4 = borrower.ssn_last4 || borrower.ssnLast4 || '';
-      const idType = borrower.id_type || borrower.idType || 'drivers_license';
-      const idLast4 = borrower.id_last4 || borrower.idLast4 || '';
-      
-      // Extract financial information
-      const employmentStatus = borrower.employment_status || borrower.employmentStatus || 'employed';
-      const annualIncome = borrower.annual_income || borrower.annualIncome || 0;
-      const coBorrowerName = borrower.co_borrower_name || borrower.coBorrowerName || '';
-      
-      console.log('📄 Extracted loan data:', { loanId, documentType, loanAmount, borrowerName, additionalNotes });
-      console.log('📄 Extracted borrower data:', { fullName, email, phone, dateOfBirth, streetAddress, city, state, zipCode, country, ssnLast4, idType, idLast4, employmentStatus, annualIncome, coBorrowerName });
-      
-      // Create updated metadata object with sanitized data
       const currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
+      const mappedMeta = buildAutoPopulateMetadata(jsonData, currentMeta);
+      const kycMeta = {
+        borrowerFullName: mappedMeta.borrowerName,
+        borrowerEmail: mappedMeta.borrowerEmail,
+        borrowerPhone: mappedMeta.borrowerPhone,
+        borrowerDateOfBirth: mappedMeta.borrowerDateOfBirth,
+        borrowerStreetAddress: mappedMeta.borrowerStreetAddress,
+        borrowerCity: mappedMeta.borrowerCity,
+        borrowerState: mappedMeta.borrowerState,
+        borrowerZipCode: mappedMeta.borrowerZipCode,
+        borrowerCountry: mappedMeta.borrowerCountry,
+        borrowerSSNLast4: mappedMeta.borrowerSSNLast4,
+        borrowerGovernmentIdType: mappedMeta.borrowerGovernmentIdType,
+        borrowerIdNumberLast4: mappedMeta.borrowerIdNumberLast4,
+        borrowerEmploymentStatus: mappedMeta.borrowerEmploymentStatus,
+        borrowerAnnualIncome: mappedMeta.borrowerAnnualIncome,
+        borrowerCoBorrowerName: mappedMeta.borrowerCoBorrowerName,
+        loanId: mappedMeta.loanId,
+        documentType: mappedMeta.documentType,
+        loanAmount: mappedMeta.loanAmount,
+        loanTerm: mappedMeta.loanTerm,
+        interestRate: mappedMeta.interestRate,
+        propertyAddress: mappedMeta.propertyAddress,
+        additionalNotes: mappedMeta.additionalNotes,
+      };
+
       const updatedMeta = {
         ...currentMeta,
-        // Loan information (sanitized)
-        loanId: sanitizeText(loanId || currentMeta.loanId),
-        documentType: sanitizeDocumentType(documentType || currentMeta.documentType),
-        loanAmount: sanitizeNumber((loanAmount || currentMeta.loanAmount)?.toString()),
-        borrowerName: sanitizeText(borrowerName || currentMeta.borrowerName),
-        additionalNotes: sanitizeNotes(additionalNotes || currentMeta.additionalNotes),
-        
-        // Borrower information (sanitized)
-        borrowerFullName: sanitizeText(fullName || currentMeta.borrowerFullName),
-        borrowerEmail: sanitizeEmail(email || currentMeta.borrowerEmail),
-        borrowerPhone: sanitizePhone(phone || currentMeta.borrowerPhone),
-        borrowerDateOfBirth: sanitizeDate(dateOfBirth || currentMeta.borrowerDateOfBirth),
-        borrowerStreetAddress: sanitizeAddress(streetAddress || currentMeta.borrowerStreetAddress),
-        borrowerCity: sanitizeCity(city || currentMeta.borrowerCity),
-        borrowerState: sanitizeState(state || currentMeta.borrowerState),
-        borrowerZipCode: sanitizeZipCode(zipCode || currentMeta.borrowerZipCode),
-        borrowerCountry: sanitizeCountry(country || currentMeta.borrowerCountry),
-        borrowerSSNLast4: sanitizeSSNLast4(ssnLast4 || currentMeta.borrowerSSNLast4),
-        borrowerGovernmentIdType: sanitizeGovernmentIdType(idType || currentMeta.borrowerGovernmentIdType),
-        borrowerIdNumberLast4: sanitizeSSNLast4(idLast4 || currentMeta.borrowerIdNumberLast4),
-        borrowerEmploymentStatus: sanitizeEmploymentStatus(employmentStatus || currentMeta.borrowerEmploymentStatus),
-        borrowerAnnualIncome: sanitizeNumber((annualIncome || currentMeta.borrowerAnnualIncome)?.toString()),
-        borrowerCoBorrowerName: sanitizeText(coBorrowerName || currentMeta.borrowerCoBorrowerName)
+        ...kycMeta,
       };
       
-      // Update both metadata state and form data state
-      console.log('🔄 Updating metadata and formData with:', updatedMeta);
-      setMetadata(JSON.stringify(updatedMeta, null, 2));
-      setFormData(updatedMeta);
-      console.log('✅ formData state updated');
+      console.log('📄 Updated metadata:', updatedMeta);
       
-      // Also update KYC data state
+      setMetadata(JSON.stringify(updatedMeta, null, 2));
+      setFormData(prev => ({
+        ...prev,
+        loanId: mappedMeta.loanId || prev.loanId,
+        documentType: mappedMeta.documentType || prev.documentType,
+        borrowerName: mappedMeta.borrowerName || prev.borrowerName,
+        propertyAddress: mappedMeta.propertyAddress || prev.propertyAddress,
+        amount: mappedMeta.loanAmount || prev.amount,
+        rate: mappedMeta.interestRate || prev.rate,
+        term: mappedMeta.loanTerm || prev.term,
+      }));
+      console.log('✅ metadata updated with loan + KYC details');
+      
       setKycData({
-        fullLegalName: updatedMeta.borrowerFullName || '',
-        dateOfBirth: updatedMeta.borrowerDateOfBirth || '',
-        phoneNumber: updatedMeta.borrowerPhone || '',
-        emailAddress: updatedMeta.borrowerEmail || '',
-        streetAddress1: updatedMeta.borrowerStreetAddress || '',
+        fullLegalName: mappedMeta.borrowerName || '',
+        dateOfBirth: mappedMeta.borrowerDateOfBirth || '',
+        phoneNumber: mappedMeta.borrowerPhone || '',
+        emailAddress: mappedMeta.borrowerEmail || '',
+        streetAddress1: mappedMeta.borrowerStreetAddress || '',
         streetAddress2: '',
-        city: updatedMeta.borrowerCity || '',
-        stateProvince: updatedMeta.borrowerState || '',
-        postalZipCode: updatedMeta.borrowerZipCode || '',
-        country: updatedMeta.borrowerCountry || 'US',
-        citizenshipCountry: updatedMeta.borrowerCountry || 'US',
-        identificationType: updatedMeta.borrowerGovernmentIdType || 'drivers_license',
-        identificationNumber: updatedMeta.borrowerIdNumberLast4 || '',
-        idIssuingCountry: updatedMeta.borrowerCountry || 'US',
+        city: mappedMeta.borrowerCity || '',
+        stateProvince: mappedMeta.borrowerState || '',
+        postalZipCode: mappedMeta.borrowerZipCode || '',
+        country: mappedMeta.borrowerCountry || 'US',
+        citizenshipCountry: mappedMeta.borrowerCountry || 'US',
+        identificationType: mappedMeta.borrowerGovernmentIdType || 'drivers_license',
+        identificationNumber: mappedMeta.borrowerIdNumberLast4 || '',
+        idIssuingCountry: mappedMeta.borrowerCountry || 'US',
         sourceOfFunds: 'Employment Income',
-        purposeOfLoan: updatedMeta.additionalNotes || '',
+        purposeOfLoan: mappedMeta.additionalNotes || '',
         expectedMonthlyTransactionVolume: 0,
         expectedNumberOfMonthlyTransactions: 0,
-        isPep: false,
+        isPEP: '',
         pepDetails: '',
         governmentIdFile: null,
-        proofOfAddressFile: null
+        proofOfAddressFile: null,
       });
       
-                  console.log('✅ KYC data state updated');
+      console.log('✅ KYC data state updated');
       
-      // Force a re-render by updating a dummy state
       setForceUpdate(prev => prev + 1);
       
-      // Show success message with count of fields filled
-      const filledFields = Object.values(updatedMeta).filter(value => 
-        value && value !== '' && value !== 0
-      ).length;
+      const filledFields = Object.values(kycMeta).filter(value => value && value !== '' && value !== 0).length;
       
-      console.log('📄 Updated metadata:', updatedMeta);
-      console.log('📄 Updated formData:', updatedMeta);
       console.log('📄 Filled fields count:', filledFields);
-      
       toast.success(`✅ Auto-filled ${filledFields} fields from JSON file!`);
       
     } catch (error) {
@@ -546,6 +542,8 @@ export default function UploadPage() {
       toast.error('Failed to auto-fill form from JSON file. Please check file format.');
     } finally {
       setIsAutoFilling(false);
+      skipLoanAutoFillRef.current = false;
+      setCurrentStep(3); // Move to Review step after extraction
     }
   };
 
@@ -665,6 +663,206 @@ export default function UploadPage() {
   };
 
   // File validation function for loan documents
+  const createEmptyMetadata = (): AutoPopulateMetadata => ({
+    loanId: '',
+    documentType: 'loan_application',
+    loanAmount: '',
+    loanTerm: '',
+    interestRate: '',
+    borrowerName: '',
+    borrowerEmail: '',
+    borrowerPhone: '',
+    borrowerDateOfBirth: '',
+    borrowerStreetAddress: '',
+    borrowerCity: '',
+    borrowerState: '',
+    borrowerZipCode: '',
+    borrowerCountry: 'US',
+    borrowerSSNLast4: '',
+    borrowerGovernmentIdType: 'drivers_license',
+    borrowerIdNumberLast4: '',
+    borrowerEmploymentStatus: '',
+    borrowerAnnualIncome: '',
+    borrowerCoBorrowerName: '',
+    propertyAddress: '',
+    additionalNotes: ''
+  });
+
+  const requiredMetadataFields: Array<{ field: keyof AutoPopulateMetadata; label: string }> = [
+    { field: 'loanId', label: 'Loan ID' },
+    { field: 'documentType', label: 'Document Type' },
+    { field: 'loanAmount', label: 'Loan Amount' },
+    { field: 'loanTerm', label: 'Loan Term' },
+    { field: 'interestRate', label: 'Interest Rate' },
+    { field: 'borrowerName', label: 'Borrower Name' },
+    { field: 'propertyAddress', label: 'Property Address' }
+  ];
+
+  const findMissingMetadata = (metadata: AutoPopulateMetadata): string[] => {
+    return requiredMetadataFields
+      .filter(({ field }) => !metadata[field] || String(metadata[field]).trim() === '')
+      .map(({ label }) => label);
+  };
+
+  const sanitizeMetadataForSave = (metadata: AutoPopulateMetadata): AutoPopulateMetadata => ({
+    loanId: sanitizeText(metadata.loanId),
+    documentType: sanitizeDocumentType(metadata.documentType),
+    loanAmount: sanitizeNumber(metadata.loanAmount, 'loan_amount'),
+    loanTerm: sanitizeNumber(metadata.loanTerm, 'loan_term'),
+    interestRate: sanitizeNumber(metadata.interestRate, 'interest_rate'),
+    borrowerName: sanitizeText(metadata.borrowerName),
+    borrowerEmail: sanitizeEmail(metadata.borrowerEmail),
+    borrowerPhone: sanitizePhone(metadata.borrowerPhone),
+    borrowerDateOfBirth: sanitizeDate(metadata.borrowerDateOfBirth),
+    borrowerStreetAddress: sanitizeAddress(metadata.borrowerStreetAddress),
+    borrowerCity: sanitizeCity(metadata.borrowerCity),
+    borrowerState: sanitizeState(metadata.borrowerState),
+    borrowerZipCode: sanitizeZipCode(metadata.borrowerZipCode),
+    borrowerCountry: sanitizeCountry(metadata.borrowerCountry || 'US'),
+    borrowerSSNLast4: sanitizeSSNLast4(metadata.borrowerSSNLast4),
+    borrowerGovernmentIdType: sanitizeGovernmentIdType(metadata.borrowerGovernmentIdType || 'drivers_license'),
+    borrowerIdNumberLast4: sanitizeSSNLast4(metadata.borrowerIdNumberLast4),
+    borrowerEmploymentStatus: sanitizeEmploymentStatus(metadata.borrowerEmploymentStatus),
+    borrowerAnnualIncome: sanitizeNumber(metadata.borrowerAnnualIncome, 'loan_amount'),
+    borrowerCoBorrowerName: sanitizeText(metadata.borrowerCoBorrowerName),
+    propertyAddress: sanitizeAddress(metadata.propertyAddress),
+    additionalNotes: sanitizeNotes(metadata.additionalNotes),
+  });
+
+  const handleOpenMetadataEditor = (fileName: string) => {
+    const existing = bulkFileMetadata[fileName] || createEmptyMetadata();
+    setEditingBulkFileName(fileName);
+    setEditingMetadata(existing);
+    setShowMetadataEditor(true);
+  };
+
+  const handleCloseMetadataEditor = () => {
+    setShowMetadataEditor(false);
+    setEditingBulkFileName(null);
+    setEditingMetadata(null);
+  };
+
+  const handleMetadataFieldChange = (field: keyof AutoPopulateMetadata, value: string) => {
+    setEditingMetadata(prev => (prev ? { ...prev, [field]: value } : prev));
+  };
+
+  const handleRemoveInvalidFile = (fileName: string) => {
+    const newInvalid = validationResults.invalid.filter(file => file.name !== fileName);
+    const newValid = validationResults.valid.filter(file => file.name !== fileName);
+    const newReasons = { ...validationResults.reasons };
+    delete newReasons[fileName];
+
+    const updatedAllFiles = { ...allSelectedFiles };
+    delete updatedAllFiles[fileName];
+    setAllSelectedFiles(updatedAllFiles);
+
+    const updatedMetadata = { ...bulkFileMetadata };
+    delete updatedMetadata[fileName];
+    setBulkFileMetadata(updatedMetadata);
+
+    setValidationResults({ valid: newValid, invalid: newInvalid, reasons: newReasons });
+    setSelectedFiles(newValid);
+    toast.info(`${fileName} removed from the upload batch`);
+  };
+
+  const handleSaveMetadata = () => {
+    if (!editingBulkFileName || !editingMetadata) {
+      return;
+    }
+
+    const sanitized = sanitizeMetadataForSave(editingMetadata);
+    const missingFields = findMissingMetadata(sanitized);
+    const fileObject = allSelectedFiles[editingBulkFileName] || null;
+
+    setBulkFileMetadata(prev => ({ ...prev, [editingBulkFileName]: sanitized }));
+
+    if (missingFields.length === 0 && fileObject) {
+      const newValid = [
+        ...validationResults.valid.filter(file => file.name !== editingBulkFileName),
+        fileObject,
+      ];
+      const newInvalid = validationResults.invalid.filter(file => file.name !== editingBulkFileName);
+      const newReasons = { ...validationResults.reasons };
+      delete newReasons[editingBulkFileName];
+
+      setValidationResults({ valid: newValid, invalid: newInvalid, reasons: newReasons });
+      setSelectedFiles(newValid);
+      toast.success('Metadata updated successfully');
+    } else {
+      const reason =
+        missingFields.length > 0
+          ? `Missing fields: ${missingFields.join(', ')}`
+          : validationResults.reasons[editingBulkFileName] || 'Metadata incomplete';
+
+      const filteredValid = validationResults.valid.filter(file => file.name !== editingBulkFileName);
+      const filteredInvalid = validationResults.invalid.filter(file => file.name !== editingBulkFileName);
+      const newInvalid = fileObject && !filteredInvalid.find(file => file.name === editingBulkFileName)
+        ? [...filteredInvalid, fileObject]
+        : filteredInvalid;
+      const newReasons = { ...validationResults.reasons, [editingBulkFileName]: reason };
+
+      setValidationResults({ valid: filteredValid, invalid: newInvalid, reasons: newReasons });
+      setSelectedFiles(filteredValid);
+      toast.error('Please complete all required fields');
+    }
+
+    handleCloseMetadataEditor();
+  };
+
+  const handleApplyDocumentTypeToAll = (documentType: string) => {
+    const updates: Record<string, AutoPopulateMetadata> = {};
+
+    Object.entries(bulkFileMetadata).forEach(([name, metadata]) => {
+      if (!metadata.documentType || metadata.documentType.trim() === '') {
+        updates[name] = sanitizeMetadataForSave({ ...metadata, documentType });
+      }
+    });
+
+    if (Object.keys(updates).length === 0) {
+      toast.info('All files already have a document type specified');
+      return;
+    }
+
+    const updatedMetadata = { ...bulkFileMetadata, ...updates };
+    setBulkFileMetadata(updatedMetadata);
+
+    const newValid: File[] = [...validationResults.valid];
+    const newInvalid: File[] = [...validationResults.invalid];
+    const newReasons: Record<string, string> = { ...validationResults.reasons };
+
+    Object.keys(updates).forEach(name => {
+      const sanitized = sanitizeMetadataForSave(updatedMetadata[name]);
+      const missing = findMissingMetadata(sanitized);
+      const fileObject = allSelectedFiles[name];
+
+      if (missing.length === 0 && fileObject) {
+        if (!newValid.find(file => file.name === name)) {
+          newValid.push(fileObject);
+        }
+        const idx = newInvalid.findIndex(file => file.name === name);
+        if (idx !== -1) {
+          newInvalid.splice(idx, 1);
+        }
+        delete newReasons[name];
+      } else if (missing.length > 0) {
+        newReasons[name] = `Missing fields: ${missing.join(', ')}`;
+      }
+    });
+
+    setValidationResults({ valid: newValid, invalid: newInvalid, reasons: newReasons });
+    setSelectedFiles(newValid);
+    toast.success(`Applied document type to ${Object.keys(updates).length} file(s)`);
+  };
+
+  const isSingleMode = uploadMode === 'single';
+  const hasPrimaryFile = isSingleMode ? Boolean(file && fileHash) : selectedFiles.length > 0;
+  const isUploadDisabled =
+    isUploading ||
+    isVerifying ||
+    Boolean(uploadResult) ||
+    Boolean(verifyResult && verifyResult.is_valid) ||
+    !hasPrimaryFile;
+
   const validateLoanFile = (file: File): { isValid: boolean; reason?: string } => {
     const validExtensions = ['.pdf', '.json', '.docx', '.xlsx', '.txt', '.jpg', '.jpeg', '.png'];
     const invalidPatterns = [
@@ -717,7 +915,8 @@ export default function UploadPage() {
         setFile(selectedFile);
         setUploadResult(null);
         setVerifyResult(null);
-        
+        setCurrentStep(2); // Move to Extract step
+
         // Calculate hash
         try {
           const hash = await calculateFileHash(selectedFile);
@@ -752,17 +951,45 @@ export default function UploadPage() {
       const valid: File[] = [];
       const invalid: File[] = [];
       const reasons: Record<string, string> = {};
+      const metadataUpdates: Record<string, AutoPopulateMetadata> = {};
+      const filesMap: Record<string, File> = { ...allSelectedFiles };
 
       for (const file of acceptedFiles) {
+        filesMap[file.name] = file;
         const validation = validateLoanFile(file);
-        if (validation.isValid) {
+        let reason = validation.reason;
+        let metadata: AutoPopulateMetadata | null = null;
+
+        const isJsonFile = file.type === 'application/json' || file.name.toLowerCase().endsWith('.json');
+        if (!reason && isJsonFile) {
+          try {
+            const text = await file.text();
+            const jsonData = JSON.parse(text);
+            metadata = buildAutoPopulateMetadata(jsonData);
+          } catch (error) {
+            console.error('Failed to parse JSON for bulk upload:', error);
+            reason = 'Invalid JSON structure';
+          }
+        }
+
+        if (metadata) {
+          metadataUpdates[file.name] = metadata;
+          const missingFields = findMissingMetadata(metadata);
+          if (!reason && missingFields.length > 0) {
+            reason = `Missing fields: ${missingFields.join(', ')}`;
+          }
+        }
+
+        if (!reason && validation.isValid) {
           valid.push(file);
         } else {
           invalid.push(file);
-          reasons[file.name] = validation.reason || 'Unknown validation error';
+          reasons[file.name] = reason || 'Unknown validation error';
         }
       }
 
+      setAllSelectedFiles(filesMap);
+      setBulkFileMetadata(prev => ({ ...prev, ...metadataUpdates }));
       setSelectedFiles(valid);
       setValidationResults({ valid, invalid, reasons });
 
@@ -832,6 +1059,417 @@ export default function UploadPage() {
     }
   };
 
+  useEffect(() => {
+    if (uploadMode === 'single') {
+      setSelectedFiles([]);
+      setValidationResults({ valid: [], invalid: [], reasons: {} });
+      setBulkFileMetadata({});
+      setAllSelectedFiles({});
+    } else {
+      setFile(null);
+      setFileHash('');
+      setUploadResult(null);
+      setVerifyResult(null);
+    }
+  }, [uploadMode]);
+
+  const renderSingleUploadTab = () => (
+    <>
+      <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+        <div className="space-y-1 text-sm text-blue-900">
+          <p className="font-medium">Upload one loan document to auto-fill all borrower and loan fields.</p>
+          <ul className="list-disc list-inside space-y-1 text-blue-800">
+            <li>Supports JSON, PDF, DOCX, XLSX, TXT, JPG, PNG</li>
+            <li>JSON files auto-populate the entire form instantly</li>
+            <li>Any missing fields can be edited directly in the form before sealing</li>
+          </ul>
+        </div>
+      </div>
+
+      <AccessibleDropzone
+        onDrop={onDrop}
+        accept={fileAccept}
+        maxFiles={1}
+        directoryMode={false}
+        maxSize={50 * 1024 * 1024}
+        description="Drag and drop a loan document (JSON, PDF, DOCX, etc.) or click to select. We'll auto-fill the form for you."
+        aria-label="single upload area for document sealing"
+        id="file-upload-dropzone-single"
+      />
+
+      {file && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              <span className="font-medium">{file.name}</span>
+              <span className="text-sm text-muted-foreground">
+                ({(file.size / 1024 / 1024).toFixed(2)} MB)
+              </span>
+              {isAutoFilling && (
+                <div className="flex items-center space-x-1 text-sm text-blue-600">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>Auto-filling form...</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {fileHash && (
+            <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+              <Hash className="h-4 w-4" />
+              <span className="text-sm font-mono break-all">{fileHash}</span>
+            </div>
+          )}
+
+          <DuplicateDetection
+            fileHash={fileHash}
+            loanId={formData.loanId}
+            borrowerEmail={formData.borrowerEmail}
+            borrowerSsnLast4={formData.borrowerSSNLast4}
+            onDuplicateFound={handleDuplicateFound}
+            onNoDuplicates={handleNoDuplicates}
+            autoCheck={true}
+          />
+
+          {isVerifying && (
+            <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+              <span className="text-sm text-blue-800">Checking if document is already sealed...</span>
+            </div>
+          )}
+
+          {verifyResult && verifyResult.is_valid && (
+            <Alert className="border-green-200 bg-green-50">
+              <Shield className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                <div className="space-y-2">
+                  <div className="font-medium">Document Already Sealed!</div>
+                  <div className="text-sm">
+                    This document was already sealed on{' '}
+                    <span className="font-medium">
+                      {new Date(verifyResult.details.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button asChild size="sm">
+                      <a href={`http://localhost:8000/api/verify?hash=${fileHash}`} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View Proof
+                      </a>
+                    </Button>
+                    <Button asChild variant="outline" size="sm">
+                      <a href={`http://localhost:8000/api/proof?id=${verifyResult.artifact_id}`} target="_blank" rel="noopener noreferrer">
+                        <Shield className="h-3 w-3 mr-1" />
+                        Download Proof Bundle
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {isUploading && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Uploading...</span>
+                <span>{uploadProgress.toFixed(1)}%</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+
+  const renderBulkUploadTab = () => (
+    <>
+      <div className="flex items-start gap-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+        <Info className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+        <div className="space-y-1 text-sm text-purple-900">
+          <p className="font-medium">Drop several documents at once—metadata is auto-filled, you only edit what's missing.</p>
+          <ul className="list-disc list-inside space-y-1 text-purple-800">
+            <li>Each JSON file is parsed and mapped to loan + borrower fields</li>
+            <li>Files with missing data appear in the "Fix now" list</li>
+            <li>Use the inline editor to fill gaps; once complete, the file is marked ready</li>
+          </ul>
+        </div>
+      </div>
+
+      <AccessibleDropzone
+        onDrop={onDrop}
+        accept={fileAccept}
+        directoryMode={false}
+        maxSize={50 * 1024 * 1024}
+        description="Drop multiple loan documents or click to select them. We'll validate the files and auto-fill metadata."
+        aria-label="bulk upload area for document sealing"
+        id="file-upload-dropzone-bulk"
+      />
+
+      {selectedFiles.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <FileCheck className="h-5 w-5 text-blue-600" />
+              <div>
+                <div className="font-medium text-blue-900">
+                  {selectedFiles.length} Valid File{selectedFiles.length > 1 ? 's' : ''} Ready
+                </div>
+                {validationResults.invalid.length > 0 && (
+                  <div className="text-sm text-amber-700">
+                    {validationResults.invalid.length} file{validationResults.invalid.length > 1 ? 's' : ''} need attention
+                  </div>
+                )}
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedFiles([]);
+                setValidationResults({ valid: [], invalid: [], reasons: {} });
+                setBulkFileMetadata({});
+                setAllSelectedFiles({});
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {validationResults.invalid.length > 0 && (
+            <Alert className="border-amber-200 bg-amber-50">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800">
+                <div className="font-medium mb-2">Files Requiring Fixes:</div>
+                <ul className="text-sm space-y-2">
+                  {validationResults.invalid.slice(0, 5).map((fileItem, idx) => (
+                    <li key={idx} className="flex flex-col gap-1">
+                      <div className="flex items-start gap-2">
+                        <span className="text-amber-600">•</span>
+                        <div>
+                          <span className="font-medium">{fileItem.name}</span>
+                          <div className="text-xs text-amber-700">
+                            {validationResults.reasons[fileItem.name]}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 pl-4">
+                        <Button size="xs" variant="outline" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                          Fix now
+                        </Button>
+                        <Button size="xs" variant="ghost" onClick={() => handleRemoveInvalidFile(fileItem.name)}>
+                          Remove
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                  {validationResults.invalid.length > 5 && (
+                    <li className="text-xs text-amber-600">
+                      ...and {validationResults.invalid.length - 5} more
+                    </li>
+                  )}
+                </ul>
+                {validationResults.invalid.some(fileItem => (bulkFileMetadata[fileItem.name]?.documentType ?? '') === '') && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <Button size="xs" variant="secondary" onClick={() => handleApplyDocumentTypeToAll('loan_application')}>
+                      Fill document type for missing files
+                    </Button>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="max-h-60 overflow-y-auto space-y-2">
+            {selectedFiles.map((fileItem, idx) => (
+              <div key={idx} className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-green-600" />
+                  <span className="font-medium">{fileItem.name}</span>
+                  <span className="text-muted-foreground">
+                    ({(fileItem.size / 1024 / 1024).toFixed(2)} MB)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="xs" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                    Edit
+                  </Button>
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {isUploading && (
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span>Uploading batch...</span>
+            <span>{uploadState.progress.toFixed(0)}%</span>
+          </div>
+          <div className="w-full bg-muted rounded-full h-2">
+            <div
+              className="bg-primary h-2 rounded-full transition-all duration-300"
+              style={{ width: `${uploadState.progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const renderDirectoryUploadTab = () => (
+    <>
+      <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <Info className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+        <div className="space-y-1 text-sm text-amber-900">
+          <p className="font-medium">Upload an entire folder. We filter non-loan files, auto-fill metadata, and flag what's missing.</p>
+          <ul className="list-disc list-inside space-y-1 text-amber-800">
+            <li>Only supported document types are processed; others are excluded automatically</li>
+            <li>Missing fields are highlighted with "Fix now" actions</li>
+            <li>ObjectValidator generates a single directory hash for downstream verification</li>
+          </ul>
+        </div>
+      </div>
+
+      <AccessibleDropzone
+        onDrop={onDrop}
+        accept={fileAccept}
+        directoryMode={true}
+        maxSize={50 * 1024 * 1024}
+        description="Select a directory containing loan documents. We'll inspect each file, filter non-loan content, and auto-fill metadata."
+        aria-label="directory upload area for document sealing"
+        id="file-upload-dropzone-directory"
+      />
+
+      {selectedFiles.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <FileCheck className="h-5 w-5 text-blue-600" />
+              <div>
+                <div className="font-medium text-blue-900">
+                  {selectedFiles.length} Loan Document{selectedFiles.length > 1 ? 's' : ''} Detected
+                </div>
+                {validationResults.invalid.length > 0 && (
+                  <div className="text-sm text-amber-700">
+                    {validationResults.invalid.length} file{validationResults.invalid.length > 1 ? 's' : ''} filtered out
+                  </div>
+                )}
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedFiles([]);
+                setValidationResults({ valid: [], invalid: [], reasons: {} });
+                setBulkFileMetadata({});
+                setAllSelectedFiles({});
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {validationResults.invalid.length > 0 && (
+            <Alert className="border-amber-200 bg-amber-50">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800">
+                <div className="font-medium mb-2">Excluded Files:</div>
+                <ul className="text-sm space-y-2">
+                  {validationResults.invalid.slice(0, 5).map((fileItem, idx) => (
+                    <li key={idx} className="flex flex-col gap-1">
+                      <div className="flex items-start gap-2">
+                        <span className="text-amber-600">•</span>
+                        <div>
+                          <span className="font-medium">{fileItem.name}</span>
+                          <div className="text-xs text-amber-700">
+                            {validationResults.reasons[fileItem.name]}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-centered gap-2 pl-4">
+                        <Button size="xs" variant="outline" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                          Fix now
+                        </Button>
+                        <Button size="xs" variant="ghost" onClick={() => handleRemoveInvalidFile(fileItem.name)}>
+                          Remove
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                  {validationResults.invalid.length > 5 && (
+                    <li className="text-xs text-amber-600">
+                      ...and {validationResults.invalid.length - 5} more
+                    </li>
+                  )}
+                </ul>
+                {validationResults.invalid.some(fileItem => (bulkFileMetadata[fileItem.name]?.documentType ?? '') === '') && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <Button size="xs" variant="secondary" onClick={() => handleApplyDocumentTypeToAll('loan_application')}>
+                      Fill document type for missing files
+                    </Button>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="max-h-60 overflow-y-auto space-y-2">
+            {selectedFiles.map((fileItem, idx) => (
+              <div key={idx} className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-green-600" />
+                  <span className="font-medium">{fileItem.name}</span>
+                  <span className="text-muted-foreground">
+                    ({(fileItem.size / 1024 / 1024).toFixed(2)} MB)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="xs" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                    Edit
+                  </Button>
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <Alert className="border-blue-200 bg-blue-50">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800 text-sm">
+              <strong>ObjectValidator:</strong> Directory contents verified. A single directory hash will be generated for efficient sealing and later verification.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {isUploading && (
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span>Processing directory...</span>
+            <span>{uploadState.progress.toFixed(0)}%</span>
+          </div>
+          <div className="w-full bg-muted rounded-full h-2">
+            <div
+              className="bg-primary h-2 rounded-full transition-all duration-300"
+              style={{ width: `${uploadState.progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   const handleUpload = async () => {
     console.log('Upload button clicked');
@@ -868,18 +1506,213 @@ export default function UploadPage() {
       return;
     }
 
-    if (!file || !fileHash) {
-      console.log('No file or hash available');
-      toast.error('Please select a file first');
+    if (isSingleMode) {
+      if (!file || !fileHash) {
+        console.log('No file or hash available');
+        toast.error('Please select a file first');
+        return;
+      }
+
+      console.log('Starting upload for file:', file.name);
+      
+      // Save form data before upload
+      saveFormData();
+      setBulkUploadResults([]);
+      
+      // Update upload state
+      setUploadState(prev => ({
+        ...prev,
+        isUploading: true,
+        progress: 0,
+        error: null,
+        canRetry: false
+      }));
+      
+      setIsUploading(true);
+      setUploadProgress(0);
+
+      try {
+        // Get raw metadata and sanitize it
+        const currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
+        
+        // Prepare raw data for sanitization
+        const rawLoanData = {
+          loanId: currentMeta.loanId || `loan-${Date.now()}`,
+          documentType: currentMeta.documentType || 'loan_application',
+          loanAmount: currentMeta.loanAmount || 0,
+          borrowerName: currentMeta.borrowerFullName || currentMeta.borrowerName || '',
+          additionalNotes: currentMeta.notes || '',
+          createdBy: 'user@example.com' // TODO: Get from auth context
+        };
+
+        const rawBorrowerData = {
+          fullName: currentMeta.borrowerFullName || '',
+          dateOfBirth: currentMeta.borrowerDateOfBirth || '',
+          email: currentMeta.borrowerEmail || '',
+          phone: currentMeta.borrowerPhone || '',
+          streetAddress: currentMeta.borrowerStreetAddress || '',
+          city: currentMeta.borrowerCity || '',
+          state: currentMeta.borrowerState || '',
+          zipCode: currentMeta.borrowerZipCode || '',
+          country: currentMeta.borrowerCountry || 'US',
+          ssnLast4: currentMeta.borrowerSSNLast4 || '',
+          governmentIdType: currentMeta.borrowerGovernmentIdType || 'drivers_license',
+          idNumberLast4: currentMeta.borrowerIdNumberLast4 || '',
+          employmentStatus: currentMeta.borrowerEmploymentStatus || 'employed',
+          annualIncome: currentMeta.borrowerAnnualIncome || 0,
+          coBorrowerName: currentMeta.borrowerCoBorrowerName || ''
+        };
+
+        // Sanitize all form data
+        const sanitizedLoanData = sanitizeFormData(rawLoanData);
+        const sanitizedBorrowerData = sanitizeFormData(rawBorrowerData);
+        
+        // Create final loan data object
+        const loanData: LoanData = {
+          loan_id: sanitizedLoanData.loanId,
+          document_type: sanitizedLoanData.documentType,
+          loan_amount: parseFloat(sanitizedLoanData.loanAmount),
+          borrower_name: sanitizedLoanData.borrowerName,
+          additional_notes: sanitizedLoanData.additionalNotes
+        };
+
+        // Create final borrower data object
+        const borrowerInfo: BorrowerInfo = {
+          full_name: sanitizedBorrowerData.fullName,
+          date_of_birth: sanitizedBorrowerData.dateOfBirth,
+          email: sanitizedBorrowerData.email,
+          phone: sanitizedBorrowerData.phone,
+          address_line1: sanitizedBorrowerData.streetAddress,
+          address_line2: currentMeta.borrowerStreetAddress2 || '', // Keep as is for now
+          city: sanitizedBorrowerData.city,
+          state: sanitizedBorrowerData.state,
+          zip_code: sanitizedBorrowerData.zipCode,
+          country: sanitizedBorrowerData.country,
+          ssn_last4: sanitizedBorrowerData.ssnLast4,
+          id_type: sanitizedBorrowerData.governmentIdType,
+          id_last4: sanitizedBorrowerData.idNumberLast4,
+          employment_status: sanitizedBorrowerData.employmentStatus,
+          annual_income_range: sanitizedBorrowerData.annualIncome,
+          co_borrower_name: sanitizedBorrowerData.coBorrowerName,
+          is_sealed: false,
+          walacor_tx_id: '',
+          seal_timestamp: ''
+        };
+
+        console.log('Loan data:', loanData);
+        console.log('Borrower info:', borrowerInfo);
+
+        toast.loading('Sealing loan document with borrower information...');
+
+        // Simulate progress updates
+        const progressInterval = setInterval(() => {
+          setUploadState(prev => {
+            const newProgress = Math.min(prev.progress + 10, 90);
+            return { ...prev, progress: newProgress };
+          });
+          setUploadProgress(prev => Math.min(prev + 10, 90));
+        }, 200);
+
+          // Use the appropriate API client based on security mode
+          let sealResponse;
+          if (quantumSafeMode) {
+            sealResponse = await sealLoanDocumentQuantumSafe(loanData, borrowerInfo, [file]);
+          } else if (maximumSecurityMode) {
+            sealResponse = await sealLoanDocumentMaximumSecurity(loanData, borrowerInfo, [file]);
+          } else {
+            sealResponse = await sealLoanDocument(loanData, borrowerInfo, [file]);
+          }
+        
+        clearInterval(progressInterval);
+        
+        console.log('Seal response:', sealResponse);
+
+        // Complete progress
+        setUploadState(prev => ({ ...prev, progress: 100 }));
+        setUploadProgress(100);
+
+        // Create UploadResult for compatibility with existing UI
+        const uploadResult: UploadResult = {
+          artifactId: sealResponse.artifact_id,
+          walacorTxId: sealResponse.walacor_tx_id,
+          sealedAt: sealResponse.sealed_at,
+          proofBundle: sealResponse.blockchain_proof || {}
+        };
+
+        setUploadResult(uploadResult);
+        setBulkUploadResults([]);
+        setCurrentStep(4); // Move to Seal complete step
+
+        // Clear saved data on success
+        clearSavedData();
+
+        // Show success modal with confetti effect
+        setShowSuccessModal(true);
+        toast.success('Loan document sealed successfully with borrower information!');
+
+      } catch (error) {
+        console.error('Upload error:', error);
+        
+        const uploadError = handleError(error, 'sealLoanDocument');
+        
+        setUploadState(prev => ({
+          ...prev,
+          error: uploadError,
+          canRetry: uploadError.retryable || false
+        }));
+        
+        // Show error modal for serious errors
+        if (uploadError.type === 'server' || uploadError.type === 'network') {
+          setShowErrorModal(true);
+        }
+        
+        toast.error(uploadError.message);
+        
+      } finally {
+        setUploadState(prev => ({ ...prev, isUploading: false }));
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
       return;
     }
 
-    console.log('Starting upload for file:', file.name);
-    
-    // Save form data before upload
+    if (selectedFiles.length === 0) {
+      toast.error('Please add at least one file to upload');
+      return;
+    }
+
+    const sanitizedMetadataByFile: Record<string, AutoPopulateMetadata> = {};
+    const filesMissingMetadata: Record<string, string[]> = {};
+
+    selectedFiles.forEach(fileItem => {
+      const baseMetadata = bulkFileMetadata[fileItem.name] || createEmptyMetadata();
+      const sanitizedMetadata = sanitizeMetadataForSave(baseMetadata);
+      sanitizedMetadataByFile[fileItem.name] = sanitizedMetadata;
+      const missing = findMissingMetadata(sanitizedMetadata);
+      if (missing.length > 0) {
+        filesMissingMetadata[fileItem.name] = missing;
+      }
+    });
+
+    if (Object.keys(filesMissingMetadata).length > 0) {
+      const reasons = { ...validationResults.reasons };
+      Object.entries(filesMissingMetadata).forEach(([fileName, missing]) => {
+        reasons[fileName] = `Missing fields: ${missing.join(', ')}`;
+      });
+      setValidationResults(prev => ({
+        ...prev,
+        invalid: [
+          ...prev.invalid,
+          ...selectedFiles.filter(fileItem => filesMissingMetadata[fileItem.name] && !prev.invalid.find(f => f.name === fileItem.name))
+        ],
+        reasons
+      }));
+      toast.error('Some files are missing required information. Please fix them before uploading.');
+      setShowValidationSummary(true);
+      return;
+    }
+
     saveFormData();
-    
-    // Update upload state
     setUploadState(prev => ({
       ...prev,
       isUploading: true,
@@ -887,145 +1720,108 @@ export default function UploadPage() {
       error: null,
       canRetry: false
     }));
-    
     setIsUploading(true);
     setUploadProgress(0);
+    setBulkUploadResults([]);
 
     try {
-      // Get raw metadata and sanitize it
-      const currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
-      
-      // Prepare raw data for sanitization
-      const rawLoanData = {
-        loanId: currentMeta.loanId || `loan-${Date.now()}`,
-        documentType: currentMeta.documentType || 'loan_application',
-        loanAmount: currentMeta.loanAmount || 0,
-        borrowerName: currentMeta.borrowerFullName || currentMeta.borrowerName || '',
-        additionalNotes: currentMeta.notes || '',
-        createdBy: 'user@example.com' // TODO: Get from auth context
-      };
+      const results: BulkUploadResult[] = [];
+      for (let index = 0; index < selectedFiles.length; index += 1) {
+        const fileItem = selectedFiles[index];
+        const meta = sanitizedMetadataByFile[fileItem.name];
 
-      const rawBorrowerData = {
-        fullName: currentMeta.borrowerFullName || '',
-        dateOfBirth: currentMeta.borrowerDateOfBirth || '',
-        email: currentMeta.borrowerEmail || '',
-        phone: currentMeta.borrowerPhone || '',
-        streetAddress: currentMeta.borrowerStreetAddress || '',
-        city: currentMeta.borrowerCity || '',
-        state: currentMeta.borrowerState || '',
-        zipCode: currentMeta.borrowerZipCode || '',
-        country: currentMeta.borrowerCountry || 'US',
-        ssnLast4: currentMeta.borrowerSSNLast4 || '',
-        governmentIdType: currentMeta.borrowerGovernmentIdType || 'drivers_license',
-        idNumberLast4: currentMeta.borrowerIdNumberLast4 || '',
-        employmentStatus: currentMeta.borrowerEmploymentStatus || 'employed',
-        annualIncome: currentMeta.borrowerAnnualIncome || 0,
-        coBorrowerName: currentMeta.borrowerCoBorrowerName || ''
-      };
+        const loanAmountNumber = parseFloat(meta.loanAmount || '0');
+        const annualIncomeNumber = parseFloat(meta.borrowerAnnualIncome || '0');
 
-      // Sanitize all form data
-      const sanitizedLoanData = sanitizeFormData(rawLoanData);
-      const sanitizedBorrowerData = sanitizeFormData(rawBorrowerData);
-      
-      // Create final loan data object
-      const loanData: LoanData = {
-        loan_id: sanitizedLoanData.loanId,
-        document_type: sanitizedLoanData.documentType,
-        loan_amount: parseFloat(sanitizedLoanData.loanAmount),
-        borrower_name: sanitizedLoanData.borrowerName,
-        additional_notes: sanitizedLoanData.additionalNotes
-      };
+        const loanData: LoanData = {
+          loan_id: meta.loanId || `loan-${Date.now()}-${index}`,
+          document_type: (meta.documentType as LoanData['document_type']) || 'loan_application',
+          loan_amount: Number.isNaN(loanAmountNumber) ? 0 : loanAmountNumber,
+          borrower_name: meta.borrowerName || meta.borrowerFullName || '',
+          additional_notes: meta.additionalNotes || undefined
+        };
 
-      // Create final borrower data object
-      const borrowerInfo: BorrowerInfo = {
-        full_name: sanitizedBorrowerData.fullName,
-        date_of_birth: sanitizedBorrowerData.dateOfBirth,
-        email: sanitizedBorrowerData.email,
-        phone: sanitizedBorrowerData.phone,
-        address_line1: sanitizedBorrowerData.streetAddress,
-        address_line2: currentMeta.borrowerStreetAddress2 || '', // Keep as is for now
-        city: sanitizedBorrowerData.city,
-        state: sanitizedBorrowerData.state,
-        zip_code: sanitizedBorrowerData.zipCode,
-        country: sanitizedBorrowerData.country,
-        ssn_last4: sanitizedBorrowerData.ssnLast4,
-        id_type: sanitizedBorrowerData.governmentIdType,
-        id_last4: sanitizedBorrowerData.idNumberLast4,
-        employment_status: sanitizedBorrowerData.employmentStatus,
-        annual_income_range: sanitizedBorrowerData.annualIncome,
-        co_borrower_name: sanitizedBorrowerData.coBorrowerName,
-        is_sealed: false,
-        walacor_tx_id: '',
-        seal_timestamp: ''
-      };
+        const borrowerFullName = meta.borrowerFullName || meta.borrowerName || '';
+        const borrowerInfo: BorrowerInfo = {
+          full_name: borrowerFullName,
+          date_of_birth: meta.borrowerDateOfBirth || '',
+          email: meta.borrowerEmail || '',
+          phone: meta.borrowerPhone || '',
+          address_line1: meta.borrowerStreetAddress || '',
+          address_line2: '',
+          city: meta.borrowerCity || '',
+          state: meta.borrowerState || '',
+          zip_code: meta.borrowerZipCode || '',
+          country: meta.borrowerCountry || 'US',
+          ssn_last4: meta.borrowerSSNLast4 || '',
+          id_type: (meta.borrowerGovernmentIdType as BorrowerInfo['id_type']) || 'drivers_license',
+          id_last4: meta.borrowerIdNumberLast4 || '',
+          employment_status: (meta.borrowerEmploymentStatus as BorrowerInfo['employment_status']) || 'employed',
+          annual_income_range: getIncomeRange(Number.isNaN(annualIncomeNumber) ? 0 : annualIncomeNumber),
+          co_borrower_name: meta.borrowerCoBorrowerName || '',
+          is_sealed: false,
+          walacor_tx_id: '',
+          seal_timestamp: ''
+        };
 
-      console.log('Loan data:', loanData);
-      console.log('Borrower info:', borrowerInfo);
+        const progressValue = Math.round((index / selectedFiles.length) * 100);
+        setUploadState(prev => ({ ...prev, progress: progressValue }));
+        setUploadProgress(progressValue);
 
-      toast.loading('Sealing loan document with borrower information...');
-
-      // Simulate progress updates
-      const progressInterval = setInterval(() => {
-        setUploadState(prev => {
-          const newProgress = Math.min(prev.progress + 10, 90);
-          return { ...prev, progress: newProgress };
-        });
-        setUploadProgress(prev => Math.min(prev + 10, 90));
-      }, 200);
-
-        // Use the appropriate API client based on security mode
         let sealResponse;
         if (quantumSafeMode) {
-          sealResponse = await sealLoanDocumentQuantumSafe(loanData, borrowerInfo, [file]);
+          sealResponse = await sealLoanDocumentQuantumSafe(loanData, borrowerInfo, [fileItem]);
         } else if (maximumSecurityMode) {
-          sealResponse = await sealLoanDocumentMaximumSecurity(loanData, borrowerInfo, [file]);
+          sealResponse = await sealLoanDocumentMaximumSecurity(loanData, borrowerInfo, [fileItem]);
         } else {
-          sealResponse = await sealLoanDocument(loanData, borrowerInfo, [file]);
+          sealResponse = await sealLoanDocument(loanData, borrowerInfo, [fileItem]);
         }
-      
-      clearInterval(progressInterval);
-      
-      console.log('Seal response:', sealResponse);
 
-      // Complete progress
-      setUploadState(prev => ({ ...prev, progress: 100 }));
-      setUploadProgress(100);
+        results.push({
+          fileName: fileItem.name,
+          result: {
+          artifactId: sealResponse.artifact_id,
+          walacorTxId: sealResponse.walacor_tx_id,
+          sealedAt: sealResponse.sealed_at,
+          proofBundle: sealResponse.blockchain_proof || {}
+          }
+        });
 
-      // Create UploadResult for compatibility with existing UI
-      const uploadResult: UploadResult = {
-        artifactId: sealResponse.artifact_id,
-        walacorTxId: sealResponse.walacor_tx_id,
-        sealedAt: sealResponse.sealed_at,
-        proofBundle: sealResponse.blockchain_proof || {}
-      };
+        const nextProgress = Math.round(((index + 1) / selectedFiles.length) * 100);
+        setUploadState(prev => ({ ...prev, progress: nextProgress }));
+        setUploadProgress(nextProgress);
+      }
 
-      setUploadResult(uploadResult);
-      
-      // Clear saved data on success
+      setBulkUploadResults(results);
+      if (results.length > 0) {
+        setUploadResult(results[results.length - 1].result);
+      }
+
       clearSavedData();
-      
-      // Show success modal with confetti effect
+      setSelectedFiles([]);
+      setValidationResults({ valid: [], invalid: [], reasons: {} });
+      setBulkFileMetadata({});
+      setAllSelectedFiles({});
+      setMetadata('');
+      setShowMetadataEditor(false);
       setShowSuccessModal(true);
-      toast.success('Loan document sealed successfully with borrower information!');
+      toast.success(`Sealed ${results.length} document${results.length > 1 ? 's' : ''} successfully!`);
 
     } catch (error) {
-      console.error('Upload error:', error);
-      
-      const uploadError = handleError(error, 'sealLoanDocument');
-      
+      console.error('Bulk upload error:', error);
+      const uploadError = handleError(error, 'bulkSealLoanDocument');
+
       setUploadState(prev => ({
         ...prev,
         error: uploadError,
         canRetry: uploadError.retryable || false
       }));
-      
-      // Show error modal for serious errors
+
       if (uploadError.type === 'server' || uploadError.type === 'network') {
         setShowErrorModal(true);
       }
-      
+
       toast.error(uploadError.message);
-      
     } finally {
       setUploadState(prev => ({ ...prev, isUploading: false }));
       setIsUploading(false);
@@ -1058,10 +1854,27 @@ export default function UploadPage() {
     const currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
 
     // File validation
-    if (!file) {
-      errors.push({ field: 'file', message: 'Please select a file to upload' });
-    } else if (file.size > 50 * 1024 * 1024) { // 50MB limit
-      errors.push({ field: 'file', message: 'File size must be less than 50MB' });
+    if (isSingleMode) {
+      if (!file) {
+        errors.push({ field: 'file', message: 'Please select a file to upload' });
+      } else if (file.size > 50 * 1024 * 1024) { // 50MB limit
+        errors.push({ field: 'file', message: 'File size must be less than 50MB' });
+      }
+    } else {
+      if (selectedFiles.length === 0) {
+        errors.push({ field: 'selectedFiles', message: 'Please select at least one document to upload' });
+      } else {
+        selectedFiles.forEach(fileItem => {
+          const meta = sanitizeMetadataForSave(bulkFileMetadata[fileItem.name] || createEmptyMetadata());
+          const missing = findMissingMetadata(meta);
+          if (missing.length > 0) {
+            errors.push({
+              field: `metadata-${fileItem.name}`,
+              message: `${fileItem.name} is missing: ${missing.join(', ')}`
+            });
+          }
+        });
+      }
     }
 
   // Loan data validation
@@ -1390,6 +2203,142 @@ export default function UploadPage() {
 
   return (
     <>
+      {/* Bulk Metadata Editor */}
+      <Dialog open={showMetadataEditor} onOpenChange={(open) => {
+        setShowMetadataEditor(open);
+        if (!open) {
+          setEditingBulkFileName(null);
+          setEditingMetadata(null);
+        }
+      }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Edit File Metadata</DialogTitle>
+            <DialogDescription>
+              Update missing information so this file can be included in the upload batch.
+            </DialogDescription>
+          </DialogHeader>
+          {editingMetadata && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Loan ID</Label>
+                <Input
+                  value={editingMetadata.loanId}
+                  onChange={(e) => handleMetadataFieldChange('loanId', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Document Type</Label>
+                <Input
+                  value={editingMetadata.documentType}
+                  onChange={(e) => handleMetadataFieldChange('documentType', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Loan Amount</Label>
+                <Input
+                  value={editingMetadata.loanAmount}
+                  onChange={(e) => handleMetadataFieldChange('loanAmount', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Interest Rate (%)</Label>
+                <Input
+                  value={editingMetadata.interestRate}
+                  onChange={(e) => handleMetadataFieldChange('interestRate', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Loan Term (months)</Label>
+                <Input
+                  value={editingMetadata.loanTerm}
+                  onChange={(e) => handleMetadataFieldChange('loanTerm', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Property Address</Label>
+                <Input
+                  value={editingMetadata.propertyAddress}
+                  onChange={(e) => handleMetadataFieldChange('propertyAddress', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Borrower Name</Label>
+                <Input
+                  value={editingMetadata.borrowerName}
+                  onChange={(e) => handleMetadataFieldChange('borrowerName', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Borrower Email</Label>
+                <Input
+                  value={editingMetadata.borrowerEmail}
+                  onChange={(e) => handleMetadataFieldChange('borrowerEmail', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Borrower Phone</Label>
+                <Input
+                  value={editingMetadata.borrowerPhone}
+                  onChange={(e) => handleMetadataFieldChange('borrowerPhone', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Borrower Address</Label>
+                <Input
+                  value={editingMetadata.borrowerStreetAddress}
+                  onChange={(e) => handleMetadataFieldChange('borrowerStreetAddress', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Borrower City</Label>
+                <Input
+                  value={editingMetadata.borrowerCity}
+                  onChange={(e) => handleMetadataFieldChange('borrowerCity', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Borrower State</Label>
+                <Input
+                  value={editingMetadata.borrowerState}
+                  onChange={(e) => handleMetadataFieldChange('borrowerState', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Borrower ZIP Code</Label>
+                <Input
+                  value={editingMetadata.borrowerZipCode}
+                  onChange={(e) => handleMetadataFieldChange('borrowerZipCode', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Borrower Country</Label>
+                <Input
+                  value={editingMetadata.borrowerCountry}
+                  onChange={(e) => handleMetadataFieldChange('borrowerCountry', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Additional Notes</Label>
+                <Textarea
+                  value={editingMetadata.additionalNotes}
+                  onChange={(e) => handleMetadataFieldChange('additionalNotes', e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseMetadataEditor}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveMetadata}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Validation Summary Modal */}
       <Dialog open={showValidationSummary} onOpenChange={setShowValidationSummary}>
         <DialogContent className="max-w-2xl">
@@ -1599,89 +2548,132 @@ export default function UploadPage() {
                               </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {uploadResult && (
+            {bulkUploadResults.length > 0 ? (
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm font-medium text-green-800">Artifact ID</p>
-                    <p className="text-sm text-green-600 font-mono">{uploadResult.artifactId}</p>
-                  </div>
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm font-medium text-green-800">Transaction ID</p>
-                    <p className="text-sm text-green-600 font-mono">{uploadResult.walacorTxId}</p>
-                  </div>
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm font-medium text-green-800">
+                    {bulkUploadResults.length} document{bulkUploadResults.length > 1 ? 's' : ''} sealed successfully!
+                  </p>
+                  <p className="text-xs text-green-700">
+                    {quantumSafeMode
+                      ? 'Each file has been processed with quantum-safe cryptography.'
+                      : maximumSecurityMode
+                      ? 'Each file has been sealed with maximum security controls.'
+                      : 'Standard security sealing completed for each document.'}
+                  </p>
                 </div>
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm font-medium text-blue-800">Sealed At</p>
-                  <p className="text-sm text-blue-600">{new Date(uploadResult.sealedAt).toLocaleString()}</p>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {bulkUploadResults.map(({ fileName, result }) => (
+                    <div key={`${fileName}-${result.artifactId}`} className="p-3 bg-white border rounded-lg space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{fileName}</p>
+                          <p className="text-xs text-gray-600">
+                            Sealed at {new Date(result.sealedAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {result.walacorTxId ? `TX: ${result.walacorTxId}` : 'Pending TX'}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-600">
+                        <div>
+                          <p className="font-medium text-gray-800">Artifact ID</p>
+                          <p className="font-mono break-all">{result.artifactId}</p>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-800">Blockchain Network</p>
+                          <p>{result.proofBundle?.blockchain_network || 'walacor'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                            {uploadResult.proofBundle && (
-                              <div className="p-3 bg-gray-50 border rounded-lg">
-                                <p className="text-sm font-medium mb-2">Blockchain Proof</p>
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="text-xs">
-                                    {uploadResult.proofBundle.blockchain_network || 'walacor'}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs">
-                                    ETID: {uploadResult.proofBundle.etid}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs">
-                                    {uploadResult.proofBundle.integrity_verified ? 'Verified' : 'Pending'}
-                                  </Badge>
-                                </div>
-                              </div>
-                            )}
-                      {quantumSafeMode && uploadResult.quantum_safe_seal && (
-                        <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                          <p className="text-sm font-medium mb-2 text-purple-800">🔬 Quantum-Safe Features</p>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="outline" className="text-xs bg-purple-100 text-purple-800">
-                                🛡️ Quantum-Resistant
-                              </Badge>
-                              <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800">
-                                🔒 Post-Quantum Secure
-                              </Badge>
-                              <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800">
-                                ⚡ SHA3-512 Protected
-                              </Badge>
-                              <Badge variant="outline" className="text-xs bg-green-100 text-green-800">
-                                ⭐ Future-Proof Security
-                              </Badge>
-                              <Badge variant="outline" className="text-xs bg-indigo-100 text-indigo-800">
-                                ✅ NIST PQC Compliant
-                              </Badge>
-                            </div>
-                            <div className="text-xs text-purple-700">
-                              <p><strong>Quantum-Resistant Hashes:</strong> {Object.keys(uploadResult.quantum_safe_seal.quantum_resistant_hashes || {}).join(', ')}</p>
-                              <p><strong>Quantum-Safe Signatures:</strong> {Object.keys(uploadResult.quantum_safe_seal.quantum_safe_signatures || {}).join(', ')}</p>
-                              <p><strong>Algorithms Used:</strong> {uploadResult.quantum_safe_seal.algorithms_used?.join(', ')}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {maximumSecurityMode && uploadResult.comprehensive_seal && (
-                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <p className="text-sm font-medium mb-2 text-blue-800">Maximum Security Features</p>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800">
-                                {uploadResult.comprehensive_seal.security_level}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs bg-green-100 text-green-800">
-                                {uploadResult.comprehensive_seal.tamper_resistance}
-                              </Badge>
-                            </div>
-                            <div className="text-xs text-blue-700">
-                              <p><strong>Multi-Hash Algorithms:</strong> {uploadResult.comprehensive_seal.multi_hash_algorithms?.join(', ')}</p>
-                              <p><strong>PKI Signature:</strong> {uploadResult.comprehensive_seal.pki_signature?.algorithm} ({uploadResult.comprehensive_seal.pki_signature?.key_size} bits)</p>
-                              <p><strong>Verification Methods:</strong> {uploadResult.comprehensive_seal.verification_methods?.join(', ')}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
               </div>
+            ) : (
+              uploadResult && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm font-medium text-green-800">Artifact ID</p>
+                      <p className="text-sm text-green-600 font-mono">{uploadResult.artifactId}</p>
+                    </div>
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm font-medium text-green-800">Transaction ID</p>
+                      <p className="text-sm text-green-600 font-mono">{uploadResult.walacorTxId}</p>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm font-medium text-blue-800">Sealed At</p>
+                    <p className="text-sm text-blue-600">{new Date(uploadResult.sealedAt).toLocaleString()}</p>
+                  </div>
+                  {uploadResult.proofBundle && (
+                    <div className="p-3 bg-gray-50 border rounded-lg">
+                      <p className="text-sm font-medium mb-2">Blockchain Proof</p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {uploadResult.proofBundle.blockchain_network || 'walacor'}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          ETID: {uploadResult.proofBundle.etid}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {uploadResult.proofBundle.integrity_verified ? 'Verified' : 'Pending'}
+                        </Badge>
+                      </div>
+                    </div>
+                  )}
+                  {quantumSafeMode && uploadResult.quantum_safe_seal && (
+                    <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                      <p className="text-sm font-medium mb-2 text-purple-800">🔬 Quantum-Safe Features</p>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-xs bg-purple-100 text-purple-800">
+                            🛡️ Quantum-Resistant
+                          </Badge>
+                          <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800">
+                            🔒 Post-Quantum Secure
+                          </Badge>
+                          <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800">
+                            ⚡ SHA3-512 Protected
+                          </Badge>
+                          <Badge variant="outline" className="text-xs bg-green-100 text-green-800">
+                            ⭐ Future-Proof Security
+                          </Badge>
+                          <Badge variant="outline" className="text-xs bg-indigo-100 text-indigo-800">
+                            ✅ NIST PQC Compliant
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-purple-700">
+                          <p><strong>Quantum-Resistant Hashes:</strong> {Object.keys(uploadResult.quantum_safe_seal.quantum_resistant_hashes || {}).join(', ')}</p>
+                          <p><strong>Quantum-Safe Signatures:</strong> {Object.keys(uploadResult.quantum_safe_seal.quantum_safe_signatures || {}).join(', ')}</p>
+                          <p><strong>Algorithms Used:</strong> {uploadResult.quantum_safe_seal.algorithms_used?.join(', ')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {maximumSecurityMode && uploadResult.comprehensive_seal && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm font-medium mb-2 text-blue-800">Maximum Security Features</p>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800">
+                            {uploadResult.comprehensive_seal.security_level}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs bg-green-100 text-green-800">
+                            {uploadResult.comprehensive_seal.tamper_resistance}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-blue-700">
+                          <p><strong>Multi-Hash Algorithms:</strong> {uploadResult.comprehensive_seal.multi_hash_algorithms?.join(', ')}</p>
+                          <p><strong>PKI Signature:</strong> {uploadResult.comprehensive_seal.pki_signature?.algorithm} ({uploadResult.comprehensive_seal.pki_signature?.key_size} bits)</p>
+                          <p><strong>Verification Methods:</strong> {uploadResult.comprehensive_seal.verification_methods?.join(', ')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
             )}
           </div>
           <DialogFooter className="gap-2">
@@ -1816,7 +2808,18 @@ export default function UploadPage() {
               Drag and drop a file or click to select. Maximum file size: 50MB
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
+            {/* Progress Steps - Only show in single file mode */}
+            {uploadMode === 'single' && (
+              <div className="mb-6">
+                <div className="hidden md:block">
+                  <ProgressSteps steps={uploadSteps} currentStep={currentStep} />
+                </div>
+                <div className="md:hidden">
+                  <CompactProgressSteps steps={uploadSteps} currentStep={currentStep} />
+                </div>
+              </div>
+            )}
             <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="space-y-1 text-sm">
@@ -1832,1541 +2835,1360 @@ export default function UploadPage() {
                 </div>
               </div>
             </div>
-            {/* Upload Mode Selection */}
-            <div className="space-y-2">
-              <Label>Upload Mode</Label>
-              <RadioGroup 
-                value={uploadMode}
-                onValueChange={(value) => setUploadMode(value as 'single' | 'bulk' | 'directory')}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="single" id="mode-single" />
-                  <Label htmlFor="mode-single" className="cursor-pointer">
-                    Single File
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="bulk" id="mode-bulk" />
-                  <Label htmlFor="mode-bulk" className="cursor-pointer">
-                    Multiple Files
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="directory" id="mode-directory" />
-                  <Label htmlFor="mode-directory" className="cursor-pointer">
-                    Directory Upload
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
 
-            <AccessibleDropzone
-              onDrop={onDrop}
-              accept={fileAccept}
-              maxFiles={uploadMode === 'single' ? 1 : undefined}
-              directoryMode={uploadMode === 'directory'}
-              maxSize={50 * 1024 * 1024} // 50MB
-              description={
-                uploadMode === 'single' 
-                  ? "Drag and drop a file here, or click to select. Supported formats: PDF, JSON, TXT, JPG, PNG, DOCX, XLSX"
-                  : uploadMode === 'bulk'
-                  ? "Drag and drop multiple files here, or click to select. All files will be validated for loan content."
-                  : "Select a directory containing loan documents. Non-loan files will be filtered automatically."
-              }
-              aria-label={`${uploadMode} upload area for document sealing`}
-              id="file-upload-dropzone"
-            />
+            <Tabs
+              value={uploadMode}
+              onValueChange={(value) => setUploadMode(value as 'single' | 'bulk' | 'directory')}
+              className="space-y-4"
+            >
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="single">Single File</TabsTrigger>
+                <TabsTrigger value="bulk">Multiple Files</TabsTrigger>
+                <TabsTrigger value="directory">Directory Upload</TabsTrigger>
+              </TabsList>
 
-            {/* Display selected files for bulk/directory mode */}
-            {(uploadMode === 'bulk' || uploadMode === 'directory') && selectedFiles.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <FileCheck className="h-5 w-5 text-blue-600" />
-                    <div>
-                      <div className="font-medium text-blue-900">
-                        {selectedFiles.length} Valid Files Selected
-                      </div>
-                      {validationResults.invalid.length > 0 && (
-                        <div className="text-sm text-amber-700">
-                          {validationResults.invalid.length} files filtered out (not loan documents)
-                        </div>
-                      )}
-                    </div>
+              <TabsContent value="single" className="space-y-4">
+                {renderSingleUploadTab()}
+              </TabsContent>
+
+              <TabsContent value="bulk" className="space-y-4">
+                {renderBulkUploadTab()}
+              </TabsContent>
+
+              <TabsContent value="directory" className="space-y-4">
+                {renderDirectoryUploadTab()}
+              </TabsContent>
+            </Tabs>
+
+            {/* Only show KYC and Loan Information for Single File mode */}
+            {uploadMode === 'single' && (
+              <>
+                {/* Borrower KYC Information */}
+                <Card>
+                  <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="h-5 w-5" />
+                      Borrower KYC Information (GENIUS ACT 2025 Required)
+                    </CardTitle>
+                    <CardDescription>
+                      Complete your Know Your Customer information as required by GENIUS ACT 2025
+                    </CardDescription>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedFiles([]);
-                      setValidationResults({ valid: [], invalid: [], reasons: {} });
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Show validation results */}
-                {validationResults.invalid.length > 0 && (
-                  <Alert className="border-amber-200 bg-amber-50">
-                    <AlertTriangle className="h-4 w-4 text-amber-600" />
-                    <AlertDescription className="text-amber-800">
-                      <div className="font-medium mb-2">Filtered Files:</div>
-                      <ul className="text-sm space-y-1">
-                        {validationResults.invalid.slice(0, 5).map((file, idx) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <span className="text-amber-600">•</span>
-                            <div>
-                              <span className="font-medium">{file.name}</span>
-                              <div className="text-xs text-amber-700">
-                                {validationResults.reasons[file.name]}
-                              </div>
-                            </div>
-                          </li>
-                        ))}
-                        {validationResults.invalid.length > 5 && (
-                          <li className="text-xs text-amber-600">
-                            ...and {validationResults.invalid.length - 5} more
-                          </li>
-                        )}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {/* List of valid files */}
-                <div className="max-h-60 overflow-y-auto space-y-2">
-                  {selectedFiles.map((file, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-green-600" />
-                        <span className="font-medium">{file.name}</span>
-                        <span className="text-muted-foreground">
-                          ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                        </span>
-                      </div>
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    </div>
-                  ))}
-                </div>
-
-                <Alert className="border-blue-200 bg-blue-50">
-                  <Info className="h-4 w-4 text-blue-600" />
-                  <AlertDescription className="text-blue-800 text-sm">
-                    <strong>ObjectValidator:</strong> All files have been cryptographically verified and validated as loan documents. 
-                    A single directory hash will be generated for efficient verification.
-                  </AlertDescription>
-                </Alert>
-              </div>
-            )}
-
-            {file && uploadMode === 'single' && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    <span className="font-medium">{file.name}</span>
-                    <span className="text-sm text-muted-foreground">
-                      ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                    </span>
-                    {isAutoFilling && (
-                      <div className="flex items-center space-x-1 text-sm text-blue-600">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        <span>Auto-filling form...</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {fileHash && (
-                  <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                    <Hash className="h-4 w-4" />
-                    <span className="text-sm font-mono break-all">{fileHash}</span>
-                  </div>
-                )}
-
-                {/* Duplicate Detection Component */}
-                <DuplicateDetection
-                  fileHash={fileHash}
-                  loanId={formData.loanId}
-                  borrowerEmail={formData.borrowerEmail}
-                  borrowerSsnLast4={formData.borrowerSSNLast4}
-                  onDuplicateFound={handleDuplicateFound}
-                  onNoDuplicates={handleNoDuplicates}
-                  autoCheck={true}
-                />
-
-                {isVerifying && (
-                  <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                    <span className="text-sm text-blue-800">Checking if document is already sealed...</span>
-                  </div>
-                )}
-
-                {verifyResult && verifyResult.is_valid && (
-                  <Alert className="border-green-200 bg-green-50">
-                    <Shield className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-800">
-                      <div className="space-y-2">
-                        <div className="font-medium">Document Already Sealed!</div>
-                        <div className="text-sm">
-                          This document was already sealed on{' '}
-                          <span className="font-medium">
-                            {new Date(verifyResult.details.created_at).toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex gap-2 mt-3">
-                          <Button asChild size="sm">
-                            <a href={`http://localhost:8000/api/verify?hash=${fileHash}`} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-3 w-3 mr-1" />
-                              View Proof
-                            </a>
-                          </Button>
-                          <Button asChild variant="outline" size="sm">
-                            <a href={`http://localhost:8000/api/proof?id=${verifyResult.artifact_id}`} target="_blank" rel="noopener noreferrer">
-                              <Shield className="h-3 w-3 mr-1" />
-                              Download Proof Bundle
-                            </a>
-                          </Button>
-                        </div>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {isUploading && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Uploading...</span>
-                      <span>{uploadProgress.toFixed(1)}%</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div
-                        className="bg-primary h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${uploadProgress}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Borrower KYC Information */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Borrower KYC Information (GENIUS ACT 2025 Required)
-                </CardTitle>
-                <CardDescription>
-                  Complete your Know Your Customer information as required by GENIUS ACT 2025
-                </CardDescription>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsKycExpanded(!isKycExpanded)}
-              >
-                {isKycExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                {isKycExpanded ? 'Collapse' : 'Expand'}
-              </Button>
-            </div>
-          </CardHeader>
-          {isKycExpanded && (
-            <CardContent className="space-y-6">
-              <TooltipProvider>
-                {/* Personal Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Personal Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fullLegalName" className="flex items-center gap-1">
-                        Full Legal Name <span className="text-red-500">*</span>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-gray-400" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Enter your full legal name as it appears on official documents</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </Label>
-                      <Input
-                        id="fullLegalName"
-                        value={kycData.fullLegalName}
-                        onChange={(e) => handleKycFieldChange('fullLegalName', e.target.value)}
-                        placeholder="John Doe"
-                        className={kycErrors.fullLegalName ? 'border-red-500' : ''}
-                      />
-                      {kycErrors.fullLegalName && <p className="text-sm text-red-500">{kycErrors.fullLegalName}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="dateOfBirth" className="flex items-center gap-1">
-                        Date of Birth <span className="text-red-500">*</span>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-gray-400" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Must be 18 years or older</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </Label>
-                      <Input
-                        id="dateOfBirth"
-                        type="date"
-                        value={kycData.dateOfBirth}
-                        onChange={(e) => handleKycFieldChange('dateOfBirth', e.target.value)}
-                        className={kycErrors.dateOfBirth ? 'border-red-500' : ''}
-                      />
-                      {kycErrors.dateOfBirth && <p className="text-sm text-red-500">{kycErrors.dateOfBirth}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="phoneNumber" className="flex items-center gap-1">
-                        Phone Number <span className="text-red-500">*</span>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-gray-400" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Format: +1-XXX-XXX-XXXX</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </Label>
-                      <Input
-                        id="phoneNumber"
-                        value={kycData.phoneNumber}
-                        onChange={(e) => handleKycFieldChange('phoneNumber', e.target.value)}
-                        placeholder="+1-555-123-4567"
-                        className={kycErrors.phoneNumber ? 'border-red-500' : ''}
-                      />
-                      {kycErrors.phoneNumber && <p className="text-sm text-red-500">{kycErrors.phoneNumber}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="emailAddress" className="flex items-center gap-1">
-                        Email Address <span className="text-red-500">*</span>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-gray-400" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Enter a valid email address</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </Label>
-                      <Input
-                        id="emailAddress"
-                        type="email"
-                        value={kycData.emailAddress}
-                        onChange={(e) => handleKycFieldChange('emailAddress', e.target.value)}
-                        placeholder="john.doe@example.com"
-                        className={kycErrors.emailAddress ? 'border-red-500' : ''}
-                      />
-                      {kycErrors.emailAddress && <p className="text-sm text-red-500">{kycErrors.emailAddress}</p>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Address Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Address Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="streetAddress1" className="flex items-center gap-1">
-                        Street Address Line 1 <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="streetAddress1"
-                        value={kycData.streetAddress1}
-                        onChange={(e) => handleKycFieldChange('streetAddress1', e.target.value)}
-                        placeholder="123 Main Street"
-                        className={kycErrors.streetAddress1 ? 'border-red-500' : ''}
-                      />
-                      {kycErrors.streetAddress1 && <p className="text-sm text-red-500">{kycErrors.streetAddress1}</p>}
-                    </div>
-
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="streetAddress2">Street Address Line 2</Label>
-                      <Input
-                        id="streetAddress2"
-                        value={kycData.streetAddress2}
-                        onChange={(e) => handleKycFieldChange('streetAddress2', e.target.value)}
-                        placeholder="Apt 4B, Suite 200"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="city" className="flex items-center gap-1">
-                        City <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="city"
-                        value={kycData.city}
-                        onChange={(e) => handleKycFieldChange('city', e.target.value)}
-                        placeholder="New York"
-                        className={kycErrors.city ? 'border-red-500' : ''}
-                      />
-                      {kycErrors.city && <p className="text-sm text-red-500">{kycErrors.city}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="stateProvince" className="flex items-center gap-1">
-                        State/Province <span className="text-red-500">*</span>
-                      </Label>
-                      <Select value={kycData.stateProvince} onValueChange={(value) => handleKycFieldChange('stateProvince', value)}>
-                        <SelectTrigger className={kycErrors.stateProvince ? 'border-red-500' : ''}>
-                          <SelectValue placeholder="Select state" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {usStates.map((state) => (
-                            <SelectItem key={state} value={state}>{state}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {kycErrors.stateProvince && <p className="text-sm text-red-500">{kycErrors.stateProvince}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="postalZipCode" className="flex items-center gap-1">
-                        Postal/ZIP Code <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="postalZipCode"
-                        value={kycData.postalZipCode}
-                        onChange={(e) => handleKycFieldChange('postalZipCode', e.target.value)}
-                        placeholder="10001"
-                        className={kycErrors.postalZipCode ? 'border-red-500' : ''}
-                      />
-                      {kycErrors.postalZipCode && <p className="text-sm text-red-500">{kycErrors.postalZipCode}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="country" className="flex items-center gap-1">
-                        Country <span className="text-red-500">*</span>
-                      </Label>
-                      <Select value={kycData.country} onValueChange={(value) => handleKycFieldChange('country', value)}>
-                        <SelectTrigger className={kycErrors.country ? 'border-red-500' : ''}>
-                          <SelectValue placeholder="Select country" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {countries.map((country) => (
-                            <SelectItem key={country} value={country}>{country}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {kycErrors.country && <p className="text-sm text-red-500">{kycErrors.country}</p>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Identification Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Identification Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="citizenshipCountry" className="flex items-center gap-1">
-                        Citizenship Country <span className="text-red-500">*</span>
-                      </Label>
-                      <Select value={kycData.citizenshipCountry} onValueChange={(value) => handleKycFieldChange('citizenshipCountry', value)}>
-                        <SelectTrigger className={kycErrors.citizenshipCountry ? 'border-red-500' : ''}>
-                          <SelectValue placeholder="Select country" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {countries.map((country) => (
-                            <SelectItem key={country} value={country}>{country}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {kycErrors.citizenshipCountry && <p className="text-sm text-red-500">{kycErrors.citizenshipCountry}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="identificationType" className="flex items-center gap-1">
-                        Identification Type <span className="text-red-500">*</span>
-                      </Label>
-                      <Select value={kycData.identificationType} onValueChange={(value) => handleKycFieldChange('identificationType', value)}>
-                        <SelectTrigger className={kycErrors.identificationType ? 'border-red-500' : ''}>
-                          <SelectValue placeholder="Select ID type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="SSN">SSN</SelectItem>
-                          <SelectItem value="TIN">TIN</SelectItem>
-                          <SelectItem value="Passport">Passport</SelectItem>
-                          <SelectItem value="Driver's License">Driver's License</SelectItem>
-                          <SelectItem value="Alien ID">Alien ID</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {kycErrors.identificationType && <p className="text-sm text-red-500">{kycErrors.identificationType}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="identificationNumber" className="flex items-center gap-1">
-                        Identification Number <span className="text-red-500">*</span>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-gray-400" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>This will be masked after typing for security</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </Label>
-                      <Input
-                        id="identificationNumber"
-                        type="password"
-                        value={kycData.identificationNumber}
-                        onChange={(e) => handleKycFieldChange('identificationNumber', e.target.value)}
-                        placeholder="Enter ID number"
-                        className={kycErrors.identificationNumber ? 'border-red-500' : ''}
-                      />
-                      {kycErrors.identificationNumber && <p className="text-sm text-red-500">{kycErrors.identificationNumber}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="idIssuingCountry" className="flex items-center gap-1">
-                        ID Issuing Country <span className="text-red-500">*</span>
-                      </Label>
-                      <Select value={kycData.idIssuingCountry} onValueChange={(value) => handleKycFieldChange('idIssuingCountry', value)}>
-                        <SelectTrigger className={kycErrors.idIssuingCountry ? 'border-red-500' : ''}>
-                          <SelectValue placeholder="Select country" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {countries.map((country) => (
-                            <SelectItem key={country} value={country}>{country}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {kycErrors.idIssuingCountry && <p className="text-sm text-red-500">{kycErrors.idIssuingCountry}</p>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Financial Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Financial Information (GENIUS ACT Required)</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="sourceOfFunds" className="flex items-center gap-1">
-                        Source of Funds <span className="text-red-500">*</span>
-                      </Label>
-                      <Select value={kycData.sourceOfFunds} onValueChange={(value) => handleKycFieldChange('sourceOfFunds', value)}>
-                        <SelectTrigger className={kycErrors.sourceOfFunds ? 'border-red-500' : ''}>
-                          <SelectValue placeholder="Select source" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Employment Income">Employment Income</SelectItem>
-                          <SelectItem value="Business Income">Business Income</SelectItem>
-                          <SelectItem value="Investment Returns">Investment Returns</SelectItem>
-                          <SelectItem value="Inheritance">Inheritance</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {kycErrors.sourceOfFunds && <p className="text-sm text-red-500">{kycErrors.sourceOfFunds}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="expectedMonthlyTransactionVolume" className="flex items-center gap-1">
-                        Expected Monthly Transaction Volume (USD) <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="expectedMonthlyTransactionVolume"
-                        type="number"
-                        value={kycData.expectedMonthlyTransactionVolume || ''}
-                        onChange={(e) => handleKycFieldChange('expectedMonthlyTransactionVolume', Number(e.target.value))}
-                        placeholder="50000"
-                        className={kycErrors.expectedMonthlyTransactionVolume ? 'border-red-500' : ''}
-                      />
-                      {kycErrors.expectedMonthlyTransactionVolume && <p className="text-sm text-red-500">{kycErrors.expectedMonthlyTransactionVolume}</p>}
-                    </div>
-
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="purposeOfLoan" className="flex items-center gap-1">
-                        Purpose of Loan <span className="text-red-500">*</span>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-gray-400" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Minimum 20 characters required</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </Label>
-                      <Textarea
-                        id="purposeOfLoan"
-                        value={kycData.purposeOfLoan}
-                        onChange={(e) => handleKycFieldChange('purposeOfLoan', e.target.value)}
-                        placeholder="Please provide a detailed explanation of how you intend to use the loan funds..."
-                        rows={3}
-                        className={kycErrors.purposeOfLoan ? 'border-red-500' : ''}
-                      />
-                      {kycErrors.purposeOfLoan && <p className="text-sm text-red-500">{kycErrors.purposeOfLoan}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="expectedNumberOfMonthlyTransactions" className="flex items-center gap-1">
-                        Expected Number of Monthly Transactions <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="expectedNumberOfMonthlyTransactions"
-                        type="number"
-                        value={kycData.expectedNumberOfMonthlyTransactions || ''}
-                        onChange={(e) => handleKycFieldChange('expectedNumberOfMonthlyTransactions', Number(e.target.value))}
-                        placeholder="10"
-                        className={kycErrors.expectedNumberOfMonthlyTransactions ? 'border-red-500' : ''}
-                      />
-                      {kycErrors.expectedNumberOfMonthlyTransactions && <p className="text-sm text-red-500">{kycErrors.expectedNumberOfMonthlyTransactions}</p>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Compliance Screening */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Compliance Screening</h3>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1">
-                        Are you a Politically Exposed Person (PEP)? <span className="text-red-500">*</span>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-gray-400" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>A PEP is someone who holds a prominent public position or has close associations with such individuals</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </Label>
-                      <RadioGroup value={kycData.isPEP} onValueChange={(value) => handleKycFieldChange('isPEP', value)}>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="No" id="pep-no" />
-                          <Label htmlFor="pep-no">No</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Yes" id="pep-yes" />
-                          <Label htmlFor="pep-yes">Yes</Label>
-                        </div>
-                      </RadioGroup>
-                      {kycErrors.isPEP && <p className="text-sm text-red-500">{kycErrors.isPEP}</p>}
-                    </div>
-
-                    {kycData.isPEP === 'Yes' && (
-                      <div className="space-y-2">
-                        <Label htmlFor="pepDetails" className="flex items-center gap-1">
-                          Please provide details <span className="text-red-500">*</span>
-                        </Label>
-                        <Textarea
-                          id="pepDetails"
-                          value={kycData.pepDetails}
-                          onChange={(e) => handleKycFieldChange('pepDetails', e.target.value)}
-                          placeholder="Please provide details about your PEP status..."
-                          rows={3}
-                          className={kycErrors.pepDetails ? 'border-red-500' : ''}
-                        />
-                        {kycErrors.pepDetails && <p className="text-sm text-red-500">{kycErrors.pepDetails}</p>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Identity Document Upload */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Identity Document Upload</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="governmentIdFile" className="flex items-center gap-1">
-                        Upload Government-Issued ID <span className="text-red-500">*</span>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-gray-400" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Passport, driver's license, or national ID</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </Label>
-                      <Input
-                        id="governmentIdFile"
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(e) => handleKycFieldChange('governmentIdFile', e.target.files?.[0] || null)}
-                        className={kycErrors.governmentIdFile ? 'border-red-500' : ''}
-                      />
-                      {kycErrors.governmentIdFile && <p className="text-sm text-red-500">{kycErrors.governmentIdFile}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="proofOfAddressFile">
-                        Upload Proof of Address
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-gray-400" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Utility bill or bank statement (optional)</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </Label>
-                      <Input
-                        id="proofOfAddressFile"
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(e) => handleKycFieldChange('proofOfAddressFile', e.target.files?.[0] || null)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Save KYC Button */}
-                <div className="flex justify-end pt-4 border-t">
-                  <Button
-                    onClick={handleSaveKyc}
-                    disabled={isSavingKyc}
-                    className="min-w-[150px]"
-                  >
-                    {isSavingKyc ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      'Save KYC Data'
-                    )}
-                  </Button>
-                </div>
-              </TooltipProvider>
-            </CardContent>
-          )}
-        </Card>
-
-        {/* Loan Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Loan Information</CardTitle>
-            <CardDescription>
-              Provide loan details and document context (optional)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`loan-info-${forceUpdate}`}>
-              <div className="space-y-2">
-                <Label htmlFor="loanId">Loan ID</Label>
-                <Input
-                  id="loanId"
-                  value={formData.loanId}
-                  onChange={(e) => {
-                    console.log('🔍 Loan ID field changed to:', e.target.value);
-                    setFormData(prev => ({ ...prev, loanId: e.target.value }));
-                    const currentMeta = JSON.parse(metadata || '{}')
-                    setMetadata(JSON.stringify({ ...currentMeta, loanId: e.target.value }, null, 2))
-                  }}
-                  placeholder="e.g., LOAN_2024_001"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Unique identifier for the loan
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="documentType">Document Type</Label>
-                <select
-                  id="documentType"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={formData.documentType}
-                  onChange={(e) => {
-                    setFormData(prev => ({ ...prev, documentType: e.target.value }));
-                    const currentMeta = JSON.parse(metadata || '{}')
-                    setMetadata(JSON.stringify({ ...currentMeta, documentType: e.target.value }, null, 2))
-                  }}
-                >
-                  <option value="">Select document type</option>
-                  <option value="loan_application">Loan Application</option>
-                  <option value="credit_report">Credit Report</option>
-                  <option value="property_appraisal">Property Appraisal</option>
-                  <option value="income_verification">Income Verification</option>
-                  <option value="bank_statements">Bank Statements</option>
-                  <option value="tax_returns">Tax Returns</option>
-                  <option value="employment_verification">Employment Verification</option>
-                  <option value="underwriting_decision">Underwriting Decision</option>
-                  <option value="closing_disclosure">Closing Disclosure</option>
-                  <option value="title_insurance">Title Insurance</option>
-                  <option value="homeowners_insurance">Homeowners Insurance</option>
-                  <option value="flood_certificate">Flood Certificate</option>
-                  <option value="compliance_document">Compliance Document</option>
-                  <option value="other">Other</option>
-                </select>
-                <p className="text-xs text-muted-foreground">
-                  Type of document being uploaded
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="borrowerName">Borrower Name</Label>
-                <Input
-                  id="borrowerName"
-                  value={formData.borrowerName}
-                  onChange={(e) => {
-                    setFormData(prev => ({ ...prev, borrowerName: e.target.value }));
-                    const currentMeta = JSON.parse(metadata || '{}')
-                    setMetadata(JSON.stringify({ ...currentMeta, borrowerName: e.target.value }, null, 2))
-                  }}
-                  placeholder="e.g., John Smith"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Primary borrower's full name
-                </p>
-              </div>
-              </div>
-
-            {/* Privacy Notice Banner */}
-            {!privacyNoticeDismissed && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 relative">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-blue-800">
-                      <span className="font-medium">ℹ️ Identity Information</span> - We collect minimal borrower identity data solely for creating an immutable audit trail. This data is cryptographically sealed in the blockchain but is not used for lending decisions or identity verification. Sensitive data (SSN, ID numbers) are collected in truncated format (last 4 digits only).
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleDismissPrivacyNotice}
-                    className="flex-shrink-0 text-blue-400 hover:text-blue-600 transition-colors"
-                    aria-label="Dismiss privacy notice"
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Borrower Information (For Audit Trail) */}
-            <div className="space-y-4 pt-4 border-t">
-              <div>
-                <h3 className="text-lg font-semibold">Borrower Information (For Audit Trail)</h3>
-                <p className="text-sm text-muted-foreground">
-                  Essential borrower identity fields that will be sealed in the blockchain
-                </p>
-              </div>
-
-              {/* Basic Identity */}
-              <div className="space-y-4">
-                <h4 className="text-md font-medium">Basic Identity</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="borrowerFullName" className="flex items-center gap-1">
-                      Full Name <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="borrowerFullName"
-                      value={formData.borrowerFullName}
-                      onChange={(e) => {
-                        setFormData(prev => ({ ...prev, borrowerFullName: e.target.value }));
-                        handleBorrowerFieldChange('borrowerFullName', e.target.value);
-                      }}
-                      placeholder="Primary borrower's legal name"
-                      className={hasFieldError('borrowerFullName') ? 'border-red-500' : ''}
-                    />
-                    {getFieldError('borrowerFullName') && (
-                      <p className="text-sm text-red-500 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
-                        {getFieldError('borrowerFullName')}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="borrowerDateOfBirth" className="flex items-center gap-1">
-                      Date of Birth <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="borrowerDateOfBirth"
-                      type="date"
-                      value={formData.borrowerDateOfBirth}
-                      onChange={(e) => handleBorrowerFieldChange('borrowerDateOfBirth', e.target.value)}
-                      className={borrowerErrors.borrowerDateOfBirth ? 'border-red-500' : ''}
-                    />
-                    {borrowerErrors.borrowerDateOfBirth && (
-                      <p className="text-sm text-red-500">{borrowerErrors.borrowerDateOfBirth}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="borrowerEmail" className="flex items-center gap-1">
-                      Email Address <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="borrowerEmail"
-                      type="email"
-                      value={formData.borrowerEmail}
-                      onChange={(e) => handleBorrowerFieldChange('borrowerEmail', e.target.value)}
-                      placeholder="borrower@example.com"
-                      className={hasFieldError('borrowerEmail') ? 'border-red-500' : ''}
-                    />
-                    {getFieldError('borrowerEmail') && (
-                      <p className="text-sm text-red-500 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
-                        {getFieldError('borrowerEmail')}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="borrowerPhone" className="flex items-center gap-1">
-                      Phone Number <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="borrowerPhone"
-                      type="tel"
-                      value={formData.borrowerPhone}
-                      onChange={(e) => handleBorrowerFieldChange('borrowerPhone', e.target.value)}
-                      placeholder="+1-555-123-4567"
-                      className={borrowerErrors.borrowerPhone ? 'border-red-500' : ''}
-                    />
-                    {borrowerErrors.borrowerPhone && (
-                      <p className="text-sm text-red-500">{borrowerErrors.borrowerPhone}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Address */}
-              <div className="space-y-4">
-                <h4 className="text-md font-medium">Address</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="borrowerStreetAddress" className="flex items-center gap-1">
-                      Street Address <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="borrowerStreetAddress"
-                      value={formData.borrowerStreetAddress}
-                      onChange={(e) => handleBorrowerFieldChange('borrowerStreetAddress', e.target.value)}
-                      placeholder="123 Main Street"
-                      className={borrowerErrors.borrowerStreetAddress ? 'border-red-500' : ''}
-                    />
-                    {borrowerErrors.borrowerStreetAddress && (
-                      <p className="text-sm text-red-500">{borrowerErrors.borrowerStreetAddress}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="borrowerCity" className="flex items-center gap-1">
-                      City <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="borrowerCity"
-                      value={formData.borrowerCity}
-                      onChange={(e) => handleBorrowerFieldChange('borrowerCity', e.target.value)}
-                      placeholder="Anytown"
-                      className={borrowerErrors.borrowerCity ? 'border-red-500' : ''}
-                    />
-                    {borrowerErrors.borrowerCity && (
-                      <p className="text-sm text-red-500">{borrowerErrors.borrowerCity}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="borrowerState" className="flex items-center gap-1">
-                      State <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      value={formData.borrowerState}
-                      onValueChange={(value) => handleBorrowerFieldChange('borrowerState', value)}
-                    >
-                      <SelectTrigger className={borrowerErrors.borrowerState ? 'border-red-500' : ''}>
-                        <SelectValue placeholder="Select state" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="AL">Alabama</SelectItem>
-                        <SelectItem value="AK">Alaska</SelectItem>
-                        <SelectItem value="AZ">Arizona</SelectItem>
-                        <SelectItem value="AR">Arkansas</SelectItem>
-                        <SelectItem value="CA">California</SelectItem>
-                        <SelectItem value="CO">Colorado</SelectItem>
-                        <SelectItem value="CT">Connecticut</SelectItem>
-                        <SelectItem value="DE">Delaware</SelectItem>
-                        <SelectItem value="FL">Florida</SelectItem>
-                        <SelectItem value="GA">Georgia</SelectItem>
-                        <SelectItem value="HI">Hawaii</SelectItem>
-                        <SelectItem value="ID">Idaho</SelectItem>
-                        <SelectItem value="IL">Illinois</SelectItem>
-                        <SelectItem value="IN">Indiana</SelectItem>
-                        <SelectItem value="IA">Iowa</SelectItem>
-                        <SelectItem value="KS">Kansas</SelectItem>
-                        <SelectItem value="KY">Kentucky</SelectItem>
-                        <SelectItem value="LA">Louisiana</SelectItem>
-                        <SelectItem value="ME">Maine</SelectItem>
-                        <SelectItem value="MD">Maryland</SelectItem>
-                        <SelectItem value="MA">Massachusetts</SelectItem>
-                        <SelectItem value="MI">Michigan</SelectItem>
-                        <SelectItem value="MN">Minnesota</SelectItem>
-                        <SelectItem value="MS">Mississippi</SelectItem>
-                        <SelectItem value="MO">Missouri</SelectItem>
-                        <SelectItem value="MT">Montana</SelectItem>
-                        <SelectItem value="NE">Nebraska</SelectItem>
-                        <SelectItem value="NV">Nevada</SelectItem>
-                        <SelectItem value="NH">New Hampshire</SelectItem>
-                        <SelectItem value="NJ">New Jersey</SelectItem>
-                        <SelectItem value="NM">New Mexico</SelectItem>
-                        <SelectItem value="NY">New York</SelectItem>
-                        <SelectItem value="NC">North Carolina</SelectItem>
-                        <SelectItem value="ND">North Dakota</SelectItem>
-                        <SelectItem value="OH">Ohio</SelectItem>
-                        <SelectItem value="OK">Oklahoma</SelectItem>
-                        <SelectItem value="OR">Oregon</SelectItem>
-                        <SelectItem value="PA">Pennsylvania</SelectItem>
-                        <SelectItem value="RI">Rhode Island</SelectItem>
-                        <SelectItem value="SC">South Carolina</SelectItem>
-                        <SelectItem value="SD">South Dakota</SelectItem>
-                        <SelectItem value="TN">Tennessee</SelectItem>
-                        <SelectItem value="TX">Texas</SelectItem>
-                        <SelectItem value="UT">Utah</SelectItem>
-                        <SelectItem value="VT">Vermont</SelectItem>
-                        <SelectItem value="VA">Virginia</SelectItem>
-                        <SelectItem value="WA">Washington</SelectItem>
-                        <SelectItem value="WV">West Virginia</SelectItem>
-                        <SelectItem value="WI">Wisconsin</SelectItem>
-                        <SelectItem value="WY">Wyoming</SelectItem>
-                        <SelectItem value="DC">District of Columbia</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {borrowerErrors.borrowerState && (
-                      <p className="text-sm text-red-500">{borrowerErrors.borrowerState}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="borrowerZipCode" className="flex items-center gap-1">
-                      ZIP Code <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="borrowerZipCode"
-                      value={formData.borrowerZipCode}
-                      onChange={(e) => handleBorrowerFieldChange('borrowerZipCode', e.target.value)}
-                      placeholder="12345"
-                      className={borrowerErrors.borrowerZipCode ? 'border-red-500' : ''}
-                    />
-                    {borrowerErrors.borrowerZipCode && (
-                      <p className="text-sm text-red-500">{borrowerErrors.borrowerZipCode}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="borrowerCountry" className="flex items-center gap-1">
-                      Country <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      value={formData.borrowerCountry}
-                      onValueChange={(value) => handleBorrowerFieldChange('borrowerCountry', value)}
-                    >
-                      <SelectTrigger className={borrowerErrors.borrowerCountry ? 'border-red-500' : ''}>
-                        <SelectValue placeholder="Select country" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="US">United States</SelectItem>
-                        <SelectItem value="CA">Canada</SelectItem>
-                        <SelectItem value="MX">Mexico</SelectItem>
-                        <SelectItem value="GB">United Kingdom</SelectItem>
-                        <SelectItem value="DE">Germany</SelectItem>
-                        <SelectItem value="FR">France</SelectItem>
-                        <SelectItem value="IT">Italy</SelectItem>
-                        <SelectItem value="ES">Spain</SelectItem>
-                        <SelectItem value="AU">Australia</SelectItem>
-                        <SelectItem value="JP">Japan</SelectItem>
-                        <SelectItem value="CN">China</SelectItem>
-                        <SelectItem value="IN">India</SelectItem>
-                        <SelectItem value="BR">Brazil</SelectItem>
-                        <SelectItem value="AR">Argentina</SelectItem>
-                        <SelectItem value="OTHER">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {borrowerErrors.borrowerCountry && (
-                      <p className="text-sm text-red-500">{borrowerErrors.borrowerCountry}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Identity Reference */}
-              <div className="space-y-4">
-                <h4 className="text-md font-medium">Identity Reference</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="borrowerSSNLast4" className="flex items-center gap-1">
-                      Social Security Number (Last 4 digits only) <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="borrowerSSNLast4"
-                      type="text"
-                      maxLength={4}
-                      value={formData.borrowerSSNLast4}
-                      onChange={(e) => handleBorrowerFieldChange('borrowerSSNLast4', e.target.value)}
-                      placeholder="1234"
-                      className={borrowerErrors.borrowerSSNLast4 ? 'border-red-500' : ''}
-                    />
-                    {borrowerErrors.borrowerSSNLast4 && (
-                      <p className="text-sm text-red-500">{borrowerErrors.borrowerSSNLast4}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="borrowerGovernmentIdType">Government ID Type</Label>
-                    <Select
-                      value={formData.borrowerGovernmentIdType}
-                      onValueChange={(value) => {
-                        const currentMeta = JSON.parse(metadata || '{}')
-                        setMetadata(JSON.stringify({ ...currentMeta, borrowerGovernmentIdType: value }, null, 2))
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select ID type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="driver_license">Driver's License</SelectItem>
-                        <SelectItem value="passport">Passport</SelectItem>
-                        <SelectItem value="state_id">State ID</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="borrowerIdNumberLast4">ID Number (Last 4 digits only)</Label>
-                    <Input
-                      id="borrowerIdNumberLast4"
-                      type="text"
-                      maxLength={4}
-                      value={formData.borrowerIdNumberLast4}
-                      onChange={(e) => handleBorrowerFieldChange('borrowerIdNumberLast4', e.target.value)}
-                      placeholder="1234"
-                      className={borrowerErrors.borrowerIdNumberLast4 ? 'border-red-500' : ''}
-                    />
-                    {borrowerErrors.borrowerIdNumberLast4 && (
-                      <p className="text-sm text-red-500">{borrowerErrors.borrowerIdNumberLast4}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Loan-Specific */}
-              <div className="space-y-4">
-                <h4 className="text-md font-medium">Loan-Specific</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="borrowerEmploymentStatus" className="flex items-center gap-1">
-                      Employment Status <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      value={formData.borrowerEmploymentStatus}
-                      onValueChange={(value) => handleBorrowerFieldChange('borrowerEmploymentStatus', value)}
-                    >
-                      <SelectTrigger className={borrowerErrors.borrowerEmploymentStatus ? 'border-red-500' : ''}>
-                        <SelectValue placeholder="Select employment status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="employed">Employed</SelectItem>
-                        <SelectItem value="self_employed">Self-Employed</SelectItem>
-                        <SelectItem value="retired">Retired</SelectItem>
-                        <SelectItem value="unemployed">Unemployed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {borrowerErrors.borrowerEmploymentStatus && (
-                      <p className="text-sm text-red-500">{borrowerErrors.borrowerEmploymentStatus}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="borrowerAnnualIncome" className="flex items-center gap-1">
-                      Annual Income <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="borrowerAnnualIncome"
-                      type="number"
-                      value={formData.borrowerAnnualIncome}
-                      onChange={(e) => handleBorrowerFieldChange('borrowerAnnualIncome', e.target.value)}
-                      placeholder="75000"
-                      className={borrowerErrors.borrowerAnnualIncome ? 'border-red-500' : ''}
-                    />
-                    {borrowerErrors.borrowerAnnualIncome && (
-                      <p className="text-sm text-red-500">{borrowerErrors.borrowerAnnualIncome}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="borrowerCoBorrowerName">Co-Borrower Name</Label>
-                    <Input
-                      id="borrowerCoBorrowerName"
-                      value={formData.borrowerCoBorrowerName}
-                      onChange={(e) => {
-                        const currentMeta = JSON.parse(metadata || '{}')
-                        setMetadata(JSON.stringify({ ...currentMeta, borrowerCoBorrowerName: e.target.value }, null, 2))
-                      }}
-                      placeholder="Jane Smith (optional)"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-              <div className="space-y-2">
-                <Label htmlFor="loanAmount">Loan Amount</Label>
-                <Input
-                  id="loanAmount"
-                  type="number"
-                  value={formData.loanAmount}
-                  onChange={(e) => {
-                    setFormData(prev => ({ ...prev, loanAmount: e.target.value }));
-                    const currentMeta = JSON.parse(metadata || '{}')
-                    setMetadata(JSON.stringify({ ...currentMeta, loanAmount: e.target.value }, null, 2))
-                  }}
-                  placeholder="e.g., 250000"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Loan amount in USD
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Additional Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.additionalNotes}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, additionalNotes: e.target.value }));
-                  const currentMeta = JSON.parse(metadata || '{}')
-                  setMetadata(JSON.stringify({ ...currentMeta, notes: e.target.value }, null, 2))
-                }}
-                placeholder="Any additional information about this document..."
-                rows={3}
-              />
-              <p className="text-xs text-muted-foreground">
-                Optional notes or comments about the document
-              </p>
-            </div>
-
-            {/* Advanced Options (Collapsible) */}
-            <details className="group">
-              <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
-                Advanced Options
-              </summary>
-              <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg">
-                <div className="space-y-2">
-                  <Label htmlFor="etid">Entity Type ID (ETID)</Label>
-                  <Input
-                    id="etid"
-                    value={etid}
-                    onChange={(e) => setEtid(e.target.value)}
-                    placeholder="100001"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    100001 for loan packets, 100002 for JSON documents. Leave as default unless you know what you're doing.
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="rawMetadata">Raw Metadata (JSON)</Label>
-                  <Textarea
-                    id="rawMetadata"
-                    value={metadata}
-                    onChange={(e) => setMetadata(e.target.value)}
-                    placeholder='{"source": "api", "department": "finance"}'
-                    rows={3}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Advanced: Raw JSON metadata for technical users
-                  </p>
-                </div>
-              </div>
-            </details>
-          </CardContent>
-        </Card>
-
-        {/* Upload Result */}
-        {uploadResult && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-600">
-                <CheckCircle className="h-5 w-5" />
-                Document Sealed Successfully
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Artifact ID</Label>
-                  <p className="text-sm font-mono bg-muted p-2 rounded">{uploadResult.artifactId}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Walacor Transaction ID</Label>
-                  <p className="text-sm font-mono bg-muted p-2 rounded">{uploadResult.walacorTxId}</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Document Hash</Label>
-                  <p className="text-sm font-mono bg-muted p-2 rounded break-all">{fileHash}</p>
-                </div>
-              <div>
-                <Label className="text-sm font-medium">Sealed At</Label>
-                <p className="text-sm">{new Date(uploadResult.sealedAt).toLocaleString()}</p>
-                </div>
-              </div>
-
-              {uploadResult.proofBundle && (
-                <div>
-                  <Label className="text-sm font-medium">Proof Bundle</Label>
-                  <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-32">
-                    {JSON.stringify(uploadResult.proofBundle, null, 2)}
-                  </pre>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Button asChild>
-                  <a href={`http://localhost:8000/api/artifacts/${uploadResult.artifactId}`} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    View Artifact Details
-                  </a>
-                </Button>
-                <Button variant="outline" onClick={handleReset}>
-                  Upload Another
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Error Display */}
-        {uploadState.error && (
-          <Alert className="border-red-200 bg-red-50">
-            <AlertCircle className="h-4 w-4 text-red-500" />
-            <AlertDescription className="text-red-700">
-              <div className="flex items-center justify-between">
-                <span>{uploadState.error.message}</span>
-                {uploadState.canRetry && (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleRetry}
-                    className="ml-4 border-red-300 text-red-700 hover:bg-red-100"
+                    onClick={() => setIsKycExpanded(!isKycExpanded)}
                   >
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    Retry
+                    {isKycExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    {isKycExpanded ? 'Collapse' : 'Expand'}
                   </Button>
-                )}
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Progress Indicator */}
-        {uploadState.isUploading && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Uploading and Sealing Document...</span>
-                  <span className="text-sm text-gray-500">{uploadState.progress}%</span>
                 </div>
-                <Progress value={uploadState.progress} className="w-full" />
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  <span>Processing borrower information and sealing in blockchain...</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* File Size Warning */}
-        {file && file.size > 10 * 1024 * 1024 && (
-          <Alert className="border-yellow-200 bg-yellow-50">
-            <AlertCircle className="h-4 w-4 text-yellow-500" />
-            <AlertDescription className="text-yellow-700">
-              Large file detected ({Math.round(file.size / 1024 / 1024)}MB). Upload may take longer than usual.
-            </AlertDescription>
-          </Alert>
-        )}
-
-            {/* Security Configuration */}
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" /> Security Configuration
-                </CardTitle>
-                <CardDescription>
-                  Choose the security level for document sealing.
-                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="quantumSafe"
-                      checked={quantumSafeMode}
-                      onChange={(e) => {
-                        setQuantumSafeMode(e.target.checked);
-                        if (e.target.checked) {
-                          setMaximumSecurityMode(false); // Disable maximum security when quantum-safe is enabled
-                        }
-                      }}
-                      className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                    />
-                    <Label htmlFor="quantumSafe" className="text-sm font-medium">
-                      🔬 Quantum-Safe Mode (Future-Proof)
-                    </Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="maximumSecurity"
-                      checked={maximumSecurityMode}
-                      onChange={(e) => {
-                        setMaximumSecurityMode(e.target.checked);
-                        if (e.target.checked) {
-                          setQuantumSafeMode(false); // Disable quantum-safe when maximum security is enabled
-                        }
-                      }}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <Label htmlFor="maximumSecurity" className="text-sm font-medium">
-                      Maximum Security Mode (Recommended)
-                    </Label>
-                  </div>
-                  
-                  <div className="text-sm text-gray-600 space-y-2">
-                    {quantumSafeMode && (
-                      <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                        <p className="font-medium text-purple-800 mb-2">🔬 Quantum-Safe Security includes:</p>
-                        <ul className="list-disc list-inside space-y-1 ml-4 text-purple-700">
-                          <li>SHAKE256 hashing (quantum-resistant)</li>
-                          <li>BLAKE3 hashing (quantum-resistant)</li>
-                          <li>Dilithium digital signatures (NIST PQC Standard)</li>
-                          <li>Hybrid classical-quantum approach</li>
-                          <li>Protection against future quantum attacks</li>
-                          <li>Blockchain sealing for immutability</li>
-                        </ul>
-                        <div className="flex items-center gap-1 flex-wrap mt-2">
-                          <Badge variant="outline" className="text-xs bg-purple-100 text-purple-800">
-                            🛡️ Quantum-Resistant
-                          </Badge>
-                          <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800">
-                            🔒 Post-Quantum Secure
-                          </Badge>
-                          <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800">
-                            ⚡ SHA3-512 Protected
-                          </Badge>
-                          <Badge variant="outline" className="text-xs bg-green-100 text-green-800">
-                            ⭐ Future-Proof Security
-                          </Badge>
-                          <Badge variant="outline" className="text-xs bg-indigo-100 text-indigo-800">
-                            ✅ NIST PQC Compliant
-                          </Badge>
+              {isKycExpanded && (
+                <CardContent className="space-y-6">
+                  <TooltipProvider>
+                    {/* Personal Information */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Personal Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="fullLegalName" className="flex items-center gap-1">
+                            Full Legal Name <span className="text-red-500">*</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Enter your full legal name as it appears on official documents</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </Label>
+                          <Input
+                            id="fullLegalName"
+                            value={kycData.fullLegalName}
+                            onChange={(e) => handleKycFieldChange('fullLegalName', e.target.value)}
+                            placeholder="John Doe"
+                            className={kycErrors.fullLegalName ? 'border-red-500' : ''}
+                          />
+                          {kycErrors.fullLegalName && <p className="text-sm text-red-500">{kycErrors.fullLegalName}</p>}
                         </div>
-                        <p className="text-xs text-purple-600 mt-2">
-                          This provides protection against future quantum computing attacks while maintaining current security.
-                        </p>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="dateOfBirth" className="flex items-center gap-1">
+                            Date of Birth <span className="text-red-500">*</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Must be 18 years or older</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </Label>
+                          <Input
+                            id="dateOfBirth"
+                            type="date"
+                            value={kycData.dateOfBirth}
+                            onChange={(e) => handleKycFieldChange('dateOfBirth', e.target.value)}
+                            className={kycErrors.dateOfBirth ? 'border-red-500' : ''}
+                          />
+                          {kycErrors.dateOfBirth && <p className="text-sm text-red-500">{kycErrors.dateOfBirth}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="phoneNumber" className="flex items-center gap-1">
+                            Phone Number <span className="text-red-500">*</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Format: +1-XXX-XXX-XXXX</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </Label>
+                          <Input
+                            id="phoneNumber"
+                            value={kycData.phoneNumber}
+                            onChange={(e) => handleKycFieldChange('phoneNumber', e.target.value)}
+                            placeholder="+1-555-123-4567"
+                            className={kycErrors.phoneNumber ? 'border-red-500' : ''}
+                          />
+                          {kycErrors.phoneNumber && <p className="text-sm text-red-500">{kycErrors.phoneNumber}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="emailAddress" className="flex items-center gap-1">
+                            Email Address <span className="text-red-500">*</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Enter a valid email address</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </Label>
+                          <Input
+                            id="emailAddress"
+                            type="email"
+                            value={kycData.emailAddress}
+                            onChange={(e) => handleKycFieldChange('emailAddress', e.target.value)}
+                            placeholder="john.doe@example.com"
+                            className={kycErrors.emailAddress ? 'border-red-500' : ''}
+                          />
+                          {kycErrors.emailAddress && <p className="text-sm text-red-500">{kycErrors.emailAddress}</p>}
+                        </div>
                       </div>
-                    )}
-                    
-                    {maximumSecurityMode && (
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="font-medium text-blue-800 mb-2">Maximum Security includes:</p>
-                        <ul className="list-disc list-inside space-y-1 ml-4 text-blue-700">
-                          <li>Multi-algorithm hashing (SHA-256, SHA-512, BLAKE3, SHA3-256)</li>
-                          <li>PKI-based digital signatures</li>
-                          <li>Content-based integrity verification</li>
-                          <li>Cross-verification systems</li>
-                          <li>Advanced tamper detection</li>
-                          <li>Blockchain sealing for immutability</li>
-                        </ul>
-                        <p className="text-xs text-blue-600 mt-2">
-                          This provides the highest level of current security and minimal tampering risk for your loan documents.
-                        </p>
+                    </div>
+
+                    {/* Address Information */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Address Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="streetAddress1" className="flex items-center gap-1">
+                            Street Address Line 1 <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="streetAddress1"
+                            value={kycData.streetAddress1}
+                            onChange={(e) => handleKycFieldChange('streetAddress1', e.target.value)}
+                            placeholder="123 Main Street"
+                            className={kycErrors.streetAddress1 ? 'border-red-500' : ''}
+                          />
+                          {kycErrors.streetAddress1 && <p className="text-sm text-red-500">{kycErrors.streetAddress1}</p>}
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="streetAddress2">Street Address Line 2</Label>
+                          <Input
+                            id="streetAddress2"
+                            value={kycData.streetAddress2}
+                            onChange={(e) => handleKycFieldChange('streetAddress2', e.target.value)}
+                            placeholder="Apt 4B, Suite 200"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="city" className="flex items-center gap-1">
+                            City <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="city"
+                            value={kycData.city}
+                            onChange={(e) => handleKycFieldChange('city', e.target.value)}
+                            placeholder="New York"
+                            className={kycErrors.city ? 'border-red-500' : ''}
+                          />
+                          {kycErrors.city && <p className="text-sm text-red-500">{kycErrors.city}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="stateProvince" className="flex items-center gap-1">
+                            State/Province <span className="text-red-500">*</span>
+                          </Label>
+                          <Select value={kycData.stateProvince} onValueChange={(value) => handleKycFieldChange('stateProvince', value)}>
+                            <SelectTrigger className={kycErrors.stateProvince ? 'border-red-500' : ''}>
+                              <SelectValue placeholder="Select state" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {usStates.map((state) => (
+                                <SelectItem key={state} value={state}>{state}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {kycErrors.stateProvince && <p className="text-sm text-red-500">{kycErrors.stateProvince}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="postalZipCode" className="flex items-center gap-1">
+                            Postal/ZIP Code <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="postalZipCode"
+                            value={kycData.postalZipCode}
+                            onChange={(e) => handleKycFieldChange('postalZipCode', e.target.value)}
+                            placeholder="10001"
+                            className={kycErrors.postalZipCode ? 'border-red-500' : ''}
+                          />
+                          {kycErrors.postalZipCode && <p className="text-sm text-red-500">{kycErrors.postalZipCode}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="country" className="flex items-center gap-1">
+                            Country <span className="text-red-500">*</span>
+                          </Label>
+                          <Select value={kycData.country} onValueChange={(value) => handleKycFieldChange('country', value)}>
+                            <SelectTrigger className={kycErrors.country ? 'border-red-500' : ''}>
+                              <SelectValue placeholder="Select country" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {countries.map((country) => (
+                                <SelectItem key={country} value={country}>{country}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {kycErrors.country && <p className="text-sm text-red-500">{kycErrors.country}</p>}
+                        </div>
                       </div>
-                    )}
-                    
-                    {!quantumSafeMode && !maximumSecurityMode && (
-                      <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                        <p className="font-medium text-gray-800 mb-2">Standard Security includes:</p>
-                        <ul className="list-disc list-inside space-y-1 ml-4 text-gray-700">
-                          <li>SHA-256 hashing</li>
-                          <li>Basic digital signatures</li>
-                          <li>Blockchain sealing for immutability</li>
-                        </ul>
-                        <p className="text-xs text-gray-600 mt-2">
-                          Standard security suitable for most loan documents.
-                        </p>
+                    </div>
+
+                    {/* Identification Information */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Identification Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="citizenshipCountry" className="flex items-center gap-1">
+                            Citizenship Country <span className="text-red-500">*</span>
+                          </Label>
+                          <Select value={kycData.citizenshipCountry} onValueChange={(value) => handleKycFieldChange('citizenshipCountry', value)}>
+                            <SelectTrigger className={kycErrors.citizenshipCountry ? 'border-red-500' : ''}>
+                              <SelectValue placeholder="Select country" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {countries.map((country) => (
+                                <SelectItem key={country} value={country}>{country}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {kycErrors.citizenshipCountry && <p className="text-sm text-red-500">{kycErrors.citizenshipCountry}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="identificationType" className="flex items-center gap-1">
+                            Identification Type <span className="text-red-500">*</span>
+                          </Label>
+                          <Select value={kycData.identificationType} onValueChange={(value) => handleKycFieldChange('identificationType', value)}>
+                            <SelectTrigger className={kycErrors.identificationType ? 'border-red-500' : ''}>
+                              <SelectValue placeholder="Select ID type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="SSN">SSN</SelectItem>
+                              <SelectItem value="TIN">TIN</SelectItem>
+                              <SelectItem value="Passport">Passport</SelectItem>
+                              <SelectItem value="Driver's License">Driver's License</SelectItem>
+                              <SelectItem value="Alien ID">Alien ID</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {kycErrors.identificationType && <p className="text-sm text-red-500">{kycErrors.identificationType}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="identificationNumber" className="flex items-center gap-1">
+                            Identification Number <span className="text-red-500">*</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>This will be masked after typing for security</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </Label>
+                          <Input
+                            id="identificationNumber"
+                            type="password"
+                            value={kycData.identificationNumber}
+                            onChange={(e) => handleKycFieldChange('identificationNumber', e.target.value)}
+                            placeholder="Enter ID number"
+                            className={kycErrors.identificationNumber ? 'border-red-500' : ''}
+                          />
+                          {kycErrors.identificationNumber && <p className="text-sm text-red-500">{kycErrors.identificationNumber}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="idIssuingCountry" className="flex items-center gap-1">
+                            ID Issuing Country <span className="text-red-500">*</span>
+                          </Label>
+                          <Select value={kycData.idIssuingCountry} onValueChange={(value) => handleKycFieldChange('idIssuingCountry', value)}>
+                            <SelectTrigger className={kycErrors.idIssuingCountry ? 'border-red-500' : ''}>
+                              <SelectValue placeholder="Select country" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {countries.map((country) => (
+                                <SelectItem key={country} value={country}>{country}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {kycErrors.idIssuingCountry && <p className="text-sm text-red-500">{kycErrors.idIssuingCountry}</p>}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
+                    </div>
+
+                    {/* Financial Information */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Financial Information (GENIUS ACT Required)</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="sourceOfFunds" className="flex items-center gap-1">
+                            Source of Funds <span className="text-red-500">*</span>
+                          </Label>
+                          <Select value={kycData.sourceOfFunds} onValueChange={(value) => handleKycFieldChange('sourceOfFunds', value)}>
+                            <SelectTrigger className={kycErrors.sourceOfFunds ? 'border-red-500' : ''}>
+                              <SelectValue placeholder="Select source" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Employment Income">Employment Income</SelectItem>
+                              <SelectItem value="Business Income">Business Income</SelectItem>
+                              <SelectItem value="Investment Returns">Investment Returns</SelectItem>
+                              <SelectItem value="Inheritance">Inheritance</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {kycErrors.sourceOfFunds && <p className="text-sm text-red-500">{kycErrors.sourceOfFunds}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="expectedMonthlyTransactionVolume" className="flex items-center gap-1">
+                            Expected Monthly Transaction Volume (USD) <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="expectedMonthlyTransactionVolume"
+                            type="number"
+                            value={kycData.expectedMonthlyTransactionVolume || ''}
+                            onChange={(e) => handleKycFieldChange('expectedMonthlyTransactionVolume', Number(e.target.value))}
+                            placeholder="50000"
+                            className={kycErrors.expectedMonthlyTransactionVolume ? 'border-red-500' : ''}
+                          />
+                          {kycErrors.expectedMonthlyTransactionVolume && <p className="text-sm text-red-500">{kycErrors.expectedMonthlyTransactionVolume}</p>}
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="purposeOfLoan" className="flex items-center gap-1">
+                            Purpose of Loan <span className="text-red-500">*</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Minimum 20 characters required</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </Label>
+                          <Textarea
+                            id="purposeOfLoan"
+                            value={kycData.purposeOfLoan}
+                            onChange={(e) => handleKycFieldChange('purposeOfLoan', e.target.value)}
+                            placeholder="Please provide a detailed explanation of how you intend to use the loan funds..."
+                            rows={3}
+                            className={kycErrors.purposeOfLoan ? 'border-red-500' : ''}
+                          />
+                          {kycErrors.purposeOfLoan && <p className="text-sm text-red-500">{kycErrors.purposeOfLoan}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="expectedNumberOfMonthlyTransactions" className="flex items-center gap-1">
+                            Expected Number of Monthly Transactions <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="expectedNumberOfMonthlyTransactions"
+                            type="number"
+                            value={kycData.expectedNumberOfMonthlyTransactions || ''}
+                            onChange={(e) => handleKycFieldChange('expectedNumberOfMonthlyTransactions', Number(e.target.value))}
+                            placeholder="10"
+                            className={kycErrors.expectedNumberOfMonthlyTransactions ? 'border-red-500' : ''}
+                          />
+                          {kycErrors.expectedNumberOfMonthlyTransactions && <p className="text-sm text-red-500">{kycErrors.expectedNumberOfMonthlyTransactions}</p>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Compliance Screening */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Compliance Screening</h3>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-1">
+                            Are you a Politically Exposed Person (PEP)? <span className="text-red-500">*</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>A PEP is someone who holds a prominent public position or has close associations with such individuals</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </Label>
+                          <RadioGroup value={kycData.isPEP} onValueChange={(value) => handleKycFieldChange('isPEP', value)}>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="No" id="pep-no" />
+                              <Label htmlFor="pep-no">No</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="Yes" id="pep-yes" />
+                              <Label htmlFor="pep-yes">Yes</Label>
+                            </div>
+                          </RadioGroup>
+                          {kycErrors.isPEP && <p className="text-sm text-red-500">{kycErrors.isPEP}</p>}
+                        </div>
+
+                        {kycData.isPEP === 'Yes' && (
+                          <div className="space-y-2">
+                            <Label htmlFor="pepDetails" className="flex items-center gap-1">
+                              Please provide details <span className="text-red-500">*</span>
+                            </Label>
+                            <Textarea
+                              id="pepDetails"
+                              value={kycData.pepDetails}
+                              onChange={(e) => handleKycFieldChange('pepDetails', e.target.value)}
+                              placeholder="Please provide details about your PEP status..."
+                              rows={3}
+                              className={kycErrors.pepDetails ? 'border-red-500' : ''}
+                            />
+                            {kycErrors.pepDetails && <p className="text-sm text-red-500">{kycErrors.pepDetails}</p>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Identity Document Upload */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Identity Document Upload</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="governmentIdFile" className="flex items-center gap-1">
+                            Upload Government-Issued ID <span className="text-red-500">*</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Passport, driver's license, or national ID</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </Label>
+                          <Input
+                            id="governmentIdFile"
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => handleKycFieldChange('governmentIdFile', e.target.files?.[0] || null)}
+                            className={kycErrors.governmentIdFile ? 'border-red-500' : ''}
+                          />
+                          {kycErrors.governmentIdFile && <p className="text-sm text-red-500">{kycErrors.governmentIdFile}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="proofOfAddressFile">
+                            Upload Proof of Address
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Utility bill or bank statement (optional)</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </Label>
+                          <Input
+                            id="proofOfAddressFile"
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => handleKycFieldChange('proofOfAddressFile', e.target.files?.[0] || null)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Save KYC Button */}
+                    <div className="flex justify-end pt-4 border-t">
+                      <Button
+                        onClick={handleSaveKyc}
+                        disabled={isSavingKyc}
+                        className="min-w-[150px]"
+                      >
+                        {isSavingKyc ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save KYC Data'
+                        )}
+                      </Button>
+                    </div>
+                  </TooltipProvider>
+                </CardContent>
+              )}
             </Card>
 
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <Button
-            onClick={handleUpload}
-            disabled={isUploading || !file || !fileHash || isVerifying || uploadResult || (verifyResult && verifyResult.is_valid)}
-            className="flex-1"
-          >
+                {/* Loan Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Loan Information</CardTitle>
+                    <CardDescription>
+                      Provide loan details and document context (optional)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`loan-info-${forceUpdate}`}>
+                  <div className="space-y-2">
+                    <Label htmlFor="loanId">Loan ID</Label>
+                    <Input
+                      id="loanId"
+                      value={formData.loanId}
+                      onChange={(e) => {
+                        console.log('🔍 Loan ID field changed to:', e.target.value);
+                        setFormData(prev => ({ ...prev, loanId: e.target.value }));
+                        const currentMeta = JSON.parse(metadata || '{}')
+                        setMetadata(JSON.stringify({ ...currentMeta, loanId: e.target.value }, null, 2))
+                      }}
+                      placeholder="e.g., LOAN_2024_001"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Unique identifier for the loan
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="documentType">Document Type</Label>
+                    <select
+                      id="documentType"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      value={formData.documentType}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, documentType: e.target.value }));
+                        const currentMeta = JSON.parse(metadata || '{}')
+                        setMetadata(JSON.stringify({ ...currentMeta, documentType: e.target.value }, null, 2))
+                      }}
+                    >
+                      <option value="">Select document type</option>
+                      <option value="loan_application">Loan Application</option>
+                      <option value="credit_report">Credit Report</option>
+                      <option value="property_appraisal">Property Appraisal</option>
+                      <option value="income_verification">Income Verification</option>
+                      <option value="bank_statements">Bank Statements</option>
+                      <option value="tax_returns">Tax Returns</option>
+                      <option value="employment_verification">Employment Verification</option>
+                      <option value="underwriting_decision">Underwriting Decision</option>
+                      <option value="closing_disclosure">Closing Disclosure</option>
+                      <option value="title_insurance">Title Insurance</option>
+                      <option value="homeowners_insurance">Homeowners Insurance</option>
+                      <option value="flood_certificate">Flood Certificate</option>
+                      <option value="compliance_document">Compliance Document</option>
+                      <option value="other">Other</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground">
+                      Type of document being uploaded
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="borrowerName">Borrower Name</Label>
+                    <Input
+                      id="borrowerName"
+                      value={formData.borrowerName}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, borrowerName: e.target.value }));
+                        const currentMeta = JSON.parse(metadata || '{}')
+                        setMetadata(JSON.stringify({ ...currentMeta, borrowerName: e.target.value }, null, 2))
+                      }}
+                      placeholder="e.g., John Smith"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Primary borrower's full name
+                    </p>
+                  </div>
+                  </div>
+
+                {/* Privacy Notice Banner */}
+                {!privacyNoticeDismissed && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 relative">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-blue-800">
+                          <span className="font-medium">ℹ️ Identity Information</span> - We collect minimal borrower identity data solely for creating an immutable audit trail. This data is cryptographically sealed in the blockchain but is not used for lending decisions or identity verification. Sensitive data (SSN, ID numbers) are collected in truncated format (last 4 digits only).
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleDismissPrivacyNotice}
+                        className="flex-shrink-0 text-blue-400 hover:text-blue-600 transition-colors"
+                        aria-label="Dismiss privacy notice"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Borrower Information (For Audit Trail) */}
+                <div className="space-y-4 pt-4 border-t">
+                  <div>
+                    <h3 className="text-lg font-semibold">Borrower Information (For Audit Trail)</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Essential borrower identity fields that will be sealed in the blockchain
+                    </p>
+                  </div>
+
+                  {/* Basic Identity */}
+                  <div className="space-y-4">
+                    <h4 className="text-md font-medium">Basic Identity</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="borrowerFullName" className="flex items-center gap-1">
+                          Full Name <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="borrowerFullName"
+                          value={formData.borrowerFullName}
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, borrowerFullName: e.target.value }));
+                            handleBorrowerFieldChange('borrowerFullName', e.target.value);
+                          }}
+                          placeholder="Primary borrower's legal name"
+                          className={hasFieldError('borrowerFullName') ? 'border-red-500' : ''}
+                        />
+                        {getFieldError('borrowerFullName') && (
+                          <p className="text-sm text-red-500 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            {getFieldError('borrowerFullName')}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="borrowerDateOfBirth" className="flex items-center gap-1">
+                          Date of Birth <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="borrowerDateOfBirth"
+                          type="date"
+                          value={formData.borrowerDateOfBirth}
+                          onChange={(e) => handleBorrowerFieldChange('borrowerDateOfBirth', e.target.value)}
+                          className={borrowerErrors.borrowerDateOfBirth ? 'border-red-500' : ''}
+                        />
+                        {borrowerErrors.borrowerDateOfBirth && (
+                          <p className="text-sm text-red-500">{borrowerErrors.borrowerDateOfBirth}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="borrowerEmail" className="flex items-center gap-1">
+                          Email Address <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="borrowerEmail"
+                          type="email"
+                          value={formData.borrowerEmail}
+                          onChange={(e) => handleBorrowerFieldChange('borrowerEmail', e.target.value)}
+                          placeholder="borrower@example.com"
+                          className={hasFieldError('borrowerEmail') ? 'border-red-500' : ''}
+                        />
+                        {getFieldError('borrowerEmail') && (
+                          <p className="text-sm text-red-500 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            {getFieldError('borrowerEmail')}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="borrowerPhone" className="flex items-center gap-1">
+                          Phone Number <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="borrowerPhone"
+                          type="tel"
+                          value={formData.borrowerPhone}
+                          onChange={(e) => handleBorrowerFieldChange('borrowerPhone', e.target.value)}
+                          placeholder="+1-555-123-4567"
+                          className={borrowerErrors.borrowerPhone ? 'border-red-500' : ''}
+                        />
+                        {borrowerErrors.borrowerPhone && (
+                          <p className="text-sm text-red-500">{borrowerErrors.borrowerPhone}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  <div className="space-y-4">
+                    <h4 className="text-md font-medium">Address</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="borrowerStreetAddress" className="flex items-center gap-1">
+                          Street Address <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="borrowerStreetAddress"
+                          value={formData.borrowerStreetAddress}
+                          onChange={(e) => handleBorrowerFieldChange('borrowerStreetAddress', e.target.value)}
+                          placeholder="123 Main Street"
+                          className={borrowerErrors.borrowerStreetAddress ? 'border-red-500' : ''}
+                        />
+                        {borrowerErrors.borrowerStreetAddress && (
+                          <p className="text-sm text-red-500">{borrowerErrors.borrowerStreetAddress}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="borrowerCity" className="flex items-center gap-1">
+                          City <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="borrowerCity"
+                          value={formData.borrowerCity}
+                          onChange={(e) => handleBorrowerFieldChange('borrowerCity', e.target.value)}
+                          placeholder="Anytown"
+                          className={borrowerErrors.borrowerCity ? 'border-red-500' : ''}
+                        />
+                        {borrowerErrors.borrowerCity && (
+                          <p className="text-sm text-red-500">{borrowerErrors.borrowerCity}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="borrowerState" className="flex items-center gap-1">
+                          State <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.borrowerState}
+                          onValueChange={(value) => handleBorrowerFieldChange('borrowerState', value)}
+                        >
+                          <SelectTrigger className={borrowerErrors.borrowerState ? 'border-red-500' : ''}>
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="AL">Alabama</SelectItem>
+                            <SelectItem value="AK">Alaska</SelectItem>
+                            <SelectItem value="AZ">Arizona</SelectItem>
+                            <SelectItem value="AR">Arkansas</SelectItem>
+                            <SelectItem value="CA">California</SelectItem>
+                            <SelectItem value="CO">Colorado</SelectItem>
+                            <SelectItem value="CT">Connecticut</SelectItem>
+                            <SelectItem value="DE">Delaware</SelectItem>
+                            <SelectItem value="FL">Florida</SelectItem>
+                            <SelectItem value="GA">Georgia</SelectItem>
+                            <SelectItem value="HI">Hawaii</SelectItem>
+                            <SelectItem value="ID">Idaho</SelectItem>
+                            <SelectItem value="IL">Illinois</SelectItem>
+                            <SelectItem value="IN">Indiana</SelectItem>
+                            <SelectItem value="IA">Iowa</SelectItem>
+                            <SelectItem value="KS">Kansas</SelectItem>
+                            <SelectItem value="KY">Kentucky</SelectItem>
+                            <SelectItem value="LA">Louisiana</SelectItem>
+                            <SelectItem value="ME">Maine</SelectItem>
+                            <SelectItem value="MD">Maryland</SelectItem>
+                            <SelectItem value="MA">Massachusetts</SelectItem>
+                            <SelectItem value="MI">Michigan</SelectItem>
+                            <SelectItem value="MN">Minnesota</SelectItem>
+                            <SelectItem value="MS">Mississippi</SelectItem>
+                            <SelectItem value="MO">Missouri</SelectItem>
+                            <SelectItem value="MT">Montana</SelectItem>
+                            <SelectItem value="NE">Nebraska</SelectItem>
+                            <SelectItem value="NV">Nevada</SelectItem>
+                            <SelectItem value="NH">New Hampshire</SelectItem>
+                            <SelectItem value="NJ">New Jersey</SelectItem>
+                            <SelectItem value="NM">New Mexico</SelectItem>
+                            <SelectItem value="NY">New York</SelectItem>
+                            <SelectItem value="NC">North Carolina</SelectItem>
+                            <SelectItem value="ND">North Dakota</SelectItem>
+                            <SelectItem value="OH">Ohio</SelectItem>
+                            <SelectItem value="OK">Oklahoma</SelectItem>
+                            <SelectItem value="OR">Oregon</SelectItem>
+                            <SelectItem value="PA">Pennsylvania</SelectItem>
+                            <SelectItem value="RI">Rhode Island</SelectItem>
+                            <SelectItem value="SC">South Carolina</SelectItem>
+                            <SelectItem value="SD">South Dakota</SelectItem>
+                            <SelectItem value="TN">Tennessee</SelectItem>
+                            <SelectItem value="TX">Texas</SelectItem>
+                            <SelectItem value="UT">Utah</SelectItem>
+                            <SelectItem value="VT">Vermont</SelectItem>
+                            <SelectItem value="VA">Virginia</SelectItem>
+                            <SelectItem value="WA">Washington</SelectItem>
+                            <SelectItem value="WV">West Virginia</SelectItem>
+                            <SelectItem value="WI">Wisconsin</SelectItem>
+                            <SelectItem value="WY">Wyoming</SelectItem>
+                            <SelectItem value="DC">District of Columbia</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {borrowerErrors.borrowerState && (
+                          <p className="text-sm text-red-500">{borrowerErrors.borrowerState}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="borrowerZipCode" className="flex items-center gap-1">
+                          ZIP Code <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="borrowerZipCode"
+                          value={formData.borrowerZipCode}
+                          onChange={(e) => handleBorrowerFieldChange('borrowerZipCode', e.target.value)}
+                          placeholder="12345"
+                          className={borrowerErrors.borrowerZipCode ? 'border-red-500' : ''}
+                        />
+                        {borrowerErrors.borrowerZipCode && (
+                          <p className="text-sm text-red-500">{borrowerErrors.borrowerZipCode}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="borrowerCountry" className="flex items-center gap-1">
+                          Country <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.borrowerCountry}
+                          onValueChange={(value) => handleBorrowerFieldChange('borrowerCountry', value)}
+                        >
+                          <SelectTrigger className={borrowerErrors.borrowerCountry ? 'border-red-500' : ''}>
+                            <SelectValue placeholder="Select country" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="US">United States</SelectItem>
+                            <SelectItem value="CA">Canada</SelectItem>
+                            <SelectItem value="MX">Mexico</SelectItem>
+                            <SelectItem value="GB">United Kingdom</SelectItem>
+                            <SelectItem value="DE">Germany</SelectItem>
+                            <SelectItem value="FR">France</SelectItem>
+                            <SelectItem value="IT">Italy</SelectItem>
+                            <SelectItem value="ES">Spain</SelectItem>
+                            <SelectItem value="AU">Australia</SelectItem>
+                            <SelectItem value="JP">Japan</SelectItem>
+                            <SelectItem value="CN">China</SelectItem>
+                            <SelectItem value="IN">India</SelectItem>
+                            <SelectItem value="BR">Brazil</SelectItem>
+                            <SelectItem value="AR">Argentina</SelectItem>
+                            <SelectItem value="OTHER">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {borrowerErrors.borrowerCountry && (
+                          <p className="text-sm text-red-500">{borrowerErrors.borrowerCountry}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Identity Reference */}
+                  <div className="space-y-4">
+                    <h4 className="text-md font-medium">Identity Reference</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="borrowerSSNLast4" className="flex items-center gap-1">
+                          Social Security Number (Last 4 digits only) <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="borrowerSSNLast4"
+                          type="text"
+                          maxLength={4}
+                          value={formData.borrowerSSNLast4}
+                          onChange={(e) => handleBorrowerFieldChange('borrowerSSNLast4', e.target.value)}
+                          placeholder="1234"
+                          className={borrowerErrors.borrowerSSNLast4 ? 'border-red-500' : ''}
+                        />
+                        {borrowerErrors.borrowerSSNLast4 && (
+                          <p className="text-sm text-red-500">{borrowerErrors.borrowerSSNLast4}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="borrowerGovernmentIdType">Government ID Type</Label>
+                        <Select
+                          value={formData.borrowerGovernmentIdType}
+                          onValueChange={(value) => {
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, borrowerGovernmentIdType: value }, null, 2))
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select ID type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="driver_license">Driver's License</SelectItem>
+                            <SelectItem value="passport">Passport</SelectItem>
+                            <SelectItem value="state_id">State ID</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="borrowerIdNumberLast4">ID Number (Last 4 digits only)</Label>
+                        <Input
+                          id="borrowerIdNumberLast4"
+                          type="text"
+                          maxLength={4}
+                          value={formData.borrowerIdNumberLast4}
+                          onChange={(e) => handleBorrowerFieldChange('borrowerIdNumberLast4', e.target.value)}
+                          placeholder="1234"
+                          className={borrowerErrors.borrowerIdNumberLast4 ? 'border-red-500' : ''}
+                        />
+                        {borrowerErrors.borrowerIdNumberLast4 && (
+                          <p className="text-sm text-red-500">{borrowerErrors.borrowerIdNumberLast4}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Loan-Specific */}
+                  <div className="space-y-4">
+                    <h4 className="text-md font-medium">Loan-Specific</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="borrowerEmploymentStatus" className="flex items-center gap-1">
+                          Employment Status <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.borrowerEmploymentStatus}
+                          onValueChange={(value) => handleBorrowerFieldChange('borrowerEmploymentStatus', value)}
+                        >
+                          <SelectTrigger className={borrowerErrors.borrowerEmploymentStatus ? 'border-red-500' : ''}>
+                            <SelectValue placeholder="Select employment status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="employed">Employed</SelectItem>
+                            <SelectItem value="self_employed">Self-Employed</SelectItem>
+                            <SelectItem value="retired">Retired</SelectItem>
+                            <SelectItem value="unemployed">Unemployed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {borrowerErrors.borrowerEmploymentStatus && (
+                          <p className="text-sm text-red-500">{borrowerErrors.borrowerEmploymentStatus}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="borrowerAnnualIncome" className="flex items-center gap-1">
+                          Annual Income <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="borrowerAnnualIncome"
+                          type="number"
+                          value={formData.borrowerAnnualIncome}
+                          onChange={(e) => handleBorrowerFieldChange('borrowerAnnualIncome', e.target.value)}
+                          placeholder="75000"
+                          className={borrowerErrors.borrowerAnnualIncome ? 'border-red-500' : ''}
+                        />
+                        {borrowerErrors.borrowerAnnualIncome && (
+                          <p className="text-sm text-red-500">{borrowerErrors.borrowerAnnualIncome}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="borrowerCoBorrowerName">Co-Borrower Name</Label>
+                        <Input
+                          id="borrowerCoBorrowerName"
+                          value={formData.borrowerCoBorrowerName}
+                          onChange={(e) => {
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, borrowerCoBorrowerName: e.target.value }, null, 2))
+                          }}
+                          placeholder="Jane Smith (optional)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                  <div className="space-y-2">
+                    <Label htmlFor="loanAmount">Loan Amount</Label>
+                    <Input
+                      id="loanAmount"
+                      type="number"
+                      value={formData.loanAmount}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, loanAmount: e.target.value }));
+                        const currentMeta = JSON.parse(metadata || '{}')
+                        setMetadata(JSON.stringify({ ...currentMeta, loanAmount: e.target.value }, null, 2))
+                      }}
+                      placeholder="e.g., 250000"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Loan amount in USD
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Additional Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.additionalNotes}
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, additionalNotes: e.target.value }));
+                      const currentMeta = JSON.parse(metadata || '{}')
+                      setMetadata(JSON.stringify({ ...currentMeta, notes: e.target.value }, null, 2))
+                    }}
+                    placeholder="Any additional information about this document..."
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Optional notes or comments about the document
+                  </p>
+                </div>
+
+                {/* Advanced Options (Collapsible) */}
+                <details className="group">
+                  <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                    Advanced Options
+                  </summary>
+                  <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg">
+                    <div className="space-y-2">
+                      <Label htmlFor="etid">Entity Type ID (ETID)</Label>
+                      <Input
+                        id="etid"
+                        value={etid}
+                        onChange={(e) => setEtid(e.target.value)}
+                        placeholder="100001"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        100001 for loan packets, 100002 for JSON documents. Leave as default unless you know what you're doing.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="rawMetadata">Raw Metadata (JSON)</Label>
+                      <Textarea
+                        id="rawMetadata"
+                        value={metadata}
+                        onChange={(e) => setMetadata(e.target.value)}
+                        placeholder='{"source": "api", "department": "finance"}'
+                        rows={3}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Advanced: Raw JSON metadata for technical users
+                      </p>
+                    </div>
+                  </div>
+                </details>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            {/* Upload Result */}
+            {uploadResult && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-green-600">
+                    <CheckCircle className="h-5 w-5" />
+                    Document Sealed Successfully
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium">Artifact ID</Label>
+                      <p className="text-sm font-mono bg-muted p-2 rounded">{uploadResult.artifactId}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Walacor Transaction ID</Label>
+                      <p className="text-sm font-mono bg-muted p-2 rounded">{uploadResult.walacorTxId}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium">Document Hash</Label>
+                      <p className="text-sm font-mono bg-muted p-2 rounded break-all">{fileHash}</p>
+                    </div>
+                  <div>
+                    <Label className="text-sm font-medium">Sealed At</Label>
+                    <p className="text-sm">{new Date(uploadResult.sealedAt).toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  {uploadResult.proofBundle && (
+                    <div>
+                      <Label className="text-sm font-medium">Proof Bundle</Label>
+                      <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-32">
+                        {JSON.stringify(uploadResult.proofBundle, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button asChild>
+                      <a href={`http://localhost:8000/api/artifacts/${uploadResult.artifactId}`} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        View Artifact Details
+                      </a>
+                    </Button>
+                    <Button variant="outline" onClick={handleReset}>
+                      Upload Another
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Error Display */}
+            {uploadState.error && (
+              <Alert className="border-red-200 bg-red-50">
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                <AlertDescription className="text-red-700">
+                  <div className="flex items-center justify-between">
+                    <span>{uploadState.error.message}</span>
+                    {uploadState.canRetry && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRetry}
+                        className="ml-4 border-red-300 text-red-700 hover:bg-red-100"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Retry
+                      </Button>
+                    )}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Progress Indicator */}
+            {uploadState.isUploading && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Uploading and Sealing Document...</span>
+                      <span className="text-sm text-gray-500">{uploadState.progress}%</span>
+                    </div>
+                    <Progress value={uploadState.progress} className="w-full" />
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>Processing borrower information and sealing in blockchain...</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* File Size Warning */}
+            {file && file.size > 10 * 1024 * 1024 && (
+              <Alert className="border-yellow-200 bg-yellow-50">
+                <AlertCircle className="h-4 w-4 text-yellow-500" />
+                <AlertDescription className="text-yellow-700">
+                  Large file detected ({Math.round(file.size / 1024 / 1024)}MB). Upload may take longer than usual.
+                </AlertDescription>
+              </Alert>
+            )}
+
+                {/* Security Configuration */}
+                <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5" /> Security Configuration
+                    </CardTitle>
+                    <CardDescription>
+                      Choose the security level for document sealing.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="quantumSafe"
+                          checked={quantumSafeMode}
+                          onChange={(e) => {
+                            setQuantumSafeMode(e.target.checked);
+                            if (e.target.checked) {
+                              setMaximumSecurityMode(false); // Disable maximum security when quantum-safe is enabled
+                            }
+                          }}
+                          className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                        />
+                        <Label htmlFor="quantumSafe" className="text-sm font-medium">
+                          🔬 Quantum-Safe Mode (Future-Proof)
+                        </Label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="maximumSecurity"
+                          checked={maximumSecurityMode}
+                          onChange={(e) => {
+                            setMaximumSecurityMode(e.target.checked);
+                            if (e.target.checked) {
+                              setQuantumSafeMode(false); // Disable quantum-safe when maximum security is enabled
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <Label htmlFor="maximumSecurity" className="text-sm font-medium">
+                          Maximum Security Mode (Recommended)
+                        </Label>
+                      </div>
+                      
+                      <div className="text-sm text-gray-600 space-y-2">
+                        {quantumSafeMode && (
+                          <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                            <p className="font-medium text-purple-800 mb-2">🔬 Quantum-Safe Security includes:</p>
+                            <ul className="list-disc list-inside space-y-1 ml-4 text-purple-700">
+                              <li>SHAKE256 hashing (quantum-resistant)</li>
+                              <li>BLAKE3 hashing (quantum-resistant)</li>
+                              <li>Dilithium digital signatures (NIST PQC Standard)</li>
+                              <li>Hybrid classical-quantum approach</li>
+                              <li>Protection against future quantum attacks</li>
+                              <li>Blockchain sealing for immutability</li>
+                            </ul>
+                            <div className="flex items-center gap-1 flex-wrap mt-2">
+                              <Badge variant="outline" className="text-xs bg-purple-100 text-purple-800">
+                                🛡️ Quantum-Resistant
+                              </Badge>
+                              <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800">
+                                🔒 Post-Quantum Secure
+                              </Badge>
+                              <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800">
+                                ⚡ SHA3-512 Protected
+                              </Badge>
+                              <Badge variant="outline" className="text-xs bg-green-100 text-green-800">
+                                ⭐ Future-Proof Security
+                              </Badge>
+                              <Badge variant="outline" className="text-xs bg-indigo-100 text-indigo-800">
+                                ✅ NIST PQC Compliant
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-purple-600 mt-2">
+                              This provides protection against future quantum computing attacks while maintaining current security.
+                            </p>
+                          </div>
+                        )}
+                        
+                        {maximumSecurityMode && (
+                          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="font-medium text-blue-800 mb-2">Maximum Security includes:</p>
+                            <ul className="list-disc list-inside space-y-1 ml-4 text-blue-700">
+                              <li>Multi-algorithm hashing (SHA-256, SHA-512, BLAKE3, SHA3-256)</li>
+                              <li>PKI-based digital signatures</li>
+                              <li>Content-based integrity verification</li>
+                              <li>Cross-verification systems</li>
+                              <li>Advanced tamper detection</li>
+                              <li>Blockchain sealing for immutability</li>
+                            </ul>
+                            <p className="text-xs text-blue-600 mt-2">
+                              This provides the highest level of current security and minimal tampering risk for your loan documents.
+                            </p>
+                          </div>
+                        )}
+                        
+                        {!quantumSafeMode && !maximumSecurityMode && (
+                          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                            <p className="font-medium text-gray-800 mb-2">Standard Security includes:</p>
+                            <ul className="list-disc list-inside space-y-1 ml-4 text-gray-700">
+                              <li>SHA-256 hashing</li>
+                              <li>Basic digital signatures</li>
+                              <li>Blockchain sealing for immutability</li>
+                            </ul>
+                            <p className="text-xs text-gray-600 mt-2">
+                              Standard security suitable for most loan documents.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button
+                onClick={handleUpload}
+                disabled={isUploadDisabled}
+                className="flex-1"
+              >
                 {isUploading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {quantumSafeMode ? 'Sealing with Quantum-Safe Cryptography...' : 
-                     maximumSecurityMode ? 'Sealing with Maximum Security...' : 'Sealing Document...'}
+                    {quantumSafeMode
+                      ? 'Sealing with Quantum-Safe Cryptography...'
+                      : maximumSecurityMode
+                      ? 'Sealing with Maximum Security...'
+                      : 'Sealing Document...'}
                   </>
                 ) : (
                   <>
                     <Upload className="h-4 w-4 mr-2" />
-                    {!file ? 'Select File to Upload' : 
-                     quantumSafeMode ? 'Upload & Seal (Quantum-Safe)' : 
-                     maximumSecurityMode ? 'Upload & Seal (Maximum Security)' : 'Upload & Seal'}
+                    {!hasPrimaryFile
+                      ? isSingleMode
+                        ? 'Select File to Upload'
+                        : 'Select Files to Upload'
+                      : quantumSafeMode
+                      ? 'Upload & Seal (Quantum-Safe)'
+                      : maximumSecurityMode
+                      ? 'Upload & Seal (Maximum Security)'
+                      : 'Upload & Seal'}
                   </>
                 )}
-          </Button>
-          {file && !uploadResult && !verifyResult && (
-            <Button variant="outline" onClick={handleReset}>
-              Reset
-            </Button>
-          )}
-        </div>
+              </Button>
+              {file && !uploadResult && !verifyResult && (
+                <Button variant="outline" onClick={handleReset}>
+                  Reset
+                </Button>
+              )}
+            </div>
 
-        {/* Action Buttons for Already Sealed Documents */}
-        {file && verifyResult && verifyResult.is_valid && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleReset} className="flex-1">
-              Upload Different File
-            </Button>
-            <Button asChild>
-              <a href={`http://localhost:8000/api/verify?hash=${fileHash}`} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                View Verification
-              </a>
-            </Button>
-          </div>
-        )}
-        </div>
+            {/* Action Buttons for Already Sealed Documents */}
+            {file && verifyResult && verifyResult.is_valid && (
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleReset} className="flex-1">
+                  Upload Different File
+                </Button>
+                <Button asChild>
+                  <a href={`http://localhost:8000/api/verify?hash=${fileHash}`} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    View Verification
+                  </a>
+                </Button>
+              </div>
+            )}
+
+          </CardContent>
+        </Card>
 
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-6">
@@ -3398,9 +4220,37 @@ export default function UploadPage() {
           </Card>
         </div>
       </div>
-      </div>
     </div>
-    </>
-  );
+  </div>
+
+  {/* Success Celebration Modal */}
+  <SuccessCelebration
+    isOpen={!!uploadResult && showSuccessModal}
+    onClose={() => {
+      setShowSuccessModal(false);
+    }}
+    onViewDocument={() => {
+      if (uploadResult?.artifactId) {
+        window.location.href = `/documents/${uploadResult.artifactId}`;
+      }
+    }}
+    onUploadAnother={() => {
+      setShowSuccessModal(false);
+      setUploadResult(null);
+      setFile(null);
+      setFileHash('');
+      setCurrentStep(1);
+    }}
+    artifactId={uploadResult?.artifactId}
+    walacorTxId={uploadResult?.walacorTxId}
+    securityLevel={
+      maximumSecurityMode ? 'maximum' :
+      quantumSafeMode ? 'quantum-safe' :
+      'standard'
+    }
+  />
+</div>
+</>
+);
 }
 
