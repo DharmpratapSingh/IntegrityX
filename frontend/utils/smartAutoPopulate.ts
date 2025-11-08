@@ -16,6 +16,8 @@ import {
   sanitizeNotes,
 } from '@/utils/dataSanitization'
 
+import { detectFraud, FraudDetectionResult } from '@/utils/fraudDetectionEngine'
+
 // ============================================================================
 // ENHANCED AUTO-POPULATE WITH BACKEND INTEGRATION
 // ============================================================================
@@ -33,6 +35,7 @@ export interface SmartExtractionResult {
   overallConfidence: number
   extractedBy: 'backend' | 'frontend'
   warnings?: string[]
+  fraudDetection?: FraudDetectionResult
 }
 
 export interface EnhancedAutoPopulateMetadata {
@@ -78,6 +81,7 @@ export interface EnhancedAutoPopulateMetadata {
     extractedBy: 'backend' | 'frontend'
     timestamp: string
     warnings: string[]
+    fraudDetection?: FraudDetectionResult
   }
 }
 
@@ -192,30 +196,41 @@ export async function smartExtractDocumentData(
   file: File,
   fileContent?: Record<string, any>
 ): Promise<SmartExtractionResult> {
+  let extractionResult: SmartExtractionResult
+
   try {
     // Try backend AI first
     console.log('🤖 Attempting backend AI extraction...')
     const backendResult = await extractWithBackendAI(file)
     console.log('✅ Backend extraction successful:', backendResult)
-    return backendResult
+    extractionResult = backendResult
   } catch (error) {
     console.warn('⚠️ Backend extraction failed, using frontend fallback:', error)
 
     // Fallback to frontend extraction
     if (fileContent) {
-      return extractWithFrontendFallback(fileContent)
-    }
-
-    // If no file content provided, try to read the file
-    try {
-      const text = await file.text()
-      const parsed = JSON.parse(text)
-      return extractWithFrontendFallback(parsed)
-    } catch (parseError) {
-      console.error('Failed to parse file for frontend fallback:', parseError)
-      throw new Error('Could not extract data from file')
+      extractionResult = await extractWithFrontendFallback(fileContent)
+    } else {
+      // If no file content provided, try to read the file
+      try {
+        const text = await file.text()
+        const parsed = JSON.parse(text)
+        extractionResult = await extractWithFrontendFallback(parsed)
+      } catch (parseError) {
+        console.error('Failed to parse file for frontend fallback:', parseError)
+        throw new Error('Could not extract data from file')
+      }
     }
   }
+
+  // Run fraud detection on extracted data
+  console.log('🔍 Running fraud detection analysis...')
+  const fraudAnalysis = detectFraud(extractionResult.fields, file.name)
+  extractionResult.fraudDetection = fraudAnalysis
+
+  console.log(`🚨 Fraud Risk Score: ${fraudAnalysis.fraudRiskScore}/100 (${fraudAnalysis.riskLevel})`)
+
+  return extractionResult
 }
 
 // ============================================================================
@@ -315,7 +330,8 @@ export function buildEnhancedAutoPopulateMetadata(
       overallConfidence: extractionResult.overallConfidence,
       extractedBy: extractionResult.extractedBy,
       timestamp: new Date().toISOString(),
-      warnings: extractionResult.warnings || []
+      warnings: extractionResult.warnings || [],
+      fraudDetection: extractionResult.fraudDetection
     }
   }
 }

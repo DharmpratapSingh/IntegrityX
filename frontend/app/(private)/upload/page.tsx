@@ -55,6 +55,7 @@ import {
 import { BulkAnalysisDashboard } from '@/components/BulkAnalysisDashboard'
 import { SmartBatchEditor } from '@/components/SmartBatchEditor'
 import { ConfidenceBadge, FieldConfidenceWrapper } from '@/components/ui/confidence-badge'
+import { FraudRiskBadge, FraudRiskInlineBadge } from '@/components/FraudRiskBadge'
 
 interface UploadResult {
   artifactId: string;
@@ -3756,6 +3757,13 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 </CardContent>
               )}
             </Card>
+
+                {/* Fraud Risk Alert */}
+                {enhancedMetadata?.extractionMetadata?.fraudDetection && (
+                  <FraudRiskBadge
+                    fraudDetection={enhancedMetadata.extractionMetadata.fraudDetection}
+                  />
+                )}
 
                 {/* Loan Information */}
                 <Card>
