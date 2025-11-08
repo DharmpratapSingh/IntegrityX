@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Hash, Shield, ArrowLeft, ChevronDown, ChevronUp, User, HelpCircle, AlertCircle, X, RefreshCw, Mail, Download, UserCheck, FileCheck, AlertTriangle, Info } from 'lucide-react';
+import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Hash, Shield, ArrowLeft, ChevronDown, ChevronUp, User, HelpCircle, AlertCircle, X, RefreshCw, Mail, Download, UserCheck, FileCheck, AlertTriangle, Info, Sparkles } from 'lucide-react';
 import { simpleToast as toast } from '@/components/ui/simple-toast';
 import { sealLoanDocument, sealLoanDocumentMaximumSecurity, sealLoanDocumentQuantumSafe, type LoanData, type BorrowerInfo } from '@/lib/api/loanDocuments';
 import { DuplicateDetection } from '@/components/DuplicateDetection';
@@ -162,6 +162,7 @@ export default function UploadPage() {
   const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [metadata, setMetadata] = useState('');
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [etid, setEtid] = useState('100002');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -211,6 +212,70 @@ export default function UploadPage() {
   useEffect(() => {
     console.log('📊 formData state changed:', formData);
   }, [formData]);
+
+  // Demo Mode: Auto-load demo data if coming from dashboard
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isDemo = params.get('demo') === 'true';
+
+    if (isDemo && typeof window !== 'undefined') {
+      console.log('🎬 Demo mode detected! Loading demo data...');
+      setIsDemoMode(true);
+
+      try {
+        const demoDocsStr = sessionStorage.getItem('demoDocuments');
+        const demoKYCStr = sessionStorage.getItem('demoKYC');
+
+        if (demoDocsStr) {
+          const demoDocuments = JSON.parse(demoDocsStr);
+          console.log('📄 Found demo documents:', demoDocuments);
+
+          // Convert first demo document to File and auto-upload
+          if (demoDocuments && demoDocuments.length > 0) {
+            const firstDoc = demoDocuments[0];
+            const jsonContent = JSON.stringify(firstDoc.data, null, 2);
+            const blob = new Blob([jsonContent], { type: 'application/json' });
+            const demoFile = new File([blob], firstDoc.fileName, { type: 'application/json' });
+
+            // Simulate file drop
+            setTimeout(() => {
+              console.log('🚀 Auto-uploading demo file...');
+              setFile(demoFile);
+              setCurrentStep(2);
+
+              // Trigger auto-fill
+              autoFillFromJSON(demoFile).then(() => {
+                toast.success('✨ Demo loaded! Review the auto-filled form.');
+              }).catch(error => {
+                console.error('Demo auto-fill error:', error);
+                toast.error('Demo loaded but auto-fill failed. Please review form.');
+              });
+            }, 1000);
+          }
+        }
+
+        if (demoKYCStr) {
+          const demoKYC = JSON.parse(demoKYCStr);
+          console.log('👤 Found demo KYC:', demoKYC);
+
+          // Pre-fill KYC data
+          setTimeout(() => {
+            setKycData(prev => ({
+              ...prev,
+              ...demoKYC
+            }));
+          }, 1500);
+        }
+
+        // Clear demo mode from sessionStorage after loading
+        sessionStorage.removeItem('demoMode');
+
+      } catch (error) {
+        console.error('Error loading demo data:', error);
+        toast.error('Failed to load demo data');
+      }
+    }
+  }, []); // Run once on mount
 
   // Helper function to get current metadata values
   const getMetadataValue = (key: string): string => {
@@ -3016,6 +3081,36 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       <div className="pointer-events-none absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-gradient-to-br from-fuchsia-400 to-sky-400 rounded-full filter blur-3xl opacity-10 animate-blob animation-delay-4000" />
       {/* Soft radial vignette */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.15),rgba(255,255,255,0)_60%)]" />
+
+      {/* Demo Mode Banner */}
+      {isDemoMode && (
+        <div className="relative z-20 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Sparkles className="h-5 w-5 animate-pulse" />
+                <div>
+                  <p className="font-semibold">✨ Interactive Demo Mode Active</p>
+                  <p className="text-xs text-purple-100">Sample loan document loaded with AI-powered auto-fill. Explore the features!</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsDemoMode(false);
+                  window.history.replaceState({}, '', '/upload');
+                }}
+                className="text-white hover:bg-white/20"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Exit Demo
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-blue-500 to-purple-600 text-white">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
