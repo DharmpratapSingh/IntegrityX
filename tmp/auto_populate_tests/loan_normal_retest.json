@@ -1,0 +1,44 @@
+{
+  "loan_id": "95f47e3c-45b5-34b2-905c-0bf59ca9cf25",
+  "loanId": "95f47e3c-45b5-34b2-905c-0bf59ca9cf25",
+  "document_type": "loan_application",
+  "loan_amount": 50000,
+  "loan_amount_value": "$50,000.00",
+  "loan_term_months": 480,
+  "interest_rate": 5.02,
+  "interest_rate_percent": "5.02%",
+  "property_address": "87934 Carmela Crossing Suite 520, Elianfort, Kansas 57704, American Samoa",
+  "borrower_information": {
+    "personal_details": {
+      "full_name": "Lavada Keeling",
+      "email": "jordi41@hotmail.com",
+      "phone": "+1-152-074-2092",
+      "date_of_birth": "1985-09-07",
+      "ssn_last4": "3939"
+    },
+    "identification": {
+      "id_type": "drivers_license",
+      "id_last4": "2296"
+    },
+    "employment": {
+      "status": "employed",
+      "employer": "Independent",
+      "annual_income": 97369
+    },
+    "address": {
+      "street": "87934 Carmela Crossing Suite 520",
+      "city": "Elianfort",
+      "state": "Kansas",
+      "zip_code": "57704",
+      "country": "American Samoa"
+    }
+  },
+  "loan_details": {
+    "loan_term_months": 480,
+    "interest_rate": 5.02,
+    "loan_amount": 50000,
+    "purpose": "Primary residence purchase",
+    "notes": "Laborum non placeat sit et unde iusto quasi."
+  },
+  "additional_notes": "Laborum non placeat sit et unde iusto quasi."
+}

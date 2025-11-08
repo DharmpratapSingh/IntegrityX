@@ -1,0 +1,160 @@
+# ============================================================================
+# IntegrityX Development Docker Compose
+# For local development with hot-reload
+# ============================================================================
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # PostgreSQL Database
+  # ==========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: integrityx_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-integrityx}
+      POSTGRES_USER: ${POSTGRES_USER:-integrityx_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme123}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-integrityx_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - integrityx-network
+
+  # ==========================================================================
+  # Redis (Rate Limiting & Caching)
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: integrityx_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - integrityx-network
+
+  # ==========================================================================
+  # Backend (FastAPI) - Development Mode
+  # ==========================================================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: integrityx_backend
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-integrityx_user}:${POSTGRES_PASSWORD:-changeme123}@postgres:5432/${POSTGRES_DB:-integrityx}
+      
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+      
+      # Environment
+      ENVIRONMENT: development
+      DEBUG: "true"
+      
+      # Clerk Auth (from .env)
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      
+      # Walacor
+      WALACOR_API_KEY: ${WALACOR_API_KEY}
+      WALACOR_API_URL: ${WALACOR_API_URL:-https://api.walacor.com}
+      
+      # Encryption
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      
+      # API
+      API_BASE_URL: http://localhost:8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app/backend
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./database:/app/database
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - integrityx-network
+
+  # ==========================================================================
+  # Frontend (Next.js) - Development Mode
+  # ==========================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: integrityx_frontend
+    environment:
+      # Backend API
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      
+      # Clerk Auth
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      
+      # Environment
+      NODE_ENV: development
+      
+      # Next.js
+      NEXT_TELEMETRY_DISABLED: 1
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    command: npm run dev
+    networks:
+      - integrityx-network
+
+# ==========================================================================
+# Networks
+# ==========================================================================
+networks:
+  integrityx-network:
+    driver: bridge
+
+# ==========================================================================
+# Volumes
+# ==========================================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+
+
+
+
+
+
+
+
+
+
+
+
+

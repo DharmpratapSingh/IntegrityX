@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ChevronDown, ChevronRight, User, Calendar, FileText, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { json as fetchJson } from '@/utils/api'
 
 interface Attestation {
   id: number
@@ -57,19 +58,9 @@ const formatJsonDetails = (details: Record<string, any>): string => {
 }
 
 async function fetchAttestations(artifactId: string): Promise<Attestation[]> {
-  const response = await fetch(`/api/attestations?artifactId=${encodeURIComponent(artifactId)}`)
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch attestations: ${response.statusText}`)
-  }
-  
-  const apiResponse = await response.json()
-  
-  if (!apiResponse.ok) {
-    throw new Error(apiResponse.error?.message || 'Failed to fetch attestations')
-  }
-  
-  return apiResponse.data.attestations || []
+  const res = await fetchJson<any>(`/api/attestations?artifactId=${encodeURIComponent(artifactId)}`, { timeoutMs: 8000 })
+  if (!res.ok || !res.data) throw new Error((res.error as any)?.message || 'Failed to fetch attestations')
+  return res.data.data.attestations || []
 }
 
 export function AttestationList({ artifactId, className }: AttestationListProps) {

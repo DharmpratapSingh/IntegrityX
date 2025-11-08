@@ -1,0 +1,168 @@
+{
+  "user_workflows": [
+    {
+      "test_name": "Complete Document Lifecycle",
+      "total_steps": 3,
+      "successful_steps": 3,
+      "success_rate": 100.0,
+      "workflow_steps": [
+        {
+          "step": "Document Creation",
+          "status": "success",
+          "artifact_id": "0ca010cd-b6ae-483b-add6-0adba6f84898",
+          "response_time": 0.06200098991394043
+        },
+        {
+          "step": "Document Retrieval",
+          "status": "success",
+          "hash": "f0ca68848ad4956cd291ca69f276035b6a6eb4efa3b50a2094eb71d84771916e",
+          "response_time": 0.0047261714935302734
+        },
+        {
+          "step": "Document Verification",
+          "status": "success",
+          "verification_status": "sealed",
+          "response_time": 0.0028429031372070312
+        }
+      ]
+    },
+    {
+      "test_name": "Bulk Document Processing",
+      "total_documents": 5,
+      "created_documents": 5,
+      "creation_success_rate": 100.0,
+      "analytics_working": true,
+      "listing_working": true,
+      "documents": [
+        {
+          "loan_id": "BULK_TEST_0_1761254100",
+          "artifact_id": "ef543968-d985-4ccb-855a-004b724f73db",
+          "status": "created"
+        },
+        {
+          "loan_id": "BULK_TEST_1_1761254100",
+          "artifact_id": "b11704ef-46a6-4ac0-8d8d-fc7f46ed1828",
+          "status": "created"
+        },
+        {
+          "loan_id": "BULK_TEST_2_1761254100",
+          "artifact_id": "d3ccada3-4e3c-45a3-b9f6-807393a90703",
+          "status": "created"
+        },
+        {
+          "loan_id": "BULK_TEST_3_1761254100",
+          "artifact_id": "264a8282-7692-482e-8b31-03d55eebd42e",
+          "status": "created"
+        },
+        {
+          "loan_id": "BULK_TEST_4_1761254100",
+          "artifact_id": "e1da0b37-ebd9-47f2-a479-400a5077cd79",
+          "status": "created"
+        }
+      ]
+    }
+  ],
+  "system_integrations": [
+    {
+      "test_name": "Walacor Integration Workflow",
+      "total_steps": 1,
+      "successful_steps": 0,
+      "success_rate": 0.0,
+      "workflow_steps": [
+        {
+          "step": "Walacor Service Status",
+          "status": "failed",
+          "error": "HTTP 404",
+          "response_time": 0.001438140869140625
+        }
+      ]
+    },
+    {
+      "test_name": "Frontend-Backend Integration",
+      "total_tests": 10,
+      "accessible_tests": 10,
+      "accessibility_rate": 100.0,
+      "integration_tests": [
+        {
+          "page": "/",
+          "status_code": 200,
+          "accessible": true
+        },
+        {
+          "page": "/dashboard",
+          "status_code": 200,
+          "accessible": true
+        },
+        {
+          "page": "/upload",
+          "status_code": 200,
+          "accessible": true
+        },
+        {
+          "page": "/documents",
+          "status_code": 200,
+          "accessible": true
+        },
+        {
+          "page": "/analytics",
+          "status_code": 200,
+          "accessible": true
+        },
+        {
+          "page": "/verification",
+          "status_code": 200,
+          "accessible": true
+        },
+        {
+          "endpoint": "/api/health",
+          "status_code": 200,
+          "accessible": true
+        },
+        {
+          "endpoint": "/api/artifacts",
+          "status_code": 200,
+          "accessible": true
+        },
+        {
+          "endpoint": "/api/analytics/dashboard",
+          "status_code": 200,
+          "accessible": true
+        },
+        {
+          "endpoint": "/api/analytics/system-metrics",
+          "status_code": 200,
+          "accessible": true
+        }
+      ]
+    }
+  ],
+  "real_world_scenarios": [],
+  "performance_under_load": [],
+  "data_consistency_tests": [
+    {
+      "test_name": "Data Consistency Across Operations",
+      "total_tests": 3,
+      "consistent_tests": 2,
+      "consistency_rate": 66.66666666666666,
+      "consistency_tests": [
+        {
+          "test": "ID-based retrieval",
+          "consistent": true,
+          "expected": "CONSISTENCY_TEST_1761254101",
+          "actual": "CONSISTENCY_TEST_1761254101"
+        },
+        {
+          "test": "List includes created document",
+          "consistent": false,
+          "found_in_list": false
+        },
+        {
+          "test": "Hash verification consistency",
+          "consistent": true,
+          "verification_status": "sealed"
+        }
+      ]
+    }
+  ],
+  "cross_platform_tests": []
+}

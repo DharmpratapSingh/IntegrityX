@@ -1,0 +1,44 @@
+{
+  "loan_id": "d77d30c7-e7db-30fb-817c-d589ac0fc54e",
+  "loanId": "d77d30c7-e7db-30fb-817c-d589ac0fc54e",
+  "document_type": "loan_application",
+  "loan_amount": 50000,
+  "loan_amount_value": "$50,000.00",
+  "loan_term_months": 60,
+  "interest_rate": 3.08,
+  "interest_rate_percent": "3.08%",
+  "property_address": "60198 Erwin Pass, East Edmondton, Mississippi 97872, Saint Helena",
+  "borrower_information": {
+    "personal_details": {
+      "full_name": "Nettie Upton",
+      "email": "shanel.heidenreich@mayert.com",
+      "phone": "+1-127-296-8036",
+      "date_of_birth": "1973-02-21",
+      "ssn_last4": "3807"
+    },
+    "identification": {
+      "id_type": "drivers_license",
+      "id_last4": "6028"
+    },
+    "employment": {
+      "status": "employed",
+      "employer": "Independent",
+      "annual_income": 228439
+    },
+    "address": {
+      "street": "60198 Erwin Pass",
+      "city": "East Edmondton",
+      "state": "Mississippi",
+      "zip_code": "97872",
+      "country": "Saint Helena"
+    }
+  },
+  "loan_details": {
+    "loan_term_months": 60,
+    "interest_rate": 3.08,
+    "loan_amount": 50000,
+    "purpose": "Primary residence purchase",
+    "notes": "Cumque dolores sit aut dolores."
+  },
+  "additional_notes": "Cumque dolores sit aut dolores."
+}

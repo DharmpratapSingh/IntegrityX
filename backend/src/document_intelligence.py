@@ -134,31 +134,49 @@ class DocumentIntelligenceService:
             return self._extract_basic_info(file_content, filename, content_type)
     
     def _extract_from_json(self, content: bytes) -> Dict[str, Any]:
-        """Extract data from JSON documents."""
+        """Extract data from JSON documents using intelligent extraction."""
         try:
+            # Validate file size
+            MAX_JSON_SIZE = 10 * 1024 * 1024  # 10MB
+            if len(content) > MAX_JSON_SIZE:
+                return {
+                    'document_type': 'json',
+                    'error': 'Document too large (max 10MB)'
+                }
+
             json_data = json.loads(content.decode('utf-8'))
-            
-            # Extract common loan fields
-            extracted = {
-                'document_type': 'json',
-                'raw_data': json_data,
-                'extracted_fields': {}
-            }
-            
-            # Extract specific fields
-            for field, patterns in self.data_extractors.items():
-                value = self._extract_field_from_data(json_data, field, patterns)
-                if value:
-                    extracted['extracted_fields'][field] = value
-            
+
+            # Use intelligent extractor for better field detection
+            from src.intelligent_extractor import IntelligentExtractor
+            extractor = IntelligentExtractor()
+            result = extractor.extract_from_document(json_data)
+
+            # Apply security sanitization
+            try:
+                from src.security.sanitizer import DataSanitizer
+                result['extracted_fields'] = DataSanitizer.sanitize_extracted_data(
+                    result['extracted_fields']
+                )
+            except ImportError:
+                logger.warning("Security sanitizer not available, skipping sanitization")
+
             # Classify document type
-            extracted['document_classification'] = self._classify_document(json_data)
-            
-            return extracted
-            
+            document_classification = self._classify_document(str(json_data))
+
+            return {
+                'document_type': 'json',
+                'extracted_fields': result['extracted_fields'],
+                'confidence': result['overall_confidence'],
+                'confidence_scores': result.get('confidence_scores', {}),
+                'document_classification': document_classification
+            }
+
+        except json.JSONDecodeError:
+            logger.error("Invalid JSON format")
+            return {'document_type': 'json', 'error': 'Invalid JSON format'}
         except Exception as e:
             logger.error(f"Error processing JSON: {e}")
-            return {'document_type': 'json', 'error': str(e)}
+            return {'document_type': 'json', 'error': 'Failed to process document'}
     
     def _extract_from_pdf(self, content: bytes) -> Dict[str, Any]:
         """Extract data from PDF documents."""

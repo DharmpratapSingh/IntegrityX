@@ -1,0 +1,4897 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "IntegrityX API",
+    "description": "\n# IntegrityX - Financial Document Integrity Platform\n\n**Production-grade API for document integrity verification, cryptographic sealing, and blockchain-based provenance tracking.**\n\n## \ud83c\udfaf Key Features\n\n- **Quantum-Safe Cryptography**: Future-proof security using hybrid classical + post-quantum algorithms\n- **Blockchain Integration**: Immutable document sealing via Walacor blockchain\n- **AI-Powered Detection**: Anomaly detection and predictive analytics\n- **Document Intelligence**: Advanced NLP and entity extraction\n- **Real-time Verification**: Public verification portal with no authentication required\n- **Comprehensive Analytics**: Document health scoring, trend analysis, and insights\n\n## \ud83d\udd12 Security\n\n- **Encryption**: AES-256 encryption for sensitive data\n- **Authentication**: Clerk-based JWT authentication\n- **Rate Limiting**: Per-endpoint rate limits (coming soon)\n- **Audit Logging**: Complete audit trail for compliance\n\n## \ud83d\udcca API Capabilities\n\n- **Document Operations**: Upload, seal, verify, and track documents\n- **Batch Processing**: Multi-file packet ingestion\n- **Attestations**: Role-based document attestations\n- **Provenance**: Complete chain of custody tracking\n- **Analytics**: Real-time insights and predictive analysis\n- **Voice Commands**: Natural language document operations (experimental)\n\n## \ud83d\ude80 Getting Started\n\n1. **Authentication**: Obtain a Clerk JWT token from the frontend\n2. **Upload Documents**: POST to `/ingest-json` or `/ingest-packet`\n3. **Seal Documents**: Documents are automatically sealed to Walacor blockchain\n4. **Verify**: Use public verification endpoints (no auth required)\n5. **Track**: Monitor document status and provenance\n\n## \ud83d\udcda Documentation\n\n- **Interactive Docs**: `/docs` (Swagger UI)\n- **Alternative Docs**: `/redoc` (ReDoc)\n- **API Guide**: See `docs/api/API_GUIDE.md`\n- **Postman Collection**: See `docs/api/IntegrityX.postman_collection.json`\n\n## \ud83d\udd17 Links\n\n- **GitHub**: https://github.com/dharmpratapsingh/IntegrityX\n- **Support**: support@walacor.com\n",
+    "termsOfService": "https://walacor.com/terms",
+    "contact": {
+      "name": "Walacor Support",
+      "url": "https://walacor.com/support",
+      "email": "support@walacor.com"
+    },
+    "license": {
+      "name": "Proprietary",
+      "url": "https://walacor.com/license"
+    },
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/config": {
+      "get": {
+        "summary": "Get Config",
+        "description": "Get non-sensitive environment configuration.\n\nReturns environment variables that are safe to expose to the frontend.",
+        "operationId": "get_config_api_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Enhanced health check endpoint.\n\nReturns detailed health status of the API and all services with timing information.\nChecks database, Walacor, and storage services.",
+        "operationId": "health_check_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/duplicate-check": {
+      "post": {
+        "summary": "Check For Duplicates",
+        "description": "Comprehensive duplicate detection endpoint.\n\nChecks for duplicates based on:\n- File hash (exact file match)\n- Loan ID (same loan processed before)\n- Borrower information (same borrower)\n- Content hash (same content, different file)",
+        "operationId": "check_for_duplicates_api_duplicate_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuplicateCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/duplicate-check/{artifact_id}": {
+      "get": {
+        "summary": "Get Duplicate Info",
+        "description": "Get detailed information about potential duplicates for a specific artifact.",
+        "operationId": "get_duplicate_info_api_duplicate_check__artifact_id__get",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mode": {
+      "get": {
+        "summary": "Get Mode",
+        "description": "Get the current application mode (demo or full).\n\nReturns:\n    StandardResponse: Contains the current mode and available services",
+        "operationId": "get_mode_api_mode_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ingest-json": {
+      "post": {
+        "summary": "Ingest Json",
+        "description": "Ingest a JSON document with comprehensive borrower information.\n\nAccepts a JSON file and processes it for integrity verification.\nNow includes borrower information in the hash calculation for immutable audit trail.",
+        "operationId": "ingest_json_api_ingest_json_post",
+        "parameters": [
+          {
+            "name": "loan_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Loan Id"
+            }
+          },
+          {
+            "name": "created_by",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Created By"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_ingest_json_api_ingest_json_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ingest-packet": {
+      "post": {
+        "summary": "Ingest Packet",
+        "description": "Ingest a multi-file packet.\n\nAccepts multiple files and creates a manifest for the packet.",
+        "operationId": "ingest_packet_api_ingest_packet_post",
+        "parameters": [
+          {
+            "name": "loan_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Loan Id"
+            }
+          },
+          {
+            "name": "created_by",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Created By"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_ingest_packet_api_ingest_packet_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/extract-document-data": {
+      "post": {
+        "summary": "Extract Document Data",
+        "description": "Extract structured data from uploaded documents using AI-powered document intelligence.\n\nThis endpoint uses OCR, pattern recognition, and machine learning to automatically\nextract key information from various document types including PDFs, Word docs,\nExcel files, images, and JSON documents.",
+        "operationId": "extract_document_data_api_extract_document_data_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_extract_document_data_api_extract_document_data_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verify-manifest": {
+      "post": {
+        "summary": "Verify Manifest",
+        "description": "Verify a manifest.\n\nValidates and processes a manifest document.",
+        "operationId": "verify_manifest_api_verify_manifest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Manifest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/artifacts": {
+      "get": {
+        "summary": "Get Artifacts",
+        "description": "Get artifacts with optional search filters.\n\nSupports searching by borrower information, loan details, and date/amount ranges.",
+        "operationId": "get_artifacts_api_artifacts_get",
+        "parameters": [
+          {
+            "name": "borrower_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search by borrower name",
+              "title": "Borrower Name"
+            },
+            "description": "Search by borrower name"
+          },
+          {
+            "name": "borrower_email",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search by borrower email",
+              "title": "Borrower Email"
+            },
+            "description": "Search by borrower email"
+          },
+          {
+            "name": "loan_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search by loan ID",
+              "title": "Loan Id"
+            },
+            "description": "Search by loan ID"
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter from date (YYYY-MM-DD)",
+              "title": "Date From"
+            },
+            "description": "Filter from date (YYYY-MM-DD)"
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to date (YYYY-MM-DD)",
+              "title": "Date To"
+            },
+            "description": "Filter to date (YYYY-MM-DD)"
+          },
+          {
+            "name": "amount_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum loan amount",
+              "title": "Amount Min"
+            },
+            "description": "Minimum loan amount"
+          },
+          {
+            "name": "amount_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Maximum loan amount",
+              "title": "Amount Max"
+            },
+            "description": "Maximum loan amount"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Number of results to return",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Number of results to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Number of results to skip",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Number of results to skip"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Upload Document",
+        "description": "Upload a document for processing.",
+        "operationId": "upload_document_api_artifacts_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/artifacts/{artifact_id}": {
+      "get": {
+        "summary": "Get Artifact",
+        "description": "Get artifact details.\n\nRetrieves detailed information about a specific artifact.",
+        "operationId": "get_artifact_api_artifacts__artifact_id__get",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Artifact",
+        "description": "Delete an artifact while preserving metadata for verification.\n\nThis endpoint implements a comprehensive delete functionality that:\n1. Removes the document from the active artifacts table\n2. Preserves all metadata in the deleted_documents table\n3. Creates a detailed audit trail of the deletion\n4. Allows the document to still be verified using its hash and blockchain seal\n\nThe deleted document can be verified later using the document hash,\nand users will see detailed information about when it was uploaded,\nwhen it was deleted, and who performed these actions.",
+        "operationId": "delete_artifact_api_artifacts__artifact_id__delete",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
+          },
+          {
+            "name": "deleted_by",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "User ID of the person deleting the document",
+              "title": "Deleted By"
+            },
+            "description": "User ID of the person deleting the document"
+          },
+          {
+            "name": "deletion_reason",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Reason for deletion",
+              "title": "Deletion Reason"
+            },
+            "description": "Reason for deletion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/artifacts/{artifact_id}/events": {
+      "get": {
+        "summary": "Get Artifact Events",
+        "description": "Get artifact events.\n\nRetrieves all events associated with a specific artifact.",
+        "operationId": "get_artifact_events_api_artifacts__artifact_id__events_get",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "summary": "Get Stats",
+        "description": "Get system statistics.\n\nReturns comprehensive statistics about the system.",
+        "operationId": "get_stats_api_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/seal": {
+      "post": {
+        "summary": "Seal Artifact",
+        "description": "Seal an artifact in Walacor blockchain.\n\nCreates or retrieves an artifact and seals it in the Walacor blockchain,\nrecording the audit event.",
+        "operationId": "seal_artifact_api_seal_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SealRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verify": {
+      "post": {
+        "summary": "Verify Artifact",
+        "description": "Verify an artifact's integrity.\n\nVerifies the artifact against the stored hash and records the audit event.",
+        "operationId": "verify_artifact_api_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/proof": {
+      "get": {
+        "summary": "Get Proof",
+        "description": "Get proof bundle from Walacor for an artifact.\n\nStreams the proof bundle from Walacor blockchain.",
+        "operationId": "get_proof_api_proof_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Artifact ID",
+              "title": "Id"
+            },
+            "description": "Artifact ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage/s3/presign": {
+      "post": {
+        "summary": "Presign S3 Upload",
+        "description": "Generate presigned URL for S3 upload.\n\nReturns presigned PUT URL and object URL with validation.",
+        "operationId": "presign_s3_upload_api_storage_s3_presign_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "summary": "Get Events",
+        "description": "Get paginated list of events with filters or aggregated dashboard data.\n\nSupports filtering by ETID, date range, and status.\nIf aggregate parameter is provided (e.g., '7d'), returns dashboard metrics.",
+        "operationId": "get_events_api_events_get",
+        "parameters": [
+          {
+            "name": "etid",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by Entity Type ID",
+              "title": "Etid"
+            },
+            "description": "Filter by Entity Type ID"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start date (ISO format)",
+              "title": "Startdate"
+            },
+            "description": "Start date (ISO format)"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End date (ISO format)",
+              "title": "Enddate"
+            },
+            "description": "End date (ISO format)"
+          },
+          {
+            "name": "status_filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status",
+              "title": "Status Filter"
+            },
+            "description": "Filter by status"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Items per page"
+          },
+          {
+            "name": "aggregate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Aggregate period (e.g., 7d, 30d)",
+              "title": "Aggregate"
+            },
+            "description": "Aggregate period (e.g., 7d, 30d)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attestations": {
+      "post": {
+        "summary": "Create Attestation",
+        "description": "Create a new attestation for an artifact.\n\nCreates an attestation record and logs an audit event.",
+        "operationId": "create_attestation_api_attestations_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttestationIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Attestations",
+        "description": "List attestations for a specific artifact.\n\nReturns paginated list of attestations with optional filtering.",
+        "operationId": "list_attestations_api_attestations_get",
+        "parameters": [
+          {
+            "name": "artifactId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Artifact ID",
+              "title": "Artifactid"
+            },
+            "description": "Artifact ID"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Number of results to return",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Number of results to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of results to skip",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Number of results to skip"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/provenance/link": {
+      "post": {
+        "summary": "Create Provenance Link",
+        "description": "Create a provenance link between two artifacts.\n\nThis operation is idempotent - if a link already exists, returns the existing link.",
+        "operationId": "create_provenance_link_api_provenance_link_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProvenanceLinkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/provenance/children": {
+      "get": {
+        "summary": "List Provenance Children",
+        "description": "List all child artifacts for a given parent artifact.\n\nReturns list of provenance links with optional relation filtering.",
+        "operationId": "list_provenance_children_api_provenance_children_get",
+        "parameters": [
+          {
+            "name": "parentId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Parent artifact ID",
+              "title": "Parentid"
+            },
+            "description": "Parent artifact ID"
+          },
+          {
+            "name": "relation",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by relation type",
+              "title": "Relation"
+            },
+            "description": "Filter by relation type"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/provenance/parents": {
+      "get": {
+        "summary": "List Provenance Parents",
+        "description": "List all parent artifacts for a given child artifact.\n\nReturns list of provenance links with optional relation filtering.",
+        "operationId": "list_provenance_parents_api_provenance_parents_get",
+        "parameters": [
+          {
+            "name": "childId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Child artifact ID",
+              "title": "Childid"
+            },
+            "description": "Child artifact ID"
+          },
+          {
+            "name": "relation",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by relation type",
+              "title": "Relation"
+            },
+            "description": "Filter by relation type"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/disclosure-pack": {
+      "get": {
+        "summary": "Get Disclosure Pack",
+        "description": "Generate a disclosure pack for an artifact.\n\nReturns a ZIP file containing:\n- proof.json: Walacor proof bundle\n- artifact.json: Artifact details\n- attestations.json: List of attestations\n- audit_events.json: Recent audit events\n- manifest.json: Metadata about the disclosure pack",
+        "operationId": "get_disclosure_pack_api_disclosure_pack_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Artifact ID",
+              "title": "Id"
+            },
+            "description": "Artifact ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verification/test": {
+      "get": {
+        "summary": "Test Verification Portal",
+        "description": "Test endpoint for verification portal.",
+        "operationId": "test_verification_portal_api_verification_test_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verification/generate-link": {
+      "post": {
+        "summary": "Generate Verification Link",
+        "description": "Generate a privacy-preserving verification link for third-party document authentication.\n\nCreates a secure, time-limited token that allows third parties to verify document\nauthenticity without exposing sensitive borrower information.",
+        "operationId": "generate_verification_link_api_verification_generate_link_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationLinkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verification/verify/{token}": {
+      "get": {
+        "summary": "Verify With Token",
+        "description": "Verify document authenticity using a secure token.\n\nAllows third parties to verify document integrity without exposing sensitive data.\nOnly returns information that was explicitly permitted in the verification link.",
+        "operationId": "verify_with_token_api_verification_verify__token__get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          },
+          {
+            "name": "verifierEmail",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Email of the verifier",
+              "title": "Verifieremail"
+            },
+            "description": "Email of the verifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/walacor/ping": {
+      "get": {
+        "summary": "Walacor Ping",
+        "description": "Ping Walacor service to test connectivity and measure latency.\n\nReturns connection status and response time.",
+        "operationId": "walacor_ping_api_walacor_ping_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Root",
+        "description": "Root endpoint with API information.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/voice/process-command": {
+      "post": {
+        "summary": "Process Voice Command",
+        "description": "Process a voice command and return the corresponding API operation.\n\nThis endpoint takes a voice command text and converts it into a structured\nAPI operation that can be executed by the frontend.",
+        "operationId": "process_voice_command_api_voice_process_command_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceCommandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/voice/available-commands": {
+      "get": {
+        "summary": "Get Available Voice Commands",
+        "description": "Get a list of available voice commands and their examples.\n\nReturns all supported voice commands with examples and descriptions.",
+        "operationId": "get_available_voice_commands_api_voice_available_commands_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/dashboard": {
+      "get": {
+        "summary": "Get Analytics Dashboard",
+        "description": "Get analytics dashboard data.\n\nReturns comprehensive dashboard metrics including system status,\ndocument processing statistics, and key performance indicators.",
+        "operationId": "get_analytics_dashboard_api_analytics_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/system-metrics": {
+      "get": {
+        "summary": "Get System Metrics",
+        "description": "Get comprehensive system metrics and analytics.\n\nReturns detailed metrics about system performance, document processing,\nattestations, and compliance status.",
+        "operationId": "get_system_metrics_api_analytics_system_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/documents": {
+      "get": {
+        "summary": "Get Document Analytics",
+        "description": "Get analytics for documents.\n\nIf artifact_id is provided, returns analytics for that specific document.\nOtherwise, returns analytics for all documents.",
+        "operationId": "get_document_analytics_api_analytics_documents_get",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Specific document ID for analytics",
+              "title": "Artifact Id"
+            },
+            "description": "Specific document ID for analytics"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/attestations": {
+      "get": {
+        "summary": "Get Attestation Analytics",
+        "description": "Get analytics for attestations.\n\nReturns detailed analytics about attestation types, success rates,\nand time series data.",
+        "operationId": "get_attestation_analytics_api_analytics_attestations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/compliance": {
+      "get": {
+        "summary": "Get Compliance Dashboard",
+        "description": "Get compliance dashboard data.\n\nReturns comprehensive compliance metrics, regulatory status,\nand audit trail information.",
+        "operationId": "get_compliance_dashboard_api_analytics_compliance_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/performance": {
+      "get": {
+        "summary": "Get Performance Analytics",
+        "description": "Get system performance analytics.\n\nReturns detailed performance metrics including API response times,\ndatabase performance, and system resource usage.",
+        "operationId": "get_performance_analytics_api_analytics_performance_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/financial-documents": {
+      "get": {
+        "summary": "Get Financial Document Analytics",
+        "description": "Get financial document processing analytics with real business metrics.",
+        "operationId": "get_financial_document_analytics_api_analytics_financial_documents_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/compliance-risk": {
+      "get": {
+        "summary": "Get Compliance Risk Analytics",
+        "description": "Get compliance and risk assessment analytics.",
+        "operationId": "get_compliance_risk_analytics_api_analytics_compliance_risk_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/business-intelligence": {
+      "get": {
+        "summary": "Get Business Intelligence",
+        "description": "Get business intelligence and revenue analytics.",
+        "operationId": "get_business_intelligence_api_analytics_business_intelligence_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audit-logs": {
+      "get": {
+        "summary": "Get Audit Logs",
+        "description": "Get audit logs with optional filtering.\n\nReturns a paginated list of audit logs with optional filtering by\nentity type and action type.",
+        "operationId": "get_audit_logs_api_audit_logs_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Number of logs to return",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Number of logs to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Number of logs to skip",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Number of logs to skip"
+          },
+          {
+            "name": "entity_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by entity type",
+              "title": "Entity Type"
+            },
+            "description": "Filter by entity type"
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by action type",
+              "title": "Action"
+            },
+            "description": "Filter by action type"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audit-logs/{entity_id}": {
+      "get": {
+        "summary": "Get Entity Audit Trail",
+        "description": "Get complete audit trail for a specific entity.\n\nReturns all audit logs for a specific entity (document, user, etc.)\nin chronological order.",
+        "operationId": "get_entity_audit_trail_api_audit_logs__entity_id__get",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entity Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/bulk-operations": {
+      "get": {
+        "summary": "Get Bulk Operations Analytics",
+        "description": "Get comprehensive bulk operations analytics.",
+        "operationId": "get_bulk_operations_analytics_api_analytics_bulk_operations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/object-validator-usage": {
+      "get": {
+        "summary": "Get Object Validator Usage Analytics",
+        "description": "Get ObjectValidator usage analytics.",
+        "operationId": "get_object_validator_usage_analytics_api_analytics_object_validator_usage_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/directory-verification-stats": {
+      "get": {
+        "summary": "Get Directory Verification Analytics",
+        "description": "Get directory verification analytics.\n\nReturns detailed metrics about directory verification performance,\nsuccess rates, and ObjectValidator directory hash usage.",
+        "operationId": "get_directory_verification_analytics_api_analytics_directory_verification_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/bulk-performance": {
+      "get": {
+        "summary": "Get Bulk Performance Analytics",
+        "description": "Get bulk operations performance analytics.\n\nReturns detailed performance metrics including response times,\nthroughput, error rates, and scalability metrics.",
+        "operationId": "get_bulk_performance_analytics_api_analytics_bulk_performance_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/predictive-analytics/risk-prediction": {
+      "post": {
+        "summary": "Predict Document Risk",
+        "description": "Predict the risk level of a document using ML models.\n\nUses machine learning to analyze document features and predict potential risks\nsuch as fraud, tampering, or compliance issues.",
+        "operationId": "predict_document_risk_api_predictive_analytics_risk_prediction_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiskPredictionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/predictive-analytics/compliance-forecast": {
+      "post": {
+        "summary": "Forecast Compliance",
+        "description": "Forecast compliance status for a document.\n\nUses machine learning to predict whether a document will pass compliance\nchecks and provides recommendations for improvement.",
+        "operationId": "forecast_compliance_api_predictive_analytics_compliance_forecast_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComplianceForecastRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/predictive-analytics/performance-prediction": {
+      "post": {
+        "summary": "Predict Performance",
+        "description": "Predict future performance for a given metric.\n\nAnalyzes historical performance data and predicts future trends\nwith recommendations for optimization.",
+        "operationId": "predict_performance_api_predictive_analytics_performance_prediction_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PerformancePredictionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/predictive-analytics/anomaly-detection": {
+      "post": {
+        "summary": "Detect Anomalies",
+        "description": "Detect anomalies in a dataset using ML models.\n\nUses isolation forest algorithm to identify unusual patterns\nin document processing data.",
+        "operationId": "detect_anomalies_api_predictive_analytics_anomaly_detection_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/main__AnomalyDetectionRequest__1"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/predictive-analytics/trend-analysis": {
+      "post": {
+        "summary": "Analyze Trends",
+        "description": "Perform trend analysis on time series data.\n\nAnalyzes time series data to identify trends and patterns\nwith recommendations for action.",
+        "operationId": "analyze_trends_api_predictive_analytics_trend_analysis_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrendAnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/predictive-analytics/train-models": {
+      "post": {
+        "summary": "Train Models",
+        "description": "Train ML models with new data.\n\nRetrains the machine learning models with new training data\nto improve prediction accuracy.",
+        "operationId": "train_models_api_predictive_analytics_train_models_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelTrainingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/predictive-analytics/model-statistics": {
+      "get": {
+        "summary": "Get Model Statistics",
+        "description": "Get statistics about the ML models.\n\nReturns information about available models, their status,\nand performance metrics.",
+        "operationId": "get_model_statistics_api_predictive_analytics_model_statistics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/anomaly-detect": {
+      "post": {
+        "summary": "Detect Anomalies",
+        "description": "Detect anomalies in document data using AI-powered analysis.\n\nPerforms comprehensive anomaly detection including document tampering,\ncompliance violations, and data inconsistencies.",
+        "operationId": "detect_anomalies_api_ai_anomaly_detect_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/main__AnomalyDetectionRequest__2"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/anomaly-summary": {
+      "get": {
+        "summary": "Get Anomaly Summary",
+        "description": "Get summary of anomalies detected in the specified time range.\n\nReturns comprehensive statistics about detected anomalies including\ntrends, affected entities, and recommendations.",
+        "operationId": "get_anomaly_summary_api_ai_anomaly_summary_get",
+        "parameters": [
+          {
+            "name": "time_range_hours",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Time range in hours",
+              "default": 24,
+              "title": "Time Range Hours"
+            },
+            "description": "Time range in hours"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/time-machine/snapshot": {
+      "post": {
+        "summary": "Create State Snapshot",
+        "description": "Create a snapshot of the current document state.\n\nCreates a point-in-time snapshot that can be used for time travel\nand state restoration.",
+        "operationId": "create_state_snapshot_api_time_machine_snapshot_post",
+        "parameters": [
+          {
+            "name": "created_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "User creating the snapshot",
+              "default": "system",
+              "title": "Created By"
+            },
+            "description": "User creating the snapshot"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StateSnapshotRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/time-machine/timeline/{document_id}": {
+      "get": {
+        "summary": "Get Document Timeline",
+        "description": "Get the timeline of document states within a time range.\n\nReturns the complete history of document state changes,\nallowing users to see how the document evolved over time.",
+        "operationId": "get_document_timeline_api_time_machine_timeline__document_id__get",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "start_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start time (ISO format)",
+              "title": "Start Time"
+            },
+            "description": "Start time (ISO format)"
+          },
+          {
+            "name": "end_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End time (ISO format)",
+              "title": "End Time"
+            },
+            "description": "End time (ISO format)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/time-machine/restore/{document_id}": {
+      "post": {
+        "summary": "Restore Document State",
+        "description": "Restore a document to a previous state.\n\nAllows users to travel back in time and restore a document\nto any previous state in its history.",
+        "operationId": "restore_document_state_api_time_machine_restore__document_id__post",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "target_state_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "ID of the state to restore to",
+              "title": "Target State Id"
+            },
+            "description": "ID of the state to restore to"
+          },
+          {
+            "name": "restored_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "User performing the restore",
+              "default": "system",
+              "title": "Restored By"
+            },
+            "description": "User performing the restore"
+          },
+          {
+            "name": "restore_reason",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Reason for restoration",
+              "default": "",
+              "title": "Restore Reason"
+            },
+            "description": "Reason for restoration"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/smart-contracts/create": {
+      "post": {
+        "summary": "Create Smart Contract",
+        "description": "Create a new smart contract for automated compliance and workflow management.\n\nSmart contracts provide rule-based automation for document processing,\ncompliance checking, and workflow management.",
+        "operationId": "create_smart_contract_api_smart_contracts_create_post",
+        "parameters": [
+          {
+            "name": "created_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "User creating the contract",
+              "default": "system",
+              "title": "Created By"
+            },
+            "description": "User creating the contract"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmartContractRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/smart-contracts/execute/{contract_id}": {
+      "post": {
+        "summary": "Execute Smart Contract",
+        "description": "Execute a smart contract against provided data.\n\nEvaluates all contract rules against the provided data and returns\nthe execution results with any violations or warnings.",
+        "operationId": "execute_smart_contract_api_smart_contracts_execute__contract_id__post",
+        "parameters": [
+          {
+            "name": "contract_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Contract Id"
+            }
+          },
+          {
+            "name": "executed_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "User executing the contract",
+              "default": "system",
+              "title": "Executed By"
+            },
+            "description": "User executing the contract"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/smart-contracts/list": {
+      "get": {
+        "summary": "List Smart Contracts",
+        "description": "List smart contracts with optional filtering.\n\nReturns a list of all smart contracts, optionally filtered by\ntype and status.",
+        "operationId": "list_smart_contracts_api_smart_contracts_list_get",
+        "parameters": [
+          {
+            "name": "contract_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by contract type",
+              "title": "Contract Type"
+            },
+            "description": "Filter by contract type"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by contract status",
+              "title": "Status"
+            },
+            "description": "Filter by contract status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/smart-contracts/statistics": {
+      "get": {
+        "summary": "Get Smart Contract Statistics",
+        "description": "Get statistics about smart contracts and their execution.\n\nReturns comprehensive statistics including contract counts,\nexecution results, and performance metrics.",
+        "operationId": "get_smart_contract_statistics_api_smart_contracts_statistics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/loan-documents/seal": {
+      "post": {
+        "summary": "Seal Loan Document",
+        "description": "Seal a loan document with borrower information in the Walacor blockchain.\n\nThis endpoint accepts loan data with borrower information, calculates a SHA-256 hash\nof the combined data, seals it in the Walacor blockchain, and stores it in the database\nwith the borrower_info JSON field.",
+        "operationId": "seal_loan_document_api_loan_documents_seal_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoanDocumentSealRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/loan-documents/seal-maximum-security": {
+      "post": {
+        "summary": "Seal Loan Document Maximum Security",
+        "description": "Seal a loan document with MAXIMUM SECURITY and MINIMAL TAMPERING.\n\nThis endpoint implements multiple layers of security:\n1. Multi-algorithm hashing (SHA-256, SHA-512, BLAKE3, SHA3-256)\n2. PKI-based digital signatures\n3. Content-based integrity verification\n4. Cross-verification systems\n5. Advanced tamper detection",
+        "operationId": "seal_loan_document_maximum_security_api_loan_documents_seal_maximum_security_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoanDocumentSealRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/loan-documents/{artifact_id}/borrower": {
+      "get": {
+        "summary": "Get Borrower Info",
+        "description": "Get borrower information for a specific loan document with privacy masking.\n\nReturns borrower information with sensitive fields masked for privacy:\n- Email: j***@email.com\n- Phone: ***-***-1234\n- SSN/ID: Last 4 digits only",
+        "operationId": "get_borrower_info_api_loan_documents__artifact_id__borrower_get",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/loan-documents/{artifact_id}/verify-maximum-security": {
+      "post": {
+        "summary": "Verify Maximum Security Document",
+        "description": "Verify a maximum security loan document with comprehensive tamper detection.\n\nThis endpoint performs:\n1. Multi-algorithm hash verification\n2. PKI signature verification\n3. Content integrity verification\n4. Blockchain seal verification\n5. Advanced tampering detection",
+        "operationId": "verify_maximum_security_document_api_loan_documents__artifact_id__verify_maximum_security_post",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/loan-documents/seal-quantum-safe": {
+      "post": {
+        "summary": "Seal Loan Document Quantum Safe",
+        "description": "Seal a loan document with QUANTUM-SAFE cryptography.\n\nThis endpoint implements quantum-resistant algorithms:\n1. SHAKE256 hashing (quantum-resistant)\n2. BLAKE3 hashing (quantum-resistant)\n3. Dilithium digital signatures (NIST PQC Standard)\n4. Hybrid classical-quantum approach for transition",
+        "operationId": "seal_loan_document_quantum_safe_api_loan_documents_seal_quantum_safe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoanDocumentSealRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/loan-documents/search": {
+      "get": {
+        "summary": "Search Loan Documents",
+        "description": "Search loan documents by various criteria with pagination.\n\nSupports searching by borrower information, loan details, date ranges, and amount ranges.\nReturns paginated results with loan and borrower information.",
+        "operationId": "search_loan_documents_api_loan_documents_search_get",
+        "parameters": [
+          {
+            "name": "borrower_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search by borrower name",
+              "title": "Borrower Name"
+            },
+            "description": "Search by borrower name"
+          },
+          {
+            "name": "borrower_email",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search by borrower email",
+              "title": "Borrower Email"
+            },
+            "description": "Search by borrower email"
+          },
+          {
+            "name": "loan_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search by loan ID",
+              "title": "Loan Id"
+            },
+            "description": "Search by loan ID"
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter from date (YYYY-MM-DD)",
+              "title": "Date From"
+            },
+            "description": "Filter from date (YYYY-MM-DD)"
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to date (YYYY-MM-DD)",
+              "title": "Date To"
+            },
+            "description": "Filter to date (YYYY-MM-DD)"
+          },
+          {
+            "name": "amount_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Minimum loan amount",
+              "title": "Amount Min"
+            },
+            "description": "Minimum loan amount"
+          },
+          {
+            "name": "amount_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Maximum loan amount",
+              "title": "Amount Max"
+            },
+            "description": "Maximum loan amount"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Number of results to return",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Number of results to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Number of results to skip",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Number of results to skip"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/loan-documents/{artifact_id}/audit-trail": {
+      "get": {
+        "summary": "Get Audit Trail",
+        "description": "Get complete audit trail for a loan document.\n\nReturns all events related to the document including:\n- Who uploaded the document\n- When it was sealed\n- Who viewed it\n- Verification attempts\n- All with timestamps and IP addresses",
+        "operationId": "get_audit_trail_api_loan_documents__artifact_id__audit_trail_get",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/artifacts/delete": {
+      "post": {
+        "summary": "Delete Artifact With Request",
+        "description": "Delete an artifact using a request body (alternative to DELETE method).\n\nThis endpoint provides the same functionality as the DELETE endpoint\nbut accepts the deletion reason in the request body instead of query parameters.",
+        "operationId": "delete_artifact_with_request_api_artifacts_delete_post",
+        "parameters": [
+          {
+            "name": "deleted_by",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "User ID of the person deleting the document",
+              "title": "Deleted By"
+            },
+            "description": "User ID of the person deleting the document"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteDocumentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deleted-documents/{original_artifact_id}": {
+      "get": {
+        "summary": "Get Deleted Document",
+        "description": "Get information about a deleted document by its original artifact ID.\n\nThis endpoint allows users to retrieve information about deleted documents,\nincluding when they were uploaded, when they were deleted, and who performed these actions.",
+        "operationId": "get_deleted_document_api_deleted_documents__original_artifact_id__get",
+        "parameters": [
+          {
+            "name": "original_artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Original Artifact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deleted-documents/loan/{loan_id}": {
+      "get": {
+        "summary": "Get Deleted Documents By Loan",
+        "description": "Get all deleted documents for a specific loan.\n\nThis endpoint returns a list of all documents that were deleted for a specific loan,\nallowing users to see the complete history of document management for that loan.",
+        "operationId": "get_deleted_documents_by_loan_api_deleted_documents_loan__loan_id__get",
+        "parameters": [
+          {
+            "name": "loan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Loan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verify-deleted-document": {
+      "post": {
+        "summary": "Verify Deleted Document",
+        "description": "Verify a deleted document by its hash.\n\nThis endpoint allows users to verify documents that have been deleted\nbut still have their metadata preserved. When a deleted document is verified,\nusers will see detailed information about when it was uploaded, when it was deleted,\nand who performed these actions.\n\nThis is particularly useful for compliance and audit purposes where\nthe history of document management is important even for deleted documents.",
+        "operationId": "verify_deleted_document_api_verify_deleted_document_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyDeletedDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verify-by-hash": {
+      "post": {
+        "summary": "Verify By Hash",
+        "description": "Verify document by hash.\n\nChecks if a document with the given hash exists and is properly sealed.",
+        "operationId": "verify_by_hash_api_verify_by_hash_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyByHashRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verify-by-document": {
+      "post": {
+        "summary": "Verify By Document",
+        "description": "Verify document by document information.\n\nSearches for documents by ID, loan ID, or other identifying information.",
+        "operationId": "verify_by_document_api_verify_by_document_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyByDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/signing/create-envelope": {
+      "post": {
+        "summary": "Create Signing Envelope",
+        "description": "Create a document signing envelope.",
+        "operationId": "create_signing_envelope_api_signing_create_envelope_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEnvelopeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/signing/send-envelope": {
+      "post": {
+        "summary": "Send Signing Envelope",
+        "description": "Send a signing envelope to signers.",
+        "operationId": "send_signing_envelope_api_signing_send_envelope_post",
+        "parameters": [
+          {
+            "name": "envelope_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "ID of the envelope to send",
+              "title": "Envelope Id"
+            },
+            "description": "ID of the envelope to send"
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Signing provider",
+              "default": "docusign",
+              "title": "Provider"
+            },
+            "description": "Signing provider"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/signing/providers": {
+      "get": {
+        "summary": "Get Signing Providers",
+        "description": "Get available signing providers.",
+        "operationId": "get_signing_providers_api_signing_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/signing/templates": {
+      "get": {
+        "summary": "Get Signing Templates",
+        "description": "Get available signing templates.",
+        "operationId": "get_signing_templates_api_signing_templates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/analyze-document-json": {
+      "post": {
+        "summary": "Analyze Document Json",
+        "description": "Analyze a JSON document using AI.",
+        "operationId": "analyze_document_json_api_ai_analyze_document_json_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/analyze-batch": {
+      "post": {
+        "summary": "Analyze Batch Documents",
+        "description": "Analyze multiple documents in batch.",
+        "operationId": "analyze_batch_documents_api_ai_analyze_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchAnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/document-types": {
+      "get": {
+        "summary": "Get Ai Document Types",
+        "description": "Get supported document types for AI processing.",
+        "operationId": "get_ai_document_types_api_ai_document_types_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/ai-capabilities": {
+      "get": {
+        "summary": "Get Ai Capabilities",
+        "description": "Get AI service capabilities.",
+        "operationId": "get_ai_capabilities_api_ai_ai_capabilities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalyzeDocumentRequest": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Original filename"
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type",
+            "description": "MIME content type"
+          },
+          "file_content": {
+            "type": "string",
+            "title": "File Content",
+            "description": "Base64 encoded file content"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id",
+            "description": "Optional document ID for tracking"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "content_type",
+          "file_content"
+        ],
+        "title": "AnalyzeDocumentRequest",
+        "description": "Request model for AI document analysis."
+      },
+      "AttestationIn": {
+        "properties": {
+          "artifactId": {
+            "type": "string",
+            "title": "Artifactid",
+            "description": "Artifact ID"
+          },
+          "etid": {
+            "type": "string",
+            "title": "Etid",
+            "description": "Entity Type ID"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "description": "Attestation kind (e.g., qc_check, kyc_passed)"
+          },
+          "issuedBy": {
+            "type": "string",
+            "title": "Issuedby",
+            "description": "User or service that issued the attestation"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "Free-form metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifactId",
+          "etid",
+          "kind",
+          "issuedBy"
+        ],
+        "title": "AttestationIn",
+        "description": "Attestation creation request model."
+      },
+      "BatchAnalyzeRequest": {
+        "properties": {
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyzeDocumentRequest"
+            },
+            "type": "array",
+            "title": "Documents",
+            "description": "List of documents to analyze"
+          }
+        },
+        "type": "object",
+        "required": [
+          "documents"
+        ],
+        "title": "BatchAnalyzeRequest",
+        "description": "Request model for batch document analysis."
+      },
+      "Body_extract_document_data_api_extract_document_data_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File",
+            "description": "Document file to extract data from"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_extract_document_data_api_extract_document_data_post"
+      },
+      "Body_ingest_json_api_ingest_json_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File",
+            "description": "JSON file to ingest"
+          },
+          "comprehensive_document": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comprehensive Document",
+            "description": "Comprehensive document JSON with borrower information"
+          },
+          "comprehensive_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comprehensive Hash",
+            "description": "SHA-256 hash of comprehensive document"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_ingest_json_api_ingest_json_post"
+      },
+      "Body_ingest_packet_api_ingest_packet_post": {
+        "properties": {
+          "files": {
+            "items": {
+              "type": "string",
+              "format": "binary"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "Files to ingest as a packet"
+          }
+        },
+        "type": "object",
+        "required": [
+          "files"
+        ],
+        "title": "Body_ingest_packet_api_ingest_packet_post"
+      },
+      "BorrowerAddress": {
+        "properties": {
+          "street": {
+            "type": "string",
+            "title": "Street",
+            "description": "Street address"
+          },
+          "city": {
+            "type": "string",
+            "title": "City",
+            "description": "City"
+          },
+          "state": {
+            "type": "string",
+            "title": "State",
+            "description": "State/Province"
+          },
+          "zip_code": {
+            "type": "string",
+            "title": "Zip Code",
+            "description": "ZIP/Postal code"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country",
+            "description": "Country",
+            "default": "United States"
+          }
+        },
+        "type": "object",
+        "required": [
+          "street",
+          "city",
+          "state",
+          "zip_code"
+        ],
+        "title": "BorrowerAddress",
+        "description": "Borrower address information."
+      },
+      "BorrowerInfo": {
+        "properties": {
+          "full_name": {
+            "type": "string",
+            "title": "Full Name",
+            "description": "Full legal name"
+          },
+          "date_of_birth": {
+            "type": "string",
+            "title": "Date Of Birth",
+            "description": "Date of birth (YYYY-MM-DD)"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email",
+            "description": "Email address"
+          },
+          "phone": {
+            "type": "string",
+            "title": "Phone",
+            "description": "Phone number"
+          },
+          "address": {
+            "$ref": "#/components/schemas/BorrowerAddress",
+            "description": "Address information"
+          },
+          "ssn_last4": {
+            "type": "string",
+            "title": "Ssn Last4",
+            "description": "Last 4 digits of SSN"
+          },
+          "id_type": {
+            "type": "string",
+            "title": "Id Type",
+            "description": "Government ID type"
+          },
+          "id_last4": {
+            "type": "string",
+            "title": "Id Last4",
+            "description": "Last 4 digits of ID number"
+          },
+          "employment_status": {
+            "type": "string",
+            "title": "Employment Status",
+            "description": "Employment status"
+          },
+          "annual_income": {
+            "type": "number",
+            "title": "Annual Income",
+            "description": "Annual income"
+          },
+          "co_borrower_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Co Borrower Name",
+            "description": "Co-borrower name (optional)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "full_name",
+          "date_of_birth",
+          "email",
+          "phone",
+          "address",
+          "ssn_last4",
+          "id_type",
+          "id_last4",
+          "employment_status",
+          "annual_income"
+        ],
+        "title": "BorrowerInfo",
+        "description": "Borrower information model."
+      },
+      "ComplianceForecastRequest": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id",
+            "description": "Document ID to analyze"
+          },
+          "document_data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document Data",
+            "description": "Document metadata and features"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "document_data"
+        ],
+        "title": "ComplianceForecastRequest",
+        "description": "Compliance forecast request model."
+      },
+      "CreateEnvelopeRequest": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id",
+            "description": "ID of the document to be signed"
+          },
+          "document_name": {
+            "type": "string",
+            "title": "Document Name",
+            "description": "Name of the document"
+          },
+          "signers": {
+            "items": {
+              "$ref": "#/components/schemas/SignerRequest"
+            },
+            "type": "array",
+            "title": "Signers",
+            "description": "List of signers"
+          },
+          "signing_fields": {
+            "items": {
+              "$ref": "#/components/schemas/SigningFieldRequest"
+            },
+            "type": "array",
+            "title": "Signing Fields",
+            "description": "List of signing fields"
+          },
+          "template_type": {
+            "type": "string",
+            "title": "Template Type",
+            "description": "Type of signing template",
+            "default": "loan_application"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "description": "Signing provider to use",
+            "default": "docusign"
+          },
+          "custom_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Config",
+            "description": "Custom configuration"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "document_name",
+          "signers",
+          "signing_fields"
+        ],
+        "title": "CreateEnvelopeRequest",
+        "description": "Request model for creating a signing envelope."
+      },
+      "DeleteDocumentRequest": {
+        "properties": {
+          "artifact_id": {
+            "type": "string",
+            "title": "Artifact Id",
+            "description": "ID of the artifact to delete"
+          },
+          "deletion_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deletion Reason",
+            "description": "Reason for deletion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifact_id"
+        ],
+        "title": "DeleteDocumentRequest",
+        "description": "Request model for deleting documents."
+      },
+      "DocumentUploadRequest": {
+        "properties": {
+          "loan_id": {
+            "type": "string",
+            "title": "Loan Id",
+            "description": "Loan ID"
+          },
+          "borrower_name": {
+            "type": "string",
+            "title": "Borrower Name",
+            "description": "Borrower name"
+          },
+          "loan_amount": {
+            "type": "number",
+            "title": "Loan Amount",
+            "description": "Loan amount"
+          },
+          "interest_rate": {
+            "type": "number",
+            "title": "Interest Rate",
+            "description": "Interest rate"
+          },
+          "loan_term": {
+            "type": "integer",
+            "title": "Loan Term",
+            "description": "Loan term in months"
+          },
+          "property_address": {
+            "type": "string",
+            "title": "Property Address",
+            "description": "Property address"
+          },
+          "credit_score": {
+            "type": "integer",
+            "title": "Credit Score",
+            "description": "Credit score"
+          },
+          "annual_income": {
+            "type": "number",
+            "title": "Annual Income",
+            "description": "Annual income"
+          },
+          "employment_status": {
+            "type": "string",
+            "title": "Employment Status",
+            "description": "Employment status"
+          },
+          "document_type": {
+            "type": "string",
+            "title": "Document Type",
+            "description": "Document type",
+            "default": "loan_application"
+          },
+          "submission_date": {
+            "type": "string",
+            "title": "Submission Date",
+            "description": "Submission date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loan_id",
+          "borrower_name",
+          "loan_amount",
+          "interest_rate",
+          "loan_term",
+          "property_address",
+          "credit_score",
+          "annual_income",
+          "employment_status",
+          "submission_date"
+        ],
+        "title": "DocumentUploadRequest",
+        "description": "Request model for document upload."
+      },
+      "DuplicateCheckRequest": {
+        "properties": {
+          "file_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Hash",
+            "description": "SHA-256 hash of the file"
+          },
+          "loan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Id",
+            "description": "Loan ID to check"
+          },
+          "borrower_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Borrower Email",
+            "description": "Borrower email to check"
+          },
+          "borrower_ssn_last4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Borrower Ssn Last4",
+            "description": "Borrower SSN last 4 digits"
+          },
+          "content_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Hash",
+            "description": "Content hash for JSON files"
+          }
+        },
+        "type": "object",
+        "title": "DuplicateCheckRequest",
+        "description": "Request model for duplicate checking."
+      },
+      "ErrorDetail": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Error code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Error message"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details",
+            "description": "Additional error details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorDetail",
+        "description": "Error detail model."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoanDocumentSealRequest": {
+        "properties": {
+          "loan_id": {
+            "type": "string",
+            "title": "Loan Id",
+            "description": "Unique loan identifier"
+          },
+          "document_type": {
+            "type": "string",
+            "title": "Document Type",
+            "description": "Type of loan document"
+          },
+          "loan_amount": {
+            "type": "number",
+            "title": "Loan Amount",
+            "description": "Loan amount"
+          },
+          "additional_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Additional Notes",
+            "description": "Additional notes"
+          },
+          "borrower": {
+            "$ref": "#/components/schemas/BorrowerInfo",
+            "description": "Borrower information"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "User who created the document"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loan_id",
+          "document_type",
+          "loan_amount",
+          "borrower",
+          "created_by"
+        ],
+        "title": "LoanDocumentSealRequest",
+        "description": "Request model for sealing loan documents with borrower information."
+      },
+      "ModelTrainingRequest": {
+        "properties": {
+          "training_data": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Training Data",
+            "description": "Training dataset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "training_data"
+        ],
+        "title": "ModelTrainingRequest",
+        "description": "Model training request model."
+      },
+      "PerformancePredictionRequest": {
+        "properties": {
+          "metric_name": {
+            "type": "string",
+            "title": "Metric Name",
+            "description": "Name of the performance metric"
+          },
+          "historical_data": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Historical Data",
+            "description": "Historical values of the metric"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric_name",
+          "historical_data"
+        ],
+        "title": "PerformancePredictionRequest",
+        "description": "Performance prediction request model."
+      },
+      "PresignRequest": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "description": "S3 object key"
+          },
+          "contentType": {
+            "type": "string",
+            "title": "Contenttype",
+            "description": "Content type"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size",
+            "description": "File size in bytes"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "title": "Expiresin",
+            "description": "Expiration time in seconds",
+            "default": 3600
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "contentType",
+          "size"
+        ],
+        "title": "PresignRequest",
+        "description": "S3 presign request model."
+      },
+      "ProvenanceLinkIn": {
+        "properties": {
+          "parentArtifactId": {
+            "type": "string",
+            "title": "Parentartifactid",
+            "description": "Parent artifact ID"
+          },
+          "childArtifactId": {
+            "type": "string",
+            "title": "Childartifactid",
+            "description": "Child artifact ID"
+          },
+          "relation": {
+            "type": "string",
+            "title": "Relation",
+            "description": "Relationship type (e.g., contains, derived_from)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "parentArtifactId",
+          "childArtifactId",
+          "relation"
+        ],
+        "title": "ProvenanceLinkIn",
+        "description": "Provenance link creation request model."
+      },
+      "RiskPredictionRequest": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id",
+            "description": "Document ID to analyze"
+          },
+          "document_data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document Data",
+            "description": "Document metadata and features"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "document_data"
+        ],
+        "title": "RiskPredictionRequest",
+        "description": "Risk prediction request model."
+      },
+      "SealRequest": {
+        "properties": {
+          "etid": {
+            "type": "integer",
+            "title": "Etid",
+            "description": "Entity Type ID"
+          },
+          "payloadHash": {
+            "type": "string",
+            "title": "Payloadhash",
+            "description": "Payload SHA-256 hash"
+          },
+          "externalUri": {
+            "type": "string",
+            "title": "Externaluri",
+            "description": "External URI where artifact is stored"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Additional metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "etid",
+          "payloadHash",
+          "externalUri"
+        ],
+        "title": "SealRequest",
+        "description": "Seal request model."
+      },
+      "SignerRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email",
+            "description": "Signer email address"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Signer full name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "Signer role",
+            "default": "signer"
+          },
+          "order": {
+            "type": "integer",
+            "title": "Order",
+            "description": "Signing order",
+            "default": 1
+          },
+          "phone_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone Number",
+            "description": "Signer phone number"
+          },
+          "access_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Code",
+            "description": "Access code for signing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "name"
+        ],
+        "title": "SignerRequest",
+        "description": "Request model for signer information."
+      },
+      "SigningFieldRequest": {
+        "properties": {
+          "field_type": {
+            "type": "string",
+            "title": "Field Type",
+            "description": "Field type (signature, initial, date, text, checkbox)"
+          },
+          "page_number": {
+            "type": "integer",
+            "title": "Page Number",
+            "description": "Page number for the field"
+          },
+          "x_position": {
+            "type": "number",
+            "title": "X Position",
+            "description": "X position of the field"
+          },
+          "y_position": {
+            "type": "number",
+            "title": "Y Position",
+            "description": "Y position of the field"
+          },
+          "width": {
+            "type": "number",
+            "title": "Width",
+            "description": "Width of the field"
+          },
+          "height": {
+            "type": "number",
+            "title": "Height",
+            "description": "Height of the field"
+          },
+          "recipient_id": {
+            "type": "string",
+            "title": "Recipient Id",
+            "description": "Recipient ID for the field"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "description": "Whether the field is required",
+            "default": true
+          },
+          "tab_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tab Label",
+            "description": "Tab label for the field"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "Default value for the field"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_type",
+          "page_number",
+          "x_position",
+          "y_position",
+          "width",
+          "height",
+          "recipient_id"
+        ],
+        "title": "SigningFieldRequest",
+        "description": "Request model for signing field configuration."
+      },
+      "SmartContractRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name of the contract"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Description of the contract"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description"
+        ],
+        "title": "SmartContractRequest",
+        "description": "Request model for smart contract operations."
+      },
+      "StandardResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "description": "Success status"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data",
+            "description": "Response data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetail"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error information"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "title": "StandardResponse",
+        "description": "Standardized response model."
+      },
+      "StateSnapshotRequest": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id",
+            "description": "ID of the document"
+          },
+          "state_data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "State Data",
+            "description": "Current state data"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Description of the snapshot",
+            "default": ""
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "description": "Tags for categorization",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "state_data"
+        ],
+        "title": "StateSnapshotRequest",
+        "description": "Request model for creating state snapshots."
+      },
+      "TrendAnalysisRequest": {
+        "properties": {
+          "metric_name": {
+            "type": "string",
+            "title": "Metric Name",
+            "description": "Name of the metric"
+          },
+          "time_series_data": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Time Series Data",
+            "description": "Time series data points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric_name",
+          "time_series_data"
+        ],
+        "title": "TrendAnalysisRequest",
+        "description": "Trend analysis request model."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VerificationLinkRequest": {
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "title": "Documentid",
+            "description": "Document ID to verify"
+          },
+          "documentHash": {
+            "type": "string",
+            "title": "Documenthash",
+            "description": "Document hash for verification"
+          },
+          "allowedParty": {
+            "type": "string",
+            "title": "Allowedparty",
+            "description": "Email of the party allowed to verify"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Permissions",
+            "description": "List of permissions (hash, timestamp, attestations)"
+          },
+          "expiresInHours": {
+            "type": "integer",
+            "title": "Expiresinhours",
+            "description": "Token expiration time in hours",
+            "default": 24
+          }
+        },
+        "type": "object",
+        "required": [
+          "documentId",
+          "documentHash",
+          "allowedParty",
+          "permissions"
+        ],
+        "title": "VerificationLinkRequest",
+        "description": "Verification link generation request model."
+      },
+      "VerifyByDocumentRequest": {
+        "properties": {
+          "document_info": {
+            "type": "string",
+            "title": "Document Info",
+            "description": "Document information (ID, loan ID, etc.)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_info"
+        ],
+        "title": "VerifyByDocumentRequest",
+        "description": "Verify by document info request model."
+      },
+      "VerifyByHashRequest": {
+        "properties": {
+          "hash": {
+            "type": "string",
+            "title": "Hash",
+            "description": "Document hash to verify"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hash"
+        ],
+        "title": "VerifyByHashRequest",
+        "description": "Verify by hash request model."
+      },
+      "VerifyDeletedDocumentRequest": {
+        "properties": {
+          "document_hash": {
+            "type": "string",
+            "title": "Document Hash",
+            "description": "SHA-256 hash of the document to verify"
+          },
+          "original_artifact_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Artifact Id",
+            "description": "Original artifact ID (optional)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_hash"
+        ],
+        "title": "VerifyDeletedDocumentRequest",
+        "description": "Request model for verifying deleted documents."
+      },
+      "VerifyRequest": {
+        "properties": {
+          "etid": {
+            "type": "integer",
+            "title": "Etid",
+            "description": "Entity Type ID"
+          },
+          "payloadHash": {
+            "type": "string",
+            "title": "Payloadhash",
+            "description": "Payload SHA-256 hash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "etid",
+          "payloadHash"
+        ],
+        "title": "VerifyRequest",
+        "description": "Verify request model."
+      },
+      "VoiceCommandRequest": {
+        "properties": {
+          "command": {
+            "type": "string",
+            "title": "Command",
+            "description": "The voice command text"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "User ID issuing the command",
+            "default": "voice_user"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "description": "Language of the command",
+            "default": "en"
+          }
+        },
+        "type": "object",
+        "required": [
+          "command"
+        ],
+        "title": "VoiceCommandRequest",
+        "description": "Voice command request model."
+      },
+      "main__AnomalyDetectionRequest__1": {
+        "properties": {
+          "data_points": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Data Points",
+            "description": "Data points to analyze for anomalies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data_points"
+        ],
+        "title": "AnomalyDetectionRequest",
+        "description": "Anomaly detection request model."
+      },
+      "main__AnomalyDetectionRequest__2": {
+        "properties": {
+          "document_data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Document Data",
+            "description": "Document data to analyze"
+          },
+          "analysis_type": {
+            "type": "string",
+            "title": "Analysis Type",
+            "description": "Type of analysis to perform",
+            "default": "document_integrity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_data"
+        ],
+        "title": "AnomalyDetectionRequest",
+        "description": "Request model for anomaly detection."
+      }
+    }
+  }
+}

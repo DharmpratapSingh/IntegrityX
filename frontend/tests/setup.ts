@@ -11,22 +11,38 @@ global.URL = {
   revokeObjectURL: jest.fn(),
 } as any
 
-// Mock document methods
+// Preserve real DOM implementations so components can render normally
+const realCreateElement = Document.prototype.createElement.bind(document)
+const realAppendChild = document.body.appendChild.bind(document.body)
+const realRemoveChild = document.body.removeChild.bind(document.body)
+
 Object.defineProperty(document, 'createElement', {
-  value: jest.fn(() => ({
-    href: '',
-    download: '',
-    style: { display: '' },
-    click: jest.fn(),
-  })),
+  configurable: true,
+  value: jest.fn((tagName: string, options?: ElementCreationOptions) => {
+    const element = realCreateElement(tagName, options)
+    if (tagName.toLowerCase() === 'a') {
+      const anchor = element as HTMLAnchorElement
+      anchor.href = ''
+      anchor.download = ''
+      anchor.style.display = ''
+      Object.defineProperty(anchor, 'click', {
+        configurable: true,
+        value: jest.fn(),
+      })
+      return anchor
+    }
+    return element
+  }),
 })
 
 Object.defineProperty(document.body, 'appendChild', {
-  value: jest.fn(),
+  configurable: true,
+  value: jest.fn((node: Node) => realAppendChild(node)),
 })
 
 Object.defineProperty(document.body, 'removeChild', {
-  value: jest.fn(),
+  configurable: true,
+  value: jest.fn((node: Node) => realRemoveChild(node)),
 })
 
 // Mock navigator.clipboard

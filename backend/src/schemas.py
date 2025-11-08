@@ -64,7 +64,7 @@ class LoanSchemas:
         """
         schema_req = CreateSchemaRequest(
             ETId=50,
-            SV=1,
+            SV=2,
             Schema=CreateSchemaDefinition(
                 ETId=100001,
                 TableName="loan_documents",
@@ -149,7 +149,7 @@ class LoanSchemas:
         """
         schema_req = CreateSchemaRequest(
             ETId=50,
-            SV=1,
+            SV=2,
             Schema=CreateSchemaDefinition(
                 ETId=100002,
                 TableName="document_provenance",
@@ -225,7 +225,7 @@ class LoanSchemas:
         """
         schema_req = CreateSchemaRequest(
             ETId=50,
-            SV=1,
+            SV=2,
             Schema=CreateSchemaDefinition(
                 ETId=100003,
                 TableName="attestations",
@@ -307,7 +307,7 @@ class LoanSchemas:
         """
         schema_req = CreateSchemaRequest(
             ETId=50,
-            SV=1,
+            SV=2,
             Schema=CreateSchemaDefinition(
                 ETId=100004,
                 TableName="audit_logs",
@@ -362,49 +362,60 @@ class LoanSchemas:
     @staticmethod
     def create_all_schemas(wal: WalacorService) -> dict:
         """
-        Create all loan document integrity schemas at once.
+        Initialize all loan document integrity schemas.
         
-        This convenience method creates all four schemas in the correct order
-        and returns a dictionary with the results.
+        This method checks if schemas exist first, and only creates them if they don't.
+        If schemas already exist, it verifies they are accessible.
         
         Args:
             wal (WalacorService): Walacor service instance
             
         Returns:
-            dict: Dictionary containing results of all schema creations
+            dict: Dictionary containing results of all schema operations
         """
         results = {}
         
+        # Check if schemas already exist
         try:
-            print("Creating loan_documents schema...")
-            results['loan_documents'] = LoanSchemas.create_loan_document_schema(wal)
-            print("✅ loan_documents schema created")
+            existing_schemas = wal.schema.get_list_with_latest_version()
+            existing_etids = {schema.ETId for schema in existing_schemas}
+            print(f"Found {len(existing_schemas)} existing schemas in Walacor")
         except Exception as e:
-            print(f"❌ Failed to create loan_documents schema: {e}")
-            results['loan_documents'] = None
+            print(f"❌ Failed to get existing schemas: {e}")
+            existing_etids = set()
         
-        try:
-            print("Creating document_provenance schema...")
-            results['document_provenance'] = LoanSchemas.create_provenance_schema(wal)
-            print("✅ document_provenance schema created")
-        except Exception as e:
-            print(f"❌ Failed to create document_provenance schema: {e}")
-            results['document_provenance'] = None
+        # Define our required schemas
+        required_schemas = {
+            100001: "loan_documents",
+            100002: "document_provenance", 
+            100003: "attestations",
+            100004: "audit_logs"
+        }
         
-        try:
-            print("Creating attestations schema...")
-            results['attestations'] = LoanSchemas.create_attestation_schema(wal)
-            print("✅ attestations schema created")
-        except Exception as e:
-            print(f"❌ Failed to create attestations schema: {e}")
-            results['attestations'] = None
-        
-        try:
-            print("Creating audit_logs schema...")
-            results['audit_logs'] = LoanSchemas.create_audit_log_schema(wal)
-            print("✅ audit_logs schema created")
-        except Exception as e:
-            print(f"❌ Failed to create audit_logs schema: {e}")
-            results['audit_logs'] = None
+        for etid, schema_name in required_schemas.items():
+            try:
+                if etid in existing_etids:
+                    print(f"✅ {schema_name} schema already exists (ETId: {etid})")
+                    results[schema_name] = {"status": "exists", "etid": etid}
+                else:
+                    print(f"Creating {schema_name} schema...")
+                    if schema_name == "loan_documents":
+                        result = LoanSchemas.create_loan_document_schema(wal)
+                    elif schema_name == "document_provenance":
+                        result = LoanSchemas.create_provenance_schema(wal)
+                    elif schema_name == "attestations":
+                        result = LoanSchemas.create_attestation_schema(wal)
+                    elif schema_name == "audit_logs":
+                        result = LoanSchemas.create_audit_log_schema(wal)
+                    
+                    print(f"✅ {schema_name} schema created")
+                    results[schema_name] = {"status": "created", "result": result}
+            except Exception as e:
+                if "No Modification in Schema" in str(e) or "already exists" in str(e).lower():
+                    print(f"✅ {schema_name} schema already exists (ETId: {etid})")
+                    results[schema_name] = {"status": "exists", "etid": etid}
+                else:
+                    print(f"❌ Failed to initialize {schema_name} schema: {e}")
+                    results[schema_name] = {"status": "error", "error": str(e)}
         
         return results

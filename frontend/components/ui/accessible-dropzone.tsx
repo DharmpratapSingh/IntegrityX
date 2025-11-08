@@ -11,6 +11,7 @@ interface AccessibleDropzoneProps {
   readonly accept?: Record<string, string[]>
   readonly maxFiles?: number
   readonly maxSize?: number
+  readonly directoryMode?: boolean
   readonly disabled?: boolean
   readonly className?: string
   readonly description?: string
@@ -23,8 +24,9 @@ interface AccessibleDropzoneProps {
 export function AccessibleDropzone({
   onDrop,
   accept,
-  maxFiles = 1,
+  maxFiles,
   maxSize,
+  directoryMode = false,
   disabled = false,
   className,
   description = "Drag and drop files here, or click to select files",
@@ -49,7 +51,7 @@ export function AccessibleDropzone({
   } = useDropzone({
     onDrop,
     accept,
-    maxFiles,
+    ...(typeof maxFiles === 'number' ? { maxFiles } : {}),
     maxSize,
     disabled,
     onDragEnter: () => setIsDragActive(true),
@@ -156,6 +158,8 @@ export function AccessibleDropzone({
           {...getInputProps()}
           id={id}
           aria-describedby={ariaDescribedBy || descriptionId}
+          {...(directoryMode ? { webkitdirectory: 'true', directory: '' } : {})}
+          {...(directoryMode || (maxFiles && maxFiles > 1) ? { multiple: true } : {})}
         />
         
         <div className="flex flex-col items-center space-y-2">
@@ -220,7 +224,7 @@ interface AccessibleDropzoneButtonProps {
 export function AccessibleDropzoneButton({
   onDrop,
   accept,
-  maxFiles = 1,
+  maxFiles,
   maxSize,
   disabled = false,
   className,
@@ -242,7 +246,7 @@ export function AccessibleDropzoneButton({
   } = useDropzone({
     onDrop,
     accept,
-    maxFiles,
+    ...(typeof maxFiles === 'number' ? { maxFiles } : {}),
     maxSize,
     disabled,
     onDragEnter: () => setIsDragActive(true),

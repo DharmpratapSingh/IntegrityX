@@ -1,0 +1,275 @@
+{
+  "borrower_profile": {
+    "profile_id": "BORROWER_2025_001",
+    "created_date": "2025-10-23",
+    "profile_type": "primary_borrower",
+    "status": "active",
+    "risk_assessment": "low_risk",
+    "compliance_status": "compliant"
+  },
+  "personal_information": {
+    "full_name": "Dr. Jennifer Martinez",
+    "date_of_birth": "1985-09-12",
+    "ssn": "***-**-4567",
+    "ssn_last4": "4567",
+    "email": "jennifer.martinez@email.com",
+    "phone": "555-234-5678",
+    "phone_type": "mobile",
+    "marital_status": "single",
+    "dependents": 0,
+    "citizenship_status": "us_citizen",
+    "drivers_license": "CA-DL-123456789",
+    "passport": "US-PP-987654321"
+  },
+  "address_information": {
+    "current_address": {
+      "street": "456 Oak Ridge Drive",
+      "apartment": "Unit 4B",
+      "city": "San Francisco",
+      "state": "CA",
+      "zip_code": "94102",
+      "country": "United States",
+      "years_at_address": 2,
+      "address_type": "rental",
+      "monthly_rent": 3500.00
+    },
+    "previous_addresses": [
+      {
+        "street": "789 Mission Street",
+        "city": "San Francisco",
+        "state": "CA",
+        "zip_code": "94103",
+        "years_at_address": 3,
+        "address_type": "rental"
+      }
+    ]
+  },
+  "employment_information": {
+    "current_employment": {
+      "employer_name": "UCSF Medical Center",
+      "job_title": "Chief of Cardiology",
+      "employment_type": "full_time",
+      "employment_status": "employed",
+      "start_date": "2017-02-15",
+      "years_employed": 8.5,
+      "annual_income": 285000.00,
+      "monthly_income": 23750.00,
+      "income_verification": "verified",
+      "employment_verification": "verified",
+      "employer_phone": "415-555-0123",
+      "employer_address": {
+        "street": "1600 Divisadero Street",
+        "city": "San Francisco",
+        "state": "CA",
+        "zip_code": "94115"
+      }
+    },
+    "previous_employment": [
+      {
+        "employer_name": "Stanford Medical Center",
+        "job_title": "Cardiologist",
+        "employment_type": "full_time",
+        "start_date": "2015-07-01",
+        "end_date": "2017-02-14",
+        "years_employed": 1.6,
+        "annual_income": 220000.00
+      }
+    ]
+  },
+  "financial_information": {
+    "assets": {
+      "checking_accounts": [
+        {
+          "bank_name": "Wells Fargo Bank",
+          "account_number": "****1234",
+          "account_type": "checking",
+          "current_balance": 45000.00,
+          "average_balance": 50000.00
+        }
+      ],
+      "savings_accounts": [
+        {
+          "bank_name": "Wells Fargo Bank",
+          "account_number": "****5678",
+          "account_type": "savings",
+          "current_balance": 125000.00,
+          "interest_rate": 4.25
+        }
+      ],
+      "investment_accounts": [
+        {
+          "brokerage": "Fidelity Investments",
+          "account_type": "individual",
+          "current_balance": 85000.00,
+          "investment_type": "mixed_portfolio"
+        }
+      ],
+      "retirement_accounts": [
+        {
+          "account_type": "401k",
+          "employer": "UCSF Medical Center",
+          "current_balance": 180000.00,
+          "contribution_rate": 15
+        }
+      ],
+      "other_assets": [
+        {
+          "asset_type": "vehicle",
+          "description": "2022 Tesla Model S",
+          "estimated_value": 25000.00,
+          "ownership": "owned_outright"
+        }
+      ],
+      "total_assets": 460000.00
+    },
+    "liabilities": {
+      "credit_cards": [
+        {
+          "creditor": "Chase Bank",
+          "account_name": "Sapphire Reserve",
+          "credit_limit": 25000.00,
+          "current_balance": 2500.00,
+          "minimum_payment": 75.00,
+          "interest_rate": 18.99
+        },
+        {
+          "creditor": "American Express",
+          "account_name": "Platinum Card",
+          "credit_limit": 30000.00,
+          "current_balance": 1800.00,
+          "minimum_payment": 54.00,
+          "interest_rate": 19.99
+        }
+      ],
+      "installment_loans": [
+        {
+          "creditor": "Federal Student Aid",
+          "loan_type": "student_loan",
+          "original_balance": 65000.00,
+          "current_balance": 45000.00,
+          "monthly_payment": 800.00,
+          "interest_rate": 4.5,
+          "remaining_term": 8.5
+        }
+      ],
+      "total_liabilities": 53500.00,
+      "monthly_debt_payments": 1200.00
+    },
+    "net_worth": 406500.00,
+    "debt_to_income_ratio": 5.1
+  },
+  "credit_information": {
+    "credit_score": 780,
+    "credit_bureau": "experian",
+    "credit_report_date": "2025-10-20",
+    "credit_history_length": "excellent",
+    "recent_inquiries": 1,
+    "recent_accounts": 0,
+    "payment_history": "excellent",
+    "credit_utilization": 8.5,
+    "derogatory_marks": 0,
+    "collections": 0,
+    "bankruptcies": 0,
+    "foreclosures": 0
+  },
+  "loan_history": {
+    "previous_loans": [
+      {
+        "loan_type": "auto_loan",
+        "creditor": "Wells Fargo Auto",
+        "original_balance": 35000.00,
+        "current_balance": 0.00,
+        "status": "paid_off",
+        "payment_history": "excellent",
+        "payoff_date": "2023-06-15"
+      }
+    ],
+    "current_loans": [
+      {
+        "loan_type": "student_loan",
+        "creditor": "Federal Student Aid",
+        "original_balance": 65000.00,
+        "current_balance": 45000.00,
+        "monthly_payment": 800.00,
+        "payment_history": "excellent"
+      }
+    ]
+  },
+  "insurance_information": {
+    "health_insurance": {
+      "provider": "UCSF Health Plan",
+      "coverage_type": "employer_provided",
+      "deductible": 1000.00,
+      "coverage_level": "premium"
+    },
+    "auto_insurance": {
+      "provider": "State Farm",
+      "coverage_type": "full_coverage",
+      "monthly_premium": 120.00,
+      "deductible": 500.00
+    },
+    "disability_insurance": {
+      "provider": "UCSF Benefits",
+      "coverage_type": "employer_provided",
+      "coverage_amount": 15000.00,
+      "coverage_percentage": 60
+    }
+  },
+  "references": {
+    "personal_references": [
+      {
+        "name": "Dr. Sarah Chen",
+        "relationship": "colleague",
+        "phone": "555-345-6789",
+        "email": "sarah.chen@ucsf.edu"
+      },
+      {
+        "name": "Michael Rodriguez",
+        "relationship": "friend",
+        "phone": "555-456-7890",
+        "email": "michael.rodriguez@email.com"
+      }
+    ],
+    "professional_references": [
+      {
+        "name": "Dr. Robert Kim",
+        "relationship": "supervisor",
+        "title": "Chief Medical Officer",
+        "phone": "415-555-0123",
+        "email": "robert.kim@ucsf.edu"
+      }
+    ]
+  },
+  "metadata": {
+    "profile_created_by": "loan_officer@integrityx.com",
+    "created_timestamp": "2025-10-23T14:30:00Z",
+    "last_updated": "2025-10-23T16:15:00Z",
+    "version": "1.0",
+    "data_classification": "confidential",
+    "retention_period": "7_years",
+    "audit_trail": {
+      "created_by": "loan_officer@integrityx.com",
+      "created_at": "2025-10-23T14:30:00Z",
+      "last_modified_by": "processor@integrityx.com",
+      "last_modified_at": "2025-10-23T16:15:00Z",
+      "modification_reason": "income_verification_complete"
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

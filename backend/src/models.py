@@ -18,6 +18,7 @@ from sqlalchemy.orm import relationship, mapped_column
 from datetime import datetime, timezone
 import uuid
 from typing import List, Optional
+from .timezone_utils import eastern_datetime_default
 
 Base = declarative_base()
 
@@ -59,7 +60,7 @@ class Artifact(Base):
     walacor_tx_id = Column(String(255), nullable=False)
     schema_version = Column(String(20), default='1.0')
     created_by = Column(String(255), nullable=False)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=eastern_datetime_default, nullable=False)
     
     # Hybrid approach fields
     blockchain_seal = Column(String(255), nullable=True)  # Blockchain seal information
@@ -192,7 +193,7 @@ class ArtifactEvent(Base):
     payload_sha256 = Column(String(64), nullable=True)
     walacor_tx_id = Column(String(255), nullable=True)
     created_by = Column(String(255), nullable=False)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=eastern_datetime_default, nullable=False)
     
     # Relationships
     artifact = relationship("Artifact", back_populates="events")
@@ -253,7 +254,7 @@ class Attestation(Base):
     kind = mapped_column(String(64), nullable=False)  # "qc_check" | "kyc_passed" | "policy_ok" | ...
     issued_by = mapped_column(String(120), nullable=False)  # user or service id
     details = mapped_column(JSON, nullable=False, default=dict)  # free-form metadata
-    created_at = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = mapped_column(DateTime(timezone=True), default=eastern_datetime_default, nullable=False)
     
     # Relationships
     artifact = relationship("Artifact")
@@ -307,7 +308,7 @@ class ProvenanceLink(Base):
     
     # Relationship data
     relation = mapped_column(String(64), nullable=False)  # "contains" | "derived_from" | "supersedes" | ...
-    created_at = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = mapped_column(DateTime(timezone=True), default=eastern_datetime_default, nullable=False)
     
     # Relationships
     parent_artifact = relationship("Artifact", foreign_keys=[parent_artifact_id])
@@ -370,27 +371,29 @@ class DeletedDocument(Base):
     
     # Core fields preserved from original document
     loan_id = Column(String(255), nullable=False, index=True)
-    artifact_type = Column(String(50), nullable=False)
+    # Note: DB column is 'document_type' (legacy). Keep naming consistent with DB.
+    artifact_type = Column('document_type', String(50), nullable=False)
     etid = Column(Integer, nullable=False)
     payload_sha256 = Column(String(64), nullable=False, index=True)
     manifest_sha256 = Column(String(64), nullable=True)
     walacor_tx_id = Column(String(255), nullable=False, index=True)
-    schema_version = Column(String(20), default='1.0')
+    # Legacy table does not have schema_version; omit from persistence layer
     
     # Original creation information
     original_created_at = Column(DateTime(timezone=True), nullable=False)
     original_created_by = Column(String(255), nullable=False)
     
     # Deletion information
-    deleted_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    deleted_at = Column(DateTime(timezone=True), default=eastern_datetime_default, nullable=False)
     deleted_by = Column(String(255), nullable=False)
     deletion_reason = Column(Text, nullable=True)
     
     # Preserved metadata
     blockchain_seal = Column(String(255), nullable=True)
-    preserved_metadata = Column(JSON, nullable=True)  # All original metadata
+    # Legacy names in DB: original_metadata, original_files
+    preserved_metadata = Column('original_metadata', JSON, nullable=True)  # All original metadata
     borrower_info = Column(JSON, nullable=True)  # Borrower information
-    files_info = Column(JSON, nullable=True)  # Information about deleted files
+    files_info = Column('original_files', JSON, nullable=True)  # Information about deleted files
     
     # Indexes
     __table_args__ = (
@@ -446,6 +449,78 @@ class DeletedDocument(Base):
         }
 
 
+class BulkOperation(Base):
+    """
+    Model representing bulk operations for analytics tracking.
+    
+    This model tracks all bulk operations performed in the system, including
+    bulk verifications, bulk exports, bulk deletes, ObjectValidator usage,
+    and directory verifications. Used for analytics and performance metrics.
+    
+    Attributes:
+        id: Unique identifier (UUID4)
+        operation_type: Type of bulk operation
+        operation_subtype: Subtype for more specific categorization
+        documents_count: Number of documents processed
+        success_count: Number of successful operations
+        failure_count: Number of failed operations
+        success: Whether the overall operation succeeded
+        execution_time_ms: Time taken to execute (milliseconds)
+        user_id: User who performed the operation
+        operation_metadata: Additional operation metadata (JSON)
+        created_at: Timestamp when operation was performed
+    """
+    
+    __tablename__ = 'bulk_operations'
+    
+    # Primary key
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    
+    # Operation details
+    operation_type = Column(String(50), nullable=False, index=True)  # 'bulk_verify', 'bulk_delete', 'bulk_export', 'object_validator', 'directory_verification'
+    operation_subtype = Column(String(50), nullable=True, index=True)  # More specific operation type
+    
+    # Operation statistics
+    documents_count = Column(Integer, nullable=False, default=0)  # Total documents processed
+    success_count = Column(Integer, nullable=False, default=0)  # Successful operations
+    failure_count = Column(Integer, nullable=False, default=0)  # Failed operations
+    success = Column(String(20), nullable=False, default='success')  # 'success', 'partial', 'failed'
+    execution_time_ms = Column(Integer, nullable=True)  # Execution time in milliseconds
+    
+    # User and tracking
+    user_id = Column(String(255), nullable=True, index=True)  # User who performed operation
+    operation_metadata = Column(JSON, nullable=True)  # Additional metadata (file sizes, error details, etc.)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=eastern_datetime_default, nullable=False, index=True)
+    
+    # Indexes for analytics queries
+    __table_args__ = (
+        Index('idx_bulk_op_type_created', 'operation_type', 'created_at'),
+        Index('idx_bulk_op_success', 'success'),
+        Index('idx_bulk_op_user_created', 'user_id', 'created_at'),
+    )
+    
+    def __repr__(self) -> str:
+        return f"<BulkOperation(id='{self.id}', type='{self.operation_type}', docs={self.documents_count})>"
+    
+    def to_dict(self) -> dict:
+        """Convert bulk operation to dictionary representation."""
+        return {
+            'id': self.id,
+            'operation_type': self.operation_type,
+            'operation_subtype': self.operation_subtype,
+            'documents_count': self.documents_count,
+            'success_count': self.success_count,
+            'failure_count': self.failure_count,
+            'success': self.success,
+            'execution_time_ms': self.execution_time_ms,
+            'user_id': self.user_id,
+            'operation_metadata': self.operation_metadata,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
 # Database engine configuration
 def create_database_engine(database_url: str, echo: bool = False):
     """
@@ -483,8 +558,11 @@ def drop_tables(engine):
 
 # Example usage and testing
 if __name__ == "__main__":
-    # Example database URL (SQLite for testing)
-    DATABASE_URL = "sqlite:///../database/integrityx.db"
+    # Example database URL (PostgreSQL required)
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL:
+        print("❌ DATABASE_URL environment variable is required. Please set it to your PostgreSQL connection string.")
+        exit(1)
     
     # Create engine
     engine = create_database_engine(DATABASE_URL, echo=True)

@@ -34,7 +34,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
 import ProofViewer from '@/components/proof/ProofViewer';
-import { DisclosureButton } from '@/components/proof/DisclosureButton';
+// Disclosure pack disabled per product decision
 import { VerifyResultSkeleton, ProofResultSkeleton } from '@/components/ui/verify-result-skeleton';
 import { EmptyState, NoResultsEmptyState } from '@/components/ui/empty-state';
 import { AttestationList } from '@/components/attestations/AttestationList';
@@ -42,6 +42,7 @@ import { AttestationForm } from '@/components/attestations/AttestationForm';
 import { LineageGraph } from '@/components/provenance/LineageGraph';
 import { ProvenanceLinker } from '@/components/provenance/ProvenanceLinker';
 import { EnhancedVerificationResult } from '@/components/verification/EnhancedVerificationResult';
+import { json as fetchJson, fetchWithTimeout } from '@/utils/api';
 import { 
   getBorrowerInfo, 
   getAuditTrail, 
@@ -114,6 +115,10 @@ export default function VerifyPage() {
   const [proofData, setProofData] = useState<any>(null);
   const viewProofButtonRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Header metrics
+  const [verifiedToday, setVerifiedToday] = useState<number>(0);
+  const [successRate24h, setSuccessRate24h] = useState<number>(0);
+  const [avgDurationMs24h, setAvgDurationMs24h] = useState<number>(0);
 
   // Enhanced verification state
   const [borrowerInfo, setBorrowerInfo] = useState<BorrowerInfo | null>(null);
@@ -142,20 +147,44 @@ export default function VerifyPage() {
     }
   }, [searchParams]);
 
+  // Load header metrics
+  useEffect(() => {
+    const loadMetrics = async () => {
+      const [daily, metrics] = await Promise.all([
+        fetchJson<any>('http://localhost:8000/api/analytics/daily-activity', { timeoutMs: 3000 }).catch(() => ({ ok: false })),
+        fetchJson<any>('http://localhost:8000/api/verification/metrics', { timeoutMs: 3000 }).catch(() => ({ ok: false }))
+      ]);
+      if (daily?.ok) {
+        const payload = (daily as any).data;
+        const data = payload?.data ?? payload;
+        setVerifiedToday(data?.verified_today || 0);
+      }
+      if (metrics?.ok) {
+        const payload = (metrics as any).data;
+        const data = payload?.data ?? payload;
+        setSuccessRate24h(data?.success_rate || 0);
+        setAvgDurationMs24h(data?.avg_duration_ms || 0);
+      }
+    };
+    loadMetrics();
+  }, []);
+
   const handleVerifyByArtifactId = async (artifactId: string) => {
     setIsVerifying(true);
     setVerifyResult(null);
     setProofResult(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/verify-by-document', {
+      const response = await fetchWithTimeout('http://localhost:8000/api/verify-by-document', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           document_info: artifactId
-        })
+        }),
+        timeoutMs: 8000,
+        retries: 1
       });
 
       const data = await response.json();
@@ -241,28 +270,15 @@ export default function VerifyPage() {
     setProofResult(null);
 
     try {
-      const response = await fetch('/api/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          etid: parseInt(etid),
-          payloadHash: fileHash
-        })
+      const resp = await fetchJson<ApiResponse<VerifyResult>>(`http://localhost:8000/api/verify?hash=${fileHash}`, {
+        timeoutMs: 8000
       });
-
-      if (!response.ok) {
-        throw new Error('Verification request failed');
-      }
-
-      const apiResponse: ApiResponse<VerifyResult> = await response.json();
       
-      if (!apiResponse.ok || !apiResponse.data) {
-        throw new Error(apiResponse.error?.message || 'Verification request failed');
+      if (!resp.ok || !resp.data) {
+        throw new Error((resp.error as any)?.message || 'Verification request failed');
       }
 
-      const result = apiResponse.data;
+      const result = resp.data as unknown as VerifyResult;
       setVerifyResult(result);
       
       // Set verification status
@@ -304,7 +320,7 @@ export default function VerifyPage() {
 
     setIsLoadingProof(true);
     try {
-      const response = await fetch(`/api/proof?artifactId=${verifyResult.artifact_id}`);
+      const response = await fetchWithTimeout(`/api/proof?artifactId=${verifyResult.artifact_id}`, { timeoutMs: 8000 });
       if (!response.ok) {
         throw new Error('Failed to fetch proof');
       }
@@ -530,7 +546,7 @@ export default function VerifyPage() {
                   <Eye className="h-4 w-4 mr-2" />
                   View Proof
                 </Button>
-                <DisclosureButton artifactId={verifyResult?.artifact_id || ''} />
+                {/* DisclosureButton removed */}
               </div>
             </CardContent>
           </Card>

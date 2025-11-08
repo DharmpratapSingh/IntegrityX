@@ -1,0 +1,119 @@
+# IntegrityX - Quick Start Guide
+
+## 🚀 Running the Project
+
+This project consists of two main components:
+1. **Backend**: FastAPI server (runs on port 8000)
+2. **Frontend**: Next.js application (runs on port 3000)
+
+### Prerequisites
+- ✅ Python 3.8+ (you have Python 3.13.7)
+- ✅ Node.js 16+ (you have Node.js v24.11.0)
+- ✅ npm (you have npm 11.6.1)
+
+### Step 1: Environment Setup
+
+The `.env` file should be created in the root directory. If it doesn't exist, create it with:
+
+```env
+WALACOR_HOST=13.220.225.175
+WALACOR_USERNAME=Admin
+WALACOR_PASSWORD=Th!51s1T@gMu
+LOG_LEVEL=INFO
+MAX_FILE_SIZE_MB=50
+ALLOWED_FILE_TYPES=pdf,docx,doc,xlsx,xls,txt,jpg,png,tiff,json,xml
+ENABLE_OCR=true
+ENABLE_DOCUMENT_CLASSIFICATION=true
+ENABLE_AUTO_EXTRACTION=true
+DEMO_MODE=true
+STORAGE_PATH=data/documents
+TEMP_PATH=data/temp
+```
+
+### Step 2: Start Backend Server
+
+Open a terminal and run:
+
+```powershell
+cd backend
+python start_server.py
+```
+
+Or use uvicorn directly:
+
+```powershell
+cd backend
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+The backend will be available at: **http://localhost:8000**
+- API docs: http://localhost:8000/docs
+- Health check: http://localhost:8000/health
+
+### Step 3: Start Frontend Server
+
+Open a **new terminal** and run:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+The frontend will be available at: **http://localhost:3000**
+
+### Step 4: Access the Application
+
+- **Frontend UI**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+
+## 📋 Alternative: Streamlit App
+
+You can also run the Streamlit application:
+
+```powershell
+streamlit run app.py
+```
+
+This will be available at: **http://localhost:8501**
+
+## 🔧 Troubleshooting
+
+### Backend Issues
+- Make sure all Python dependencies are installed: `pip install -r config/requirements.txt`
+- Check that the `.env` file exists in the root directory
+- Verify Walacor connection settings in `.env`
+
+### Frontend Issues
+- Make sure node_modules are installed: `cd frontend && npm install`
+- Check that the backend is running on port 8000
+- Verify CORS settings if you see connection errors
+
+### Port Conflicts
+- If port 8000 is in use, change it in `backend/start_server.py`
+- If port 3000 is in use, Next.js will automatically use the next available port
+
+## 📚 Project Structure
+
+```
+IntegrityX/
+├── backend/          # FastAPI backend
+│   ├── main.py      # Main API application
+│   ├── src/         # Source modules
+│   └── start_server.py
+├── frontend/         # Next.js frontend
+│   ├── app/         # Next.js app directory
+│   └── components/  # React components
+├── app.py           # Streamlit application
+└── .env             # Environment configuration
+```
+
+## 🎯 Next Steps
+
+1. Start both servers (backend and frontend)
+2. Open http://localhost:3000 in your browser
+3. Explore the dashboard and features
+4. Check the API documentation at http://localhost:8000/docs
+
+Happy coding! 🎉
+

@@ -1,0 +1,44 @@
+{
+  "loan_id": "63d1e67f-513f-380a-a777-47dd4a7b872c",
+  "loanId": "63d1e67f-513f-380a-a777-47dd4a7b872c",
+  "document_type": "loan_application",
+  "loan_amount": 50000,
+  "loan_amount_value": "$50,000.00",
+  "loan_term_months": 480,
+  "interest_rate": 4.78,
+  "interest_rate_percent": "4.78%",
+  "property_address": "462 Lebsack Coves, Lake Catharine, Massachusetts 97672, New Zealand",
+  "borrower_information": {
+    "personal_details": {
+      "full_name": "Esther Tremblay",
+      "email": "josiah92@larkin.biz",
+      "phone": "+1-193-165-0560",
+      "date_of_birth": "1985-06-27",
+      "ssn_last4": "0325"
+    },
+    "identification": {
+      "id_type": "drivers_license",
+      "id_last4": "1169"
+    },
+    "employment": {
+      "status": "employed",
+      "employer": "Independent",
+      "annual_income": 128943
+    },
+    "address": {
+      "street": "462 Lebsack Coves",
+      "city": "Lake Catharine",
+      "state": "Massachusetts",
+      "zip_code": "97672",
+      "country": "New Zealand"
+    }
+  },
+  "loan_details": {
+    "loan_term_months": 480,
+    "interest_rate": 4.78,
+    "loan_amount": 50000,
+    "purpose": "Primary residence purchase",
+    "notes": "Aut incidunt ut in placeat nihil consequatur nam."
+  },
+  "additional_notes": "Aut incidunt ut in placeat nihil consequatur nam."
+}

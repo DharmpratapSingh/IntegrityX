@@ -36,18 +36,23 @@ export function PageHero({ title, subtitle, stats, accentColor = 'blue' }: PageH
   const iconColorClass = iconColorMap[accentColor]
 
   return (
-    <div className={`relative overflow-hidden bg-gradient-to-r ${gradientClass} text-white`}>
+    <div className={`relative overflow-hidden bg-gradient-to-br ${gradientClass} text-white`}>
+      {/* Animated gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent bg-size-200 animate-gradient-shift"></div>
       <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10"></div>
+      
+      {/* Floating gradient orbs */}
+      <div className="absolute top-10 right-20 w-72 h-72 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-10 animate-blob" />
+      <div className="absolute bottom-10 left-20 w-72 h-72 bg-purple-300 rounded-full mix-blend-overlay filter blur-3xl opacity-10 animate-blob animation-delay-2000" />
       
       <div className="relative max-w-7xl mx-auto px-6 py-16">
         <div className="space-y-6">
           <div className="space-y-3">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent">
               {title}
             </h1>
             
-            <p className="text-lg md:text-xl text-blue-100 max-w-3xl">
+            <p className="text-lg md:text-xl text-blue-50 max-w-3xl leading-relaxed">
               {subtitle}
             </p>
           </div>
@@ -57,14 +62,14 @@ export function PageHero({ title, subtitle, stats, accentColor = 'blue' }: PageH
               {stats.map((stat, index) => (
                 <div 
                   key={index}
-                  className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300"
+                  className="group bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl"
                 >
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-blue-100">{stat.label}</p>
-                      <p className="text-3xl font-bold">{stat.value}</p>
+                      <p className="text-3xl font-bold bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">{stat.value}</p>
                     </div>
-                    <div className={`p-3 ${iconColorClass} rounded-xl`}>
+                    <div className={`p-3 ${iconColorClass} rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
                       <stat.icon className="h-6 w-6" />
                     </div>
                   </div>
@@ -77,4 +82,7 @@ export function PageHero({ title, subtitle, stats, accentColor = 'blue' }: PageH
     </div>
   )
 }
+
+
+
 

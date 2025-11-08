@@ -1,0 +1,135 @@
+{
+  "tax_returns": {
+    "taxpayer": "Dr. Jennifer Martinez",
+    "ssn": "***-**-4567",
+    "filing_status": "single",
+    "tax_year": 2024,
+    "filing_date": "2025-04-15",
+    "filing_method": "efile",
+    "preparer": "H&R Block",
+    "preparer_id": "HRB-12345"
+  },
+  "income_information": {
+    "wages_salaries": 285000.00,
+    "bonus_income": 25000.00,
+    "consulting_income": 30000.00,
+    "investment_income": 14400.00,
+    "speaking_income": 9600.00,
+    "total_income": 364000.00,
+    "adjusted_gross_income": 350000.00
+  },
+  "deductions": {
+    "standard_deduction": 13850.00,
+    "itemized_deductions": 0.00,
+    "student_loan_interest": 2500.00,
+    "charitable_contributions": 8500.00,
+    "medical_expenses": 3200.00,
+    "total_deductions": 13850.00
+  },
+  "tax_calculations": {
+    "taxable_income": 336150.00,
+    "federal_tax": 85000.00,
+    "state_tax": 18500.00,
+    "local_tax": 0.00,
+    "total_tax": 103500.00,
+    "tax_withheld": 95000.00,
+    "tax_due": 8500.00,
+    "refund": 0.00
+  },
+  "previous_year_comparison": {
+    "tax_year_2023": {
+      "total_income": 340000.00,
+      "adjusted_gross_income": 325000.00,
+      "taxable_income": 311150.00,
+      "federal_tax": 82000.00,
+      "state_tax": 17500.00,
+      "total_tax": 99500.00
+    },
+    "income_growth": {
+      "year_over_year_growth": 7.1,
+      "income_trend": "increasing",
+      "stability_rating": "excellent"
+    }
+  },
+  "supporting_documents": {
+    "w2_forms": [
+      {
+        "employer": "UCSF Medical Center",
+        "wages": 285000.00,
+        "federal_withheld": 85000.00,
+        "state_withheld": 18500.00,
+        "social_security_wages": 285000.00,
+        "medicare_wages": 285000.00
+      }
+    ],
+    "1099_forms": [
+      {
+        "payer": "Pharmaceutical Consulting Inc.",
+        "income_type": "consulting",
+        "amount": 30000.00,
+        "federal_withheld": 0.00
+      },
+      {
+        "payer": "Medical Conference LLC",
+        "income_type": "speaking",
+        "amount": 9600.00,
+        "federal_withheld": 0.00
+      }
+    ],
+    "investment_income": {
+      "dividends": 8400.00,
+      "interest": 6000.00,
+      "capital_gains": 0.00,
+      "total_investment_income": 14400.00
+    }
+  },
+  "verification_status": {
+    "irs_verification": "verified",
+    "income_verification": "verified",
+    "employment_verification": "verified",
+    "documentation_complete": true,
+    "verification_date": "2025-10-23",
+    "verified_by": "Maria Rodriguez, Senior Loan Officer"
+  },
+  "compliance_checks": {
+    "sox_compliance": true,
+    "gdpr_compliance": true,
+    "soc2_compliance": true,
+    "fair_lending_compliance": true,
+    "truth_in_lending_compliance": true,
+    "hmda_compliance": true,
+    "reg_z_compliance": true
+  },
+  "metadata": {
+    "document_created_by": "tax_preparer@hrblock.com",
+    "created_timestamp": "2025-04-15T10:30:00Z",
+    "last_updated": "2025-10-23T16:15:00Z",
+    "version": "1.0",
+    "data_classification": "confidential",
+    "retention_period": "7_years",
+    "audit_trail": {
+      "created_by": "tax_preparer@hrblock.com",
+      "created_at": "2025-04-15T10:30:00Z",
+      "last_modified_by": "processor@integrityx.com",
+      "last_modified_at": "2025-10-23T16:15:00Z",
+      "modification_reason": "loan_application_verification"
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

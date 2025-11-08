@@ -1,0 +1,294 @@
+# IntegrityX - Comprehensive .gitignore
+
+# ===================================================================
+# SECURITY - NEVER COMMIT THESE FILES
+# ===================================================================
+
+# Environment variables with secrets
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env.local
+*.env
+
+# Encryption keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Database files with sensitive data
+*.db
+*.sqlite
+*.sqlite3
+integrityx.db
+backend/integrityx.db
+
+# Secret configuration files
+secrets/
+config/secrets.json
+credentials.json
+
+# ===================================================================
+# Python
+# ===================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# ===================================================================
+# Node.js / Frontend
+# ===================================================================
+
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js
+/.next/
+/out/
+
+# Production
+/build
+
+# Vercel
+.vercel
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
+.env*.local
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# ===================================================================
+# IDEs and Editors
+# ===================================================================
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ===================================================================
+# Operating Systems
+# ===================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ===================================================================
+# Project-Specific
+# ===================================================================
+
+# Log files
+logs/
+*.log
+*.log.*
+walacor_integrity.log
+backend/logs/
+
+# Data directories
+data/documents/
+data/temp/
+data/*.json
+!data/sample*.json
+
+# Test results
+test-results/
+*.test.json
+standalone_test_results.json
+
+# Uploads
+uploads/
+tmp/
+temp/
+
+# Generated receipts and reports
+*_receipt.json
+*_proof.txt
+*_proof.json
+*_proof.pdf
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Compiled documentation
+docs/_build/
+site/
+
+# ===================================================================
+# CI/CD
+# ===================================================================
+
+# GitHub Actions
+.github/workflows/*.yml.backup
+
+# Docker
+*.dockerignore.backup
+docker-compose.override.yml
+
+# ===================================================================
+# Walacor-Specific
+# ===================================================================
+
+# Walacor cache
+.walacor/
+walacor_cache/
+
+# Blockchain simulation data
+blockchain_simulation/
+
+# ===================================================================
+# ALLOW THESE IMPORTANT FILES (Overrides)
+# ===================================================================
+
+# Example/template files
+!.env.example
+!backend/.env.example
+!backend/env.postgresql.example
+!frontend/.env.local.example
+
+# Sample data for testing
+!sample*.json
+!test-*.json
+!SAMPLE_TEST_FILE.json
+
+# Documentation
+!README.md
+!*.md
+!docs/**/*.md
+
+# Configuration templates
+!config/requirements.txt
+!frontend/package.json
+!backend/requirements*.txt
+
+# ===================================================================
+# Notes
+# ===================================================================
+# This .gitignore is designed for maximum security.
+# It prevents accidental commits of:
+# - Credentials and API keys (.env files)
+# - Database files with sensitive data
+# - Encryption keys and certificates
+# - PII in uploaded documents
+# 
+# If you need to commit a file that's being ignored, review carefully
+# and use 'git add -f' only if absolutely necessary.
+# ===================================================================

@@ -1,0 +1,37 @@
+{
+  "loan_id": "MAXIMUM-002-1319",
+  "document_type": "loan_application",
+  "loan_details": {
+    "loan_amount": 138650,
+    "loan_term_months": 300,
+    "interest_rate": 7.33,
+    "purpose": "refinance"
+  },
+  "property_information": {
+    "property_address": {
+      "street": "4023 Oak Ave",
+      "city": "Boston",
+      "state": "TX",
+      "zip_code": "21226",
+      "country": "US"
+    }
+  },
+  "borrower_information": {
+    "personal_details": {
+      "full_name": "Casey White",
+      "email": "borrower2@example.com",
+      "phone": "+1-555-935-2133",
+      "date_of_birth": "1994-09-25",
+      "ssn_last4": "2060"
+    },
+    "identification": {
+      "id_type": "drivers_license",
+      "id_last4": "2103"
+    },
+    "employment": {
+      "status": "retired",
+      "employer": "Soylent",
+      "annual_income": 214127
+    }
+  }
+}

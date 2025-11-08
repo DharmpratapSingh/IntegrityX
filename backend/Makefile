@@ -14,8 +14,8 @@
 #   make reset-db      - Reset database (WARNING: destroys all data)
 # =============================================================================
 
-# Default database URL (can be overridden with environment variable)
-DATABASE_URL ?= sqlite:///../database/integrityx.db
+# PostgreSQL database URL (required)
+DATABASE_URL ?= postgresql://dharmpratapsingh@localhost:5432/walacor_integrity
 
 # Python executable
 PYTHON := python
@@ -139,9 +139,9 @@ check-db: ## Check database connection and show info
 	@echo "$(BLUE)Current Migration Status:$(NC)"
 	@export DATABASE_URL=$(DATABASE_URL) && $(ALEMBIC) current
 
-show-tables: ## Show database tables (SQLite only)
+show-tables: ## Show database tables (PostgreSQL)
 	@echo "$(BLUE)Database Tables:$(NC)"
-	@sqlite3 ../database/integrityx.db ".tables"
+	@psql $(DATABASE_URL) -c "\dt"
 
 # =============================================================================
 # EXAMPLES

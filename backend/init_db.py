@@ -11,16 +11,22 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src.database import Database
 
 def main():
-    # Create database with absolute path
-    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'integrityx.db')
-    print(f'Creating database at: {db_path}')
+    # Use DATABASE_URL from environment (PostgreSQL required)
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+    
+    database_url = os.getenv('DATABASE_URL')
+    if not database_url:
+        raise ValueError("DATABASE_URL environment variable is required. Please set it to your PostgreSQL connection string.")
+    
+    print(f'Initializing database with: {database_url.split("@")[0].split(":")[0]}...')
     
     # Initialize database - this will call create_all()
-    db = Database(db_url=f'sqlite:///{db_path}')
+    db = Database(db_url=database_url)
     
-    print('✅ Database created successfully!')
-    print(f'Database location: {db_path}')
-    print(f'Database file exists: {os.path.exists(db_path)}')
+    print('✅ Database initialized successfully!')
+    print(f'Database URL: {database_url}')
     
     # Check table creation
     from sqlalchemy import inspect
@@ -30,4 +36,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
 

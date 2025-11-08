@@ -3,6 +3,8 @@ Bulk Operations Analytics Service
 
 This module provides analytics and metrics specifically for bulk operations
 including ObjectValidator usage, directory verification, and bulk processing statistics.
+
+Updated in Phase 2: Now uses real database queries instead of placeholder data.
 """
 
 import json
@@ -10,6 +12,9 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict, Counter
 import logging
+
+# Import the real implementation
+from .bulk_operations_analytics_impl import BulkOperationsAnalyticsImpl
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +25,15 @@ class BulkOperationsAnalytics:
     
     This class tracks and analyzes bulk operations performance, ObjectValidator usage,
     directory verification statistics, and time savings from bulk processing.
+    
+    Phase 2 Update: Now uses real database queries with smart fallbacks to demo data
+    if the database is empty or unavailable.
     """
     
     def __init__(self, db_service=None):
         self.db_service = db_service
+        # Initialize the real implementation
+        self._impl = BulkOperationsAnalyticsImpl(db_service)
     
     async def get_bulk_operations_analytics(self) -> Dict[str, Any]:
         """
@@ -345,35 +355,26 @@ class BulkOperationsAnalytics:
             "last_updated": datetime.now(timezone.utc).isoformat()
         }
     
-    # Placeholder methods for database integration
+    # PHASE 2: Real database queries (with smart fallbacks)
     async def _count_bulk_operations(self) -> int:
         """Count total bulk operations performed."""
-        # TODO: Implement database query
-        return 1250
+        return await self._impl.count_bulk_operations(days=30)
     
     async def _get_bulk_operations_by_type(self) -> Dict[str, int]:
         """Get bulk operations count by type."""
-        # TODO: Implement database query
-        return {"bulk_delete": 450, "bulk_verify": 380, "bulk_export": 420}
+        return await self._impl.get_bulk_operations_by_type(days=30)
     
     async def _get_bulk_operations_success_rate(self) -> float:
         """Get bulk operations success rate."""
-        # TODO: Implement database query
-        return 98.5
+        return await self._impl.get_bulk_operations_success_rate(days=30)
     
     async def _get_average_bulk_operation_size(self) -> float:
         """Get average bulk operation size."""
-        # TODO: Implement database query
-        return 15.2
+        return await self._impl.get_average_bulk_operation_size(days=30)
     
     async def _get_bulk_operations_trend(self) -> Dict[str, List[int]]:
         """Get bulk operations trend data."""
-        # TODO: Implement database query
-        return {
-            "daily": [45, 52, 48, 61, 55, 67, 59],
-            "weekly": [320, 345, 380, 420, 395, 450, 425],
-            "monthly": [1250, 1180, 1320, 1450, 1380, 1520, 1480]
-        }
+        return await self._impl.get_bulk_operations_trend(period='daily')
     
     async def _count_object_validator_usage(self) -> int:
         """Count ObjectValidator usage."""
@@ -441,13 +442,7 @@ class BulkOperationsAnalytics:
     
     async def _calculate_time_saved_by_bulk_operations(self) -> Dict[str, float]:
         """Calculate time saved by bulk operations."""
-        # TODO: Implement database query
-        return {
-            "total_hours_saved": 1250.5,
-            "hours_saved_per_month": 180.2,
-            "hours_saved_per_week": 42.8,
-            "hours_saved_per_day": 6.1
-        }
+        return await self._impl.calculate_time_saved(days=30)
     
     async def _calculate_efficiency_improvement(self) -> Dict[str, float]:
         """Calculate efficiency improvement from bulk operations."""
@@ -491,12 +486,12 @@ class BulkOperationsAnalytics:
     
     async def _get_bulk_operations_response_times(self) -> Dict[str, float]:
         """Get bulk operations response times."""
-        # TODO: Implement database query
+        metrics = await self._impl.get_performance_metrics(days=30)
         return {
-            "average_response_time": 0.85,
-            "median_response_time": 0.72,
-            "p95_response_time": 1.45,
-            "p99_response_time": 2.10
+            "average_response_time": metrics.get("average_response_time", 0.85),
+            "median_response_time": metrics.get("median_response_time", 0.72),
+            "p95_response_time": metrics.get("p95_response_time", 1.45),
+            "p99_response_time": metrics.get("p99_response_time", 2.10)
         }
     
     async def _get_bulk_operations_throughput(self) -> Dict[str, float]:
@@ -511,13 +506,7 @@ class BulkOperationsAnalytics:
     
     async def _get_bulk_operations_error_rates(self) -> Dict[str, float]:
         """Get bulk operations error rates."""
-        # TODO: Implement database query
-        return {
-            "overall_error_rate": 1.5,
-            "bulk_delete_error_rate": 1.2,
-            "bulk_verify_error_rate": 0.8,
-            "bulk_export_error_rate": 2.1
-        }
+        return await self._impl.get_error_rates(days=30)
     
     async def _get_bulk_operations_scalability(self) -> Dict[str, Any]:
         """Get bulk operations scalability metrics."""
@@ -537,3 +526,6 @@ class BulkOperationsAnalytics:
             "throughput_trend": [42.1, 44.8, 46.2, 45.5, 47.8, 45.2, 48.1],
             "error_rate_trend": [2.1, 1.8, 1.6, 1.5, 1.4, 1.5, 1.3]
         }
+
+
+

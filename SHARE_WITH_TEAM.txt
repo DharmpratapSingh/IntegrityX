@@ -1,0 +1,85 @@
+=====================================================
+IntegrityX - Setup Instructions for Team
+=====================================================
+
+Hi Team,
+
+Here's how to get IntegrityX running on your machine:
+
+📦 Repository: https://github.com/DharmpratapSingh/IntegrityX
+
+=====================================================
+QUICK START (5 MINUTES)
+=====================================================
+
+1️⃣ PREREQUISITES
+   - Install Docker Desktop: https://www.docker.com/products/docker-desktop
+
+2️⃣ CLONE & SETUP
+   Open terminal and run:
+
+   git clone https://github.com/DharmpratapSingh/IntegrityX.git
+   cd IntegrityX
+   cp .env.example .env
+
+3️⃣ CONFIGURE .env FILE
+   Edit .env and add these keys:
+
+   - CLERK_SECRET_KEY (get from https://clerk.com)
+   - CLERK_PUBLISHABLE_KEY (get from https://clerk.com)
+   - WALACOR_API_KEY (ask team lead)
+   - ENCRYPTION_KEY (generate: python3 -c "import secrets; print(secrets.token_hex(32))")
+
+4️⃣ START APPLICATION
+   docker-compose up -d
+
+5️⃣ ACCESS
+   - Frontend: http://localhost:3000
+   - API Docs: http://localhost:8000/docs
+
+=====================================================
+TESTING
+=====================================================
+
+Test file to upload: data/documents/demo_loan_auto_populate.json
+
+Expected result:
+✅ Form auto-fills
+✅ Upload succeeds
+✅ Gets ETID and Walacor TX ID
+
+=====================================================
+DOCUMENTATION
+=====================================================
+
+Quick Start:     QUICK_START.md
+Full Setup:      SETUP_FOR_TEAMMATES.md
+Testing Guide:   DEMO_TESTING_GUIDE.md
+Demo Reference:  DEMO_QUICK_REFERENCE.md
+Forensic Guide:  FORENSIC_FEATURES.md
+
+=====================================================
+HELP & SUPPORT
+=====================================================
+
+If you get stuck:
+1. Check logs: docker-compose logs -f
+2. Read: SETUP_FOR_TEAMMATES.md (Troubleshooting section)
+3. Ask on team Slack/Discord
+4. GitHub Issues: https://github.com/DharmpratapSingh/IntegrityX/issues
+
+=====================================================
+USEFUL COMMANDS
+=====================================================
+
+Start:    docker-compose up -d
+Stop:     docker-compose down
+Logs:     docker-compose logs -f
+Restart:  docker-compose restart
+Reset:    docker-compose down -v && docker-compose up --build
+
+=====================================================
+
+Questions? Just ask!
+
+Happy coding! 🚀

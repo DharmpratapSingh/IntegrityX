@@ -1,0 +1,133 @@
+# Prometheus Configuration for IntegrityX
+# 
+# This configuration sets up Prometheus to scrape metrics from:
+# - IntegrityX backend (FastAPI)
+# - Node exporter (system metrics)
+# - PostgreSQL exporter (database metrics)
+
+global:
+  scrape_interval: 15s  # Scrape targets every 15 seconds
+  evaluation_interval: 15s  # Evaluate rules every 15 seconds
+  scrape_timeout: 10s  # Timeout after 10 seconds
+
+  # Attach these labels to all metrics
+  external_labels:
+    cluster: 'integrityx-production'
+    environment: 'production'
+
+# Alertmanager configuration (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 'alertmanager:9093'
+
+# Load alerting rules
+rule_files:
+  - 'alerts.yml'
+
+# Scrape configurations
+scrape_configs:
+  # =============================================================================
+  # Prometheus itself
+  # =============================================================================
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # =============================================================================
+  # IntegrityX Backend (FastAPI)
+  # =============================================================================
+  - job_name: 'integrityx-backend'
+    metrics_path: '/metrics'
+    scrape_interval: 10s  # More frequent scraping for application metrics
+    static_configs:
+      - targets: ['backend:8000']  # Docker service name
+        labels:
+          service: 'integrityx-backend'
+          component: 'api'
+    
+    # Relabel configurations
+    relabel_configs:
+      # Add instance label
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'integrityx-backend'
+
+  # =============================================================================
+  # Node Exporter (System Metrics)
+  # =============================================================================
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+          component: 'system'
+    
+    # Collect system metrics
+    metric_relabel_configs:
+      # Keep only useful system metrics
+      - source_labels: [__name__]
+        regex: 'node_(cpu|memory|disk|network|filesystem).*'
+        action: keep
+
+  # =============================================================================
+  # PostgreSQL Exporter (Database Metrics)
+  # =============================================================================
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres-exporter'
+          component: 'database'
+    
+    # Database-specific metrics
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'pg_(database|stat|locks|replication).*'
+        action: keep
+
+  # =============================================================================
+  # Redis Exporter (Cache/Rate Limiting Metrics) - Optional
+  # =============================================================================
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis-exporter'
+          component: 'cache'
+
+# Storage configuration
+storage:
+  tsdb:
+    path: /prometheus/data
+    retention:
+      time: 30d  # Keep metrics for 30 days
+      size: 10GB  # Maximum storage size
+
+# Remote write (optional - for long-term storage)
+# remote_write:
+#   - url: 'http://remote-storage:9009/write'
+#     queue_config:
+#       capacity: 10000
+#       max_shards: 50
+
+# Remote read (optional)
+# remote_read:
+#   - url: 'http://remote-storage:9009/read'
+
+
+
+
+
+
+
+
+
+
+
+
+
+

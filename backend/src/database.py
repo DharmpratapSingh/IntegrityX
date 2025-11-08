@@ -82,7 +82,7 @@ class Database:
         
         Args:
             db_url: Database connection URL. If None, will try to get from environment
-                   variable DATABASE_URL or default to SQLite in-memory database.
+                   variable DATABASE_URL (PostgreSQL required).
         
         Raises:
             ValueError: If database URL cannot be determined
@@ -95,19 +95,41 @@ class Database:
         if db_url:
             self.db_url = db_url
         else:
-            self.db_url = os.getenv('DATABASE_URL', 'sqlite:///:memory:')
+            self.db_url = os.getenv('DATABASE_URL')
         
         if not self.db_url:
-            raise ValueError("Database URL must be provided either as parameter or DATABASE_URL environment variable")
+            raise ValueError("DATABASE_URL environment variable is required. Please set it to your PostgreSQL connection string.")
         
         try:
-            # Create engine
+            # Create engine with sane pool and timeout defaults
             self.engine = create_engine(
                 self.db_url,
                 echo=False,  # Set to True for SQL debugging
                 pool_pre_ping=True,  # Verify connections before use
                 pool_recycle=3600,   # Recycle connections every hour
+                pool_size=10,
+                max_overflow=20,
+                pool_timeout=30,
+                connect_args={
+                    # For psycopg2: set statement timeout via options (20s)
+                    "options": "-c statement_timeout=20000"
+                } if self.db_url.startswith("postgresql") else {},
             )
+
+            # Ensure statement_timeout is set on each connection (fallback)
+            try:
+                from sqlalchemy import event
+
+                @event.listens_for(self.engine, "connect")
+                def set_statement_timeout(dbapi_connection, connection_record):  # type: ignore
+                    try:
+                        cursor = dbapi_connection.cursor()
+                        cursor.execute("SET statement_timeout = 20000")
+                        cursor.close()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
             
             # Create all tables
             Base.metadata.create_all(self.engine)
@@ -635,23 +657,56 @@ class Database:
             logger.error(f"Database error retrieving all artifacts: {e}")
             raise
 
+    def get_all_artifacts_paginated(self, page: int = 1, page_size: int = 100) -> List[Artifact]:
+        """
+        Get paginated artifacts from the database for DNA similarity analysis.
+
+        Args:
+            page: Page number (1-indexed, default: 1)
+            page_size: Number of artifacts per page (default: 100)
+
+        Returns:
+            List[Artifact]: List of Artifact objects
+
+        Raises:
+            SQLAlchemyError: If database operation fails
+        """
+        try:
+            session = self._ensure_session()
+
+            # Calculate offset from page number
+            offset = (page - 1) * page_size
+
+            artifacts = session.query(Artifact)\
+                .order_by(Artifact.created_at.desc())\
+                .limit(page_size)\
+                .offset(offset)\
+                .all()
+
+            logger.debug(f"Retrieved {len(artifacts)} paginated artifacts (page={page}, page_size={page_size})")
+            return artifacts
+
+        except SQLAlchemyError as e:
+            logger.error(f"Database error retrieving paginated artifacts: {e}")
+            raise
+
     def get_artifact_by_loan_id(self, loan_id: str) -> List[Artifact]:
         """
         Get all artifacts for a specific loan ID.
-        
+
         Args:
             loan_id: The loan ID to search for
-        
+
         Returns:
             List[Artifact]: List of artifacts for the loan, ordered by creation date
-        
+
         Raises:
             ValueError: If loan_id is empty
             SQLAlchemyError: If database operation fails
         """
         if not loan_id:
             raise ValueError("loan_id is required")
-        
+
         try:
             session = self._ensure_session()
             
@@ -1128,7 +1183,6 @@ class Database:
                 payload_sha256=artifact.payload_sha256,
                 manifest_sha256=artifact.manifest_sha256,
                 walacor_tx_id=artifact.walacor_tx_id,
-                schema_version=artifact.schema_version,
                 original_created_at=artifact.created_at,
                 original_created_by=artifact.created_by,
                 deleted_by=deleted_by,
@@ -1141,38 +1195,8 @@ class Database:
             
             session.add(deleted_doc)
             
-            # Delete the original artifact (this will cascade to files and events due to CASCADE delete)
+            # Delete the original artifact (this will cascade to files and events due to FK)
             session.delete(artifact)
-            
-            # Create deletion audit event
-            from datetime import datetime, timezone
-            import json
-            deletion_payload = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "deleted_by": deleted_by,
-                "deletion_reason": deletion_reason,
-                "preserved_metadata": {
-                    "original_created_at": artifact.created_at.isoformat(),
-                    "original_created_by": artifact.created_by,
-                    "loan_id": artifact.loan_id,
-                    "payload_sha256": artifact.payload_sha256,
-                    "walacor_tx_id": artifact.walacor_tx_id,
-                    "files_count": len(artifact.files) if artifact.files else 0
-                },
-                "action_details": {
-                    "action": "document_deletion",
-                    "preservation_method": "metadata_preservation",
-                    "verification_possible": True,
-                    "compliance_requirement": "audit_trail_maintenance"
-                }
-            }
-            
-            deletion_event_id = self.insert_event(
-                artifact_id=artifact_id,  # Use original ID for audit trail
-                event_type="document_deleted",
-                created_by=deleted_by,
-                payload_json=json.dumps(deletion_payload, separators=(',', ':'))
-            )
             
             session.commit()
             
@@ -1181,7 +1205,7 @@ class Database:
             return {
                 "deleted_artifact_id": artifact_id,
                 "deleted_document_id": deleted_doc.id,
-                "deletion_event_id": deletion_event_id,
+                "deletion_event_id": None,
                 "verification_info": deleted_doc.get_verification_info(),
                 "preserved_metadata": {
                     "loan_id": artifact.loan_id,

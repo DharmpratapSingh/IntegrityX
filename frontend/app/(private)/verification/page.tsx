@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Search, Hash, FileText, AlertTriangle, CheckCircle, XCircle, Clock, Copy, Shield } from 'lucide-react'
+import { Search, Hash, FileText, AlertTriangle, CheckCircle, XCircle, Clock, Copy, Shield, FileSearch } from 'lucide-react'
+import Link from 'next/link'
 import { toast } from '@/components/ui/toast'
+import { fetchWithTimeout } from '@/utils/api'
 
 interface VerificationResult {
   status: 'sealed' | 'tampered' | 'not_found' | 'error'
@@ -48,14 +50,16 @@ export default function VerificationPage() {
     setResult(null)
 
     try {
-      const response = await fetch('http://localhost:8000/api/verify-by-document', {
+      const response = await fetchWithTimeout('http://localhost:8000/api/verify-by-document', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           document_info: artifactId
-        })
+        }),
+        timeoutMs: 8000,
+        retries: 1
       })
 
       const data = await response.json()
@@ -95,24 +99,28 @@ export default function VerificationPage() {
     try {
       let response
       if (verificationType === 'hash') {
-        response = await fetch('http://localhost:8000/api/verify-by-hash', {
+        response = await fetchWithTimeout('http://localhost:8000/api/verify-by-hash', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             hash: hashInput.trim()
-          })
+          }),
+          timeoutMs: 8000,
+          retries: 1
         })
       } else {
-        response = await fetch('http://localhost:8000/api/verify-by-document', {
+        response = await fetchWithTimeout('http://localhost:8000/api/verify-by-document', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             document_info: documentInput.trim()
-          })
+          }),
+          timeoutMs: 8000,
+          retries: 1
         })
       }
 
@@ -501,6 +509,40 @@ export default function VerificationPage() {
                   <div className="flex items-center space-x-3">
                     <Clock className="h-5 w-5 text-blue-600" />
                     <span className="text-sm">Last Verified: {new Date(result.verification_details.last_verified).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Forensic Analysis Section */}
+            {result.document && (
+              <div className="border-t pt-6 mt-6">
+                <h3 className="text-md font-semibold text-gray-900 mb-4">Forensic Analysis</h3>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-700 mb-4">
+                    Perform advanced forensic analysis including timeline review, document comparison, and tamper detection.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <Link
+                      href={`/forensics?document=${result.document.id}`}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      <FileSearch className="h-4 w-4 mr-2" />
+                      View Forensic Timeline
+                    </Link>
+                    <Link
+                      href={`/forensics`}
+                      className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+                    >
+                      <FileSearch className="h-4 w-4 mr-2" />
+                      Compare Documents
+                    </Link>
+                    {result.verification_details?.tamper_detected && (
+                      <div className="flex items-center px-4 py-2 bg-red-50 border border-red-200 rounded-md">
+                        <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
+                        <span className="text-sm text-red-800 font-medium">Tampering Detected - Investigation Recommended</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -27,14 +27,13 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-# Configure database URL from environment variable with fallback
+# Configure database URL from environment variable (PostgreSQL required)
 def get_database_url():
-    """Get database URL from environment variable with fallback."""
+    """Get database URL from environment variable (PostgreSQL required)."""
     database_url = os.getenv("DATABASE_URL")
-    if database_url:
-        return database_url
-    # Fallback to SQLite
-    return "sqlite:///./app.db"
+    if not database_url:
+        raise ValueError("DATABASE_URL environment variable is required. Please set it to your PostgreSQL connection string.")
+    return database_url
 
 # Override the sqlalchemy.url in the config
 config.set_main_option("sqlalchemy.url", get_database_url())

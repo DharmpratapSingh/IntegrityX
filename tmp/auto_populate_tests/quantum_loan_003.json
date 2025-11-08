@@ -1,0 +1,37 @@
+{
+  "loan_id": "QUANTUM-003-4593",
+  "document_type": "loan_application",
+  "loan_details": {
+    "loan_amount": 152525,
+    "loan_term_months": 360,
+    "interest_rate": 3.63,
+    "purpose": "purchase"
+  },
+  "property_information": {
+    "property_address": {
+      "street": "1896 Maple Ave",
+      "city": "Orlando",
+      "state": "MA",
+      "zip_code": "18326",
+      "country": "US"
+    }
+  },
+  "borrower_information": {
+    "personal_details": {
+      "full_name": "Casey White",
+      "email": "borrower3@example.com",
+      "phone": "+1-555-490-8668",
+      "date_of_birth": "1986-05-18",
+      "ssn_last4": "0188"
+    },
+    "identification": {
+      "id_type": "drivers_license",
+      "id_last4": "1876"
+    },
+    "employment": {
+      "status": "retired",
+      "employer": "Initech",
+      "annual_income": 159174
+    }
+  }
+}

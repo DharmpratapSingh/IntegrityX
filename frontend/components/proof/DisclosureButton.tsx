@@ -1,6 +1,7 @@
 "use client"
 
 import React from 'react'
+import { fetchWithTimeout } from '@/utils/api'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Download, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
@@ -15,7 +16,7 @@ interface DisclosureButtonProps {
 }
 
 async function downloadDisclosurePack(artifactId: string): Promise<void> {
-  const response = await fetch(`/api/disclosure-pack?id=${encodeURIComponent(artifactId)}`)
+  const response = await fetchWithTimeout(`http://localhost:8000/api/disclosure-pack?id=${encodeURIComponent(artifactId)}`, { timeoutMs: 15000, retries: 1 })
   
   if (!response.ok) {
     const errorData = await response.json()

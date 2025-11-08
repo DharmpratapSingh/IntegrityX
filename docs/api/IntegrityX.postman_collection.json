@@ -1,0 +1,364 @@
+{
+  "info": {
+    "name": "IntegrityX API",
+    "description": "Complete Postman collection for IntegrityX Financial Document Integrity Platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "YOUR_JWT_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "test_etid",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health & Status",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Check API health status (no auth required)"
+          },
+          "response": []
+        },
+        {
+          "name": "Root Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Document Operations",
+      "item": [
+        {
+          "name": "Upload Single Document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('test_etid', jsonData.etid);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document\": {\n    \"loan_id\": \"LOAN-12345\",\n    \"borrower_name\": \"John Doe\",\n    \"amount\": 250000,\n    \"interest_rate\": 4.5,\n    \"term_months\": 360,\n    \"property_address\": \"123 Main St, New York, NY 10001\"\n  },\n  \"metadata\": {\n    \"source\": \"loan_system\",\n    \"user_id\": \"user_123\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ingest-json",
+              "host": ["{{base_url}}"],
+              "path": ["ingest-json"]
+            },
+            "description": "Upload a single JSON document for sealing"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Document",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/document/{{test_etid}}",
+              "host": ["{{base_url}}"],
+              "path": ["document", "{{test_etid}}"]
+            },
+            "description": "Retrieve a document by ETID"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Document",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/document/{{test_etid}}",
+              "host": ["{{base_url}}"],
+              "path": ["document", "{{test_etid}}"]
+            },
+            "description": "Delete a document (admin only)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Verification",
+      "item": [
+        {
+          "name": "Verify Document (Public)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/public/verify/{{test_etid}}",
+              "host": ["{{base_url}}"],
+              "path": ["public", "verify", "{{test_etid}}"]
+            },
+            "description": "Verify any document by ETID (no auth required)"
+          },
+          "response": []
+        },
+        {
+          "name": "Batch Verify",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etids\": [\n    \"{{test_etid}}\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/verify/batch",
+              "host": ["{{base_url}}"],
+              "path": ["verify", "batch"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Attestations",
+      "item": [
+        {
+          "name": "Create Attestation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etid\": \"{{test_etid}}\",\n  \"role\": \"underwriter\",\n  \"status\": \"approved\",\n  \"comments\": \"Loan application approved after review\",\n  \"attested_by\": \"john.doe@company.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/attestations",
+              "host": ["{{base_url}}"],
+              "path": ["attestations"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Attestations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/attestations/{{test_etid}}",
+              "host": ["{{base_url}}"],
+              "path": ["attestations", "{{test_etid}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Provenance",
+      "item": [
+        {
+          "name": "Get Provenance Chain",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/provenance/{{test_etid}}",
+              "host": ["{{base_url}}"],
+              "path": ["provenance", "{{test_etid}}"]
+            },
+            "description": "Get complete chain of custody for a document"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Analytics",
+      "item": [
+        {
+          "name": "Document Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/analytics/stats",
+              "host": ["{{base_url}}"],
+              "path": ["analytics", "stats"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Predictive Analytics",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"metric\": \"document_volume\",\n  \"timeframe\": \"next_30_days\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/analytics/predictive",
+              "host": ["{{base_url}}"],
+              "path": ["analytics", "predictive"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Advanced Features",
+      "item": [
+        {
+          "name": "AI Anomaly Detection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etid\": \"{{test_etid}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/detect-anomalies",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "detect-anomalies"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Document Intelligence",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etid\": \"{{test_etid}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/intelligence/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["intelligence", "analyze"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Voice Command (Experimental)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"command\": \"Show me all loans approved today\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/voice/command",
+              "host": ["{{base_url}}"],
+              "path": ["voice", "command"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

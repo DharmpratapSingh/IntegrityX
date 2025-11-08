@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Brain, TrendingUp, Shield, AlertTriangle, BarChart3 } from 'lucide-react'
+import { json as fetchJson } from '@/utils/api'
 import PredictiveAnalyticsDashboard from '@/components/PredictiveAnalyticsDashboard'
 
 export default function PredictiveAnalyticsPage() {
@@ -15,12 +16,9 @@ export default function PredictiveAnalyticsPage() {
 
   const fetchModelStatistics = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/predictive-analytics/model-statistics')
-      if (response.ok) {
-        const data = await response.json()
-        if (data.ok && data.data) {
-          setModelStats(data.data.model_statistics)
-        }
+      const res = await fetchJson<any>('http://localhost:8000/api/predictive-analytics/model-statistics', { timeoutMs: 8000 })
+      if (res.ok && res.data) {
+        setModelStats(res.data.data.model_statistics)
       }
     } catch (error) {
       console.error('Failed to fetch model statistics:', error)

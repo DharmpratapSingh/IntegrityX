@@ -76,7 +76,9 @@ class RobustDatabase:
             retry_delay: Initial retry delay in seconds
             health_check_interval: Health check interval in seconds
         """
-        self.db_url = db_url or os.getenv('DATABASE_URL', 'sqlite:///:memory:')
+        self.db_url = db_url or os.getenv('DATABASE_URL')
+        if not self.db_url:
+            raise ValueError("DATABASE_URL environment variable is required. Please set it to your PostgreSQL connection string.")
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         self.health_check_interval = health_check_interval

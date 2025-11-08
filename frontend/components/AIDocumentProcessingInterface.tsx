@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { json as fetchJson, fetchWithTimeout } from '@/utils/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -111,7 +112,7 @@ export default function AIDocumentProcessingInterface() {
       const formData = new FormData()
       formData.append('file', selectedFile)
 
-      const response = await fetch('http://localhost:8000/api/ai/analyze-document-json', {
+      const response = await fetchWithTimeout('http://localhost:8000/api/ai/analyze-document-json', {
         method: 'POST',
         body: JSON.stringify({
           filename: selectedFile.name,
@@ -120,7 +121,9 @@ export default function AIDocumentProcessingInterface() {
         }),
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        timeoutMs: 20000,
+        retries: 1
       })
 
       const data = await response.json()
@@ -156,12 +159,14 @@ export default function AIDocumentProcessingInterface() {
         }))
       )
 
-      const response = await fetch('http://localhost:8000/api/ai/analyze-batch', {
+      const response = await fetchWithTimeout('http://localhost:8000/api/ai/analyze-batch', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ documents })
+        body: JSON.stringify({ documents }),
+        timeoutMs: 30000,
+        retries: 1
       })
 
       const data = await response.json()
@@ -181,12 +186,10 @@ export default function AIDocumentProcessingInterface() {
 
   const fetchAICapabilities = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/ai/ai-capabilities')
-      const data = await response.json()
+      const res = await fetchJson<any>('http://localhost:8000/api/ai/ai-capabilities', { timeoutMs: 8000 })
+      const data = res.data
 
-      if (data.ok) {
-        setCapabilities(data.data.ai_capabilities)
-      }
+      if (res.ok && data) setCapabilities(data.data.ai_capabilities)
     } catch (err) {
       console.error('Failed to fetch AI capabilities:', err)
     }

@@ -1,0 +1,296 @@
+{
+  "loan_application": {
+    "loan_id": "LOAN_2025_001234",
+    "application_date": "2025-10-23",
+    "loan_type": "residential_mortgage",
+    "loan_amount": 485000.00,
+    "loan_purpose": "primary_residence_purchase",
+    "loan_term_years": 30,
+    "interest_rate_type": "fixed",
+    "interest_rate": 6.75,
+    "down_payment": 97000.00,
+    "down_payment_percentage": 20.0,
+    "property_value": 485000.00,
+    "loan_to_value_ratio": 80.0,
+    "monthly_payment": 3145.67,
+    "debt_to_income_ratio": 28.5,
+    "credit_score": 745,
+    "employment_verification": "verified",
+    "income_verification": "verified",
+    "property_verification": "verified",
+    "insurance_required": true,
+    "private_mortgage_insurance": false,
+    "additional_notes": "First-time homebuyer with excellent credit history. Property located in suburban area with good school district. Borrower has stable employment for 5+ years.",
+    "created_by": "loan_officer@integrityx.com",
+    "status": "under_review",
+    "priority": "high",
+    "risk_level": "low",
+    "compliance_checks": {
+      "sox_compliance": true,
+      "gdpr_compliance": true,
+      "soc2_compliance": true,
+      "fair_lending_compliance": true,
+      "truth_in_lending_compliance": true
+    }
+  },
+  "borrower": {
+    "full_name": "Sarah Elizabeth Johnson",
+    "date_of_birth": "1988-03-15",
+    "ssn": "***-**-6789",
+    "ssn_last4": "6789",
+    "email": "sarah.johnson@email.com",
+    "phone": "555-123-4567",
+    "phone_type": "mobile",
+    "marital_status": "married",
+    "dependents": 2,
+    "citizenship_status": "us_citizen",
+    "address": {
+      "street": "123 Maple Street",
+      "apartment": "Apt 4B",
+      "city": "Springfield",
+      "state": "IL",
+      "zip_code": "62701",
+      "country": "United States",
+      "years_at_address": 3,
+      "address_type": "rental"
+    },
+    "employment": {
+      "employer_name": "Tech Solutions Inc.",
+      "job_title": "Senior Software Engineer",
+      "employment_type": "full_time",
+      "employment_status": "employed",
+      "years_employed": 5.5,
+      "annual_income": 125000.00,
+      "monthly_income": 10416.67,
+      "income_verification": "verified",
+      "employment_verification": "verified",
+      "employer_phone": "555-987-6543",
+      "employer_address": {
+        "street": "456 Business Blvd",
+        "city": "Springfield",
+        "state": "IL",
+        "zip_code": "62702"
+      }
+    },
+    "financial_information": {
+      "assets": {
+        "checking_account": 25000.00,
+        "savings_account": 45000.00,
+        "investment_accounts": 15000.00,
+        "retirement_accounts": 35000.00,
+        "other_assets": 5000.00,
+        "total_assets": 125000.00
+      },
+      "liabilities": {
+        "credit_card_debt": 2500.00,
+        "auto_loan_balance": 18000.00,
+        "student_loan_balance": 12000.00,
+        "other_debts": 0.00,
+        "total_liabilities": 32500.00
+      },
+      "net_worth": 92500.00,
+      "monthly_debt_payments": 850.00,
+      "debt_to_income_ratio": 8.2
+    },
+    "credit_information": {
+      "credit_score": 745,
+      "credit_bureau": "experian",
+      "credit_report_date": "2025-10-20",
+      "credit_history_length": "excellent",
+      "recent_inquiries": 2,
+      "recent_accounts": 1,
+      "payment_history": "excellent",
+      "credit_utilization": 15.2
+    },
+    "documents_required": [
+      "pay_stubs_last_2_months",
+      "w2_forms_last_2_years",
+      "bank_statements_last_2_months",
+      "tax_returns_last_2_years",
+      "employment_verification_letter",
+      "credit_report",
+      "property_appraisal",
+      "title_insurance",
+      "homeowners_insurance",
+      "flood_certificate"
+    ],
+    "documents_provided": [
+      "pay_stubs_last_2_months",
+      "w2_forms_last_2_years",
+      "bank_statements_last_2_months",
+      "tax_returns_last_2_years",
+      "employment_verification_letter",
+      "credit_report"
+    ],
+    "documents_pending": [
+      "property_appraisal",
+      "title_insurance",
+      "homeowners_insurance",
+      "flood_certificate"
+    ]
+  },
+  "co_borrower": {
+    "full_name": "Michael David Johnson",
+    "date_of_birth": "1985-07-22",
+    "ssn": "***-**-1234",
+    "ssn_last4": "1234",
+    "email": "michael.johnson@email.com",
+    "phone": "555-123-4568",
+    "relationship_to_borrower": "spouse",
+    "employment": {
+      "employer_name": "Springfield Medical Center",
+      "job_title": "Registered Nurse",
+      "employment_type": "full_time",
+      "employment_status": "employed",
+      "years_employed": 8.0,
+      "annual_income": 78000.00,
+      "monthly_income": 6500.00
+    },
+    "credit_information": {
+      "credit_score": 720,
+      "credit_history_length": "good",
+      "payment_history": "excellent"
+    }
+  },
+  "property": {
+    "address": {
+      "street": "789 Oak Avenue",
+      "city": "Springfield",
+      "state": "IL",
+      "zip_code": "62703",
+      "county": "Sangamon County"
+    },
+    "property_type": "single_family_residence",
+    "property_use": "primary_residence",
+    "property_value": 485000.00,
+    "purchase_price": 485000.00,
+    "down_payment": 97000.00,
+    "loan_amount": 388000.00,
+    "property_taxes_annual": 4850.00,
+    "homeowners_insurance_annual": 1200.00,
+    "hoa_fees_monthly": 0.00,
+    "property_features": {
+      "bedrooms": 4,
+      "bathrooms": 2.5,
+      "square_footage": 2200,
+      "lot_size": "0.25 acres",
+      "year_built": 2015,
+      "garage": "2-car attached",
+      "basement": "finished",
+      "heating": "gas",
+      "cooling": "central_air"
+    },
+    "appraisal": {
+      "appraisal_date": "2025-10-22",
+      "appraised_value": 485000.00,
+      "appraiser_name": "John Smith, MAI",
+      "appraiser_license": "IL-12345",
+      "appraisal_type": "full_appraisal"
+    }
+  },
+  "loan_terms": {
+    "loan_amount": 388000.00,
+    "interest_rate": 6.75,
+    "loan_term_months": 360,
+    "loan_type": "conventional",
+    "amortization_type": "fixed_rate",
+    "payment_frequency": "monthly",
+    "first_payment_date": "2025-12-01",
+    "maturity_date": "2055-11-01",
+    "prepayment_penalty": false,
+    "balloon_payment": false,
+    "interest_only_period": false,
+    "escrow_required": true,
+    "private_mortgage_insurance": false,
+    "loan_to_value_ratio": 80.0,
+    "debt_to_income_ratio": 28.5,
+    "combined_debt_to_income_ratio": 35.2
+  },
+  "underwriting": {
+    "underwriter_name": "Jane Smith",
+    "underwriter_id": "UW-001",
+    "underwriting_date": "2025-10-23",
+    "underwriting_decision": "approved",
+    "conditions": [
+      "Property appraisal required",
+      "Title insurance required",
+      "Homeowners insurance required",
+      "Flood certificate required"
+    ],
+    "risk_assessment": {
+      "credit_risk": "low",
+      "income_risk": "low",
+      "property_risk": "low",
+      "overall_risk": "low"
+    },
+    "compliance_checks": {
+      "sox_compliance": true,
+      "gdpr_compliance": true,
+      "soc2_compliance": true,
+      "fair_lending_compliance": true,
+      "truth_in_lending_compliance": true,
+      "hmda_compliance": true,
+      "reg_z_compliance": true
+    }
+  },
+  "closing": {
+    "closing_date": "2025-11-15",
+    "closing_location": "Springfield Title Company",
+    "closing_agent": "Mary Johnson",
+    "title_company": "Springfield Title Company",
+    "escrow_company": "Springfield Escrow Services",
+    "closing_costs": {
+      "loan_origination_fee": 1940.00,
+      "appraisal_fee": 500.00,
+      "credit_report_fee": 50.00,
+      "title_insurance": 1200.00,
+      "recording_fees": 150.00,
+      "transfer_taxes": 485.00,
+      "homeowners_insurance": 1200.00,
+      "property_taxes": 1212.50,
+      "total_closing_costs": 6737.50
+    },
+    "cash_to_close": 103737.50
+  },
+  "metadata": {
+    "application_source": "online_portal",
+    "referral_source": "real_estate_agent",
+    "marketing_campaign": "first_time_homebuyer",
+    "application_id": "APP-2025-001234",
+    "loan_officer": "Robert Wilson",
+    "loan_officer_id": "LO-001",
+    "branch": "Springfield Main",
+    "branch_id": "BR-001",
+    "processor": "Lisa Brown",
+    "processor_id": "PR-001",
+    "created_timestamp": "2025-10-23T10:30:00Z",
+    "last_updated": "2025-10-23T15:45:00Z",
+    "version": "1.0",
+    "data_classification": "confidential",
+    "retention_period": "7_years",
+    "audit_trail": {
+      "created_by": "loan_officer@integrityx.com",
+      "created_at": "2025-10-23T10:30:00Z",
+      "last_modified_by": "processor@integrityx.com",
+      "last_modified_at": "2025-10-23T15:45:00Z",
+      "modification_reason": "underwriting_review_complete"
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

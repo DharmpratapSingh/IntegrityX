@@ -1,0 +1,37 @@
+{
+  "loan_id": "MAXIMUM-003-3705",
+  "document_type": "loan_application",
+  "loan_details": {
+    "loan_amount": 218966,
+    "loan_term_months": 360,
+    "interest_rate": 7.73,
+    "purpose": "home_equity"
+  },
+  "property_information": {
+    "property_address": {
+      "street": "3395 Pine Ln",
+      "city": "Denver",
+      "state": "FL",
+      "zip_code": "77839",
+      "country": "US"
+    }
+  },
+  "borrower_information": {
+    "personal_details": {
+      "full_name": "Casey White",
+      "email": "borrower3@example.com",
+      "phone": "+1-555-223-5061",
+      "date_of_birth": "1977-02-11",
+      "ssn_last4": "0344"
+    },
+    "identification": {
+      "id_type": "drivers_license",
+      "id_last4": "9638"
+    },
+    "employment": {
+      "status": "retired",
+      "employer": "Globex",
+      "annual_income": 127728
+    }
+  }
+}

@@ -59,22 +59,29 @@ export default function Dashboard() {
       if (docsResponse.ok) {
         const docsData = await docsResponse.json()
         if (docsData.ok && docsData.data) {
-          setDocuments(docsData.data.artifacts || [])
+          const docs = docsData.data.artifacts || []
+          setDocuments(docs)
+          // Update stats immediately with fresh data to avoid stale state
+          setStats(prev => ({
+            ...prev,
+            total_documents: docs.length
+          }))
         }
       } else if (docsResponse.status === 404) {
         // No documents yet - this is normal
         setDocuments([])
+        setStats(prev => ({ ...prev, total_documents: 0 }))
       } else {
         throw new Error(`Failed to fetch documents: ${docsResponse.status}`)
       }
 
       // Fetch stats (mock for now - would come from analytics API)
-      setStats({
-        total_documents: documents.length,
+      setStats(prev => ({
+        total_documents: prev.total_documents,
         total_attestations: 0,
         recent_activity: 12,
         compliance_score: 94.5
-      })
+      }))
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error)
       if (error instanceof Error) {

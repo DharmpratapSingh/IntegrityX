@@ -1,0 +1,899 @@
+{
+  "test_suites": [
+    {
+      "test_name": "Advanced Load & Stress Testing",
+      "test_file": "advanced_load_testing.py",
+      "duration": 74.77671980857849,
+      "return_code": 0,
+      "stdout": "\ud83d\ude80 STARTING ADVANCED LOAD TESTING SUITE\n============================================================\n\ud83e\uddea Testing 10 concurrent document sealing operations...\n\u2705 Concurrent Test Results:\n   Success Rate: 100.0%\n   Avg Response Time: 0.777s\n   Max Response Time: 0.829s\n\ud83e\uddea Testing 50 rapid-fire requests with 0.1s delay...\n\ud83e\uddea Testing database performance with 50 operations...\n\ud83e\uddea Testing Walacor connection with 15 concurrent connections...\n\ud83e\uddea Testing memory usage under 1 minutes of load...\n   Made 10 requests...\n   Made 20 requests...\n   Made 30 requests...\n   Made 40 requests...\n   Made 50 requests...\n   Made 60 requests...\n   Made 70 requests...\n   Made 80 requests...\n   Made 90 requests...\n   Made 100 requests...\n   Made 110 requests...\n\n============================================================\n\ud83c\udfaf ADVANCED LOAD TESTING SUMMARY\n============================================================\n\ud83d\udcca Load Test Results:\n   Total Test Scenarios: 5\n   Successful Scenarios: 3\n   Success Rate: 60.0%\n   Total Duration: 74.59 seconds\n\n\ud83d\udcc8 Performance Metrics:\n   Average Response Time: 0.242s\n   Max Response Time: 0.777s\n   Min Response Time: 0.006s\n\n\ud83d\udcc4 Detailed results saved to: advanced_load_test_results.json\n\u26a0\ufe0f System performs well under load with some issues.\n",
+      "stderr": "",
+      "success": true,
+      "timestamp": "2025-10-23T17:14:54.525259",
+      "detailed_results": {
+        "load_tests": [
+          {
+            "test_name": "Rapid Fire Requests (50 requests)",
+            "total_requests": 50,
+            "successful_requests": 50,
+            "success_rate": 100.0,
+            "avg_response_time": 0.10540732860565186,
+            "max_response_time": 0.14430594444274902,
+            "min_response_time": 0.0699920654296875,
+            "timestamp": 1761254027.931175
+          }
+        ],
+        "stress_tests": [
+          {
+            "test_name": "Walacor Connection Load (15 connections)",
+            "total_connections": 15,
+            "successful_connections": 0,
+            "success_rate": 0.0,
+            "avg_response_time": 0.006443341573079427,
+            "max_response_time": 0.007782936096191406,
+            "min_response_time": 0.005018711090087891,
+            "timestamp": 1761254032.030009
+          }
+        ],
+        "concurrent_tests": [
+          {
+            "test_name": "Concurrent Document Sealing (10 users)",
+            "total_requests": 10,
+            "successful_requests": 10,
+            "failed_requests": 0,
+            "success_rate": 100.0,
+            "avg_response_time": 0.7773126125335693,
+            "max_response_time": 0.8288078308105469,
+            "min_response_time": 0.6636221408843994,
+            "timestamp": 1761254020.728466
+          }
+        ],
+        "memory_tests": [
+          {
+            "test_name": "Memory Usage Test (1 minutes)",
+            "duration_minutes": 1,
+            "total_requests": 119,
+            "requests_per_minute": 119.0,
+            "timestamp": 1761254094.493897
+          }
+        ],
+        "performance_tests": [
+          {
+            "test_name": "Database Performance (50 operations)",
+            "total_operations": 50,
+            "successful_operations": 50,
+            "success_rate": 100.0,
+            "avg_response_time": 0.07887018203735352,
+            "max_response_time": 0.08891582489013672,
+            "min_response_time": 0.05845785140991211,
+            "timestamp": 1761254030.0212522
+          }
+        ]
+      }
+    },
+    {
+      "test_name": "Security Penetration Testing",
+      "test_file": "security_penetration_testing.py",
+      "duration": 2.6058437824249268,
+      "return_code": 0,
+      "stdout": "\ud83d\udd12 STARTING SECURITY PENETRATION TESTING SUITE\n============================================================\n\ud83d\udd12 Testing SQL injection vulnerabilities...\n\u2705 SQL Injection Test: 100.0% secure\n\ud83d\udd12 Testing XSS vulnerabilities...\n\u2705 XSS Test: 0.0% secure\n\ud83d\udd12 Testing authentication bypass...\n\u2705 Auth Bypass Test: 0.0% secure\n\ud83d\udd12 Testing data validation attacks...\n\u2705 Data Validation Test: 58.3% secure\n\ud83d\udd12 Testing endpoint security...\n\u2705 Endpoint Security Test: 37.5% secure\n\n============================================================\n\ud83d\udd12 SECURITY PENETRATION TESTING SUMMARY\n============================================================\n\ud83d\udd12 Security Test Results:\n   Total Security Tests: 5\n   Secure Tests: 1\n   Security Score: 20.0%\n   Total Duration: 2.45 seconds\n\n\ud83d\udee1\ufe0f Overall Security Score: 39.2%\n\ud83d\udea8 POOR security posture - immediate attention required!\n\n\ud83d\udcc4 Detailed results saved to: security_penetration_test_results.json\n",
+      "stderr": "",
+      "success": true,
+      "timestamp": "2025-10-23T17:14:57.131413",
+      "detailed_results": {
+        "injection_tests": [
+          {
+            "test_name": "SQL Injection Testing",
+            "total_payloads": 10,
+            "vulnerable_payloads": 0,
+            "security_score": 100.0,
+            "details": [
+              {
+                "payload": "'; DROP TABLE artifacts; --",
+                "vulnerable": false,
+                "status": "Blocked properly"
+              },
+              {
+                "payload": "' OR '1'='1",
+                "vulnerable": false,
+                "status": "Blocked properly"
+              },
+              {
+                "payload": "' UNION SELECT * FROM artifacts --",
+                "vulnerable": false,
+                "status": "Blocked properly"
+              },
+              {
+                "payload": "'; INSERT INTO artifacts VALUES ('hack', 'hack'); --",
+                "vulnerable": false,
+                "status": "Blocked properly"
+              },
+              {
+                "payload": "' OR 1=1 --",
+                "vulnerable": false,
+                "status": "Blocked properly"
+              },
+              {
+                "payload": "admin'--",
+                "vulnerable": false,
+                "status": "Blocked properly"
+              },
+              {
+                "payload": "' OR 'x'='x",
+                "vulnerable": false,
+                "status": "Blocked properly"
+              },
+              {
+                "payload": "1' OR '1'='1",
+                "vulnerable": false,
+                "status": "Blocked properly"
+              },
+              {
+                "payload": "'; EXEC xp_cmdshell('dir'); --",
+                "vulnerable": false,
+                "status": "Blocked properly"
+              },
+              {
+                "payload": "' OR 1=1 LIMIT 1 OFFSET 0 --",
+                "vulnerable": false,
+                "status": "Blocked properly"
+              }
+            ]
+          },
+          {
+            "test_name": "XSS Testing",
+            "total_payloads": 10,
+            "vulnerable_payloads": 10,
+            "security_score": 0.0,
+            "details": [
+              {
+                "payload": "<script>alert('XSS')</script>",
+                "vulnerable": true,
+                "status": "Potential XSS vulnerability"
+              },
+              {
+                "payload": "javascript:alert('XSS')",
+                "vulnerable": true,
+                "status": "Potential XSS vulnerability"
+              },
+              {
+                "payload": "<img src=x onerror=alert('XSS')>",
+                "vulnerable": true,
+                "status": "Potential XSS vulnerability"
+              },
+              {
+                "payload": "<svg onload=alert('XSS')>",
+                "vulnerable": true,
+                "status": "Potential XSS vulnerability"
+              },
+              {
+                "payload": "';alert('XSS');//",
+                "vulnerable": true,
+                "status": "Potential XSS vulnerability"
+              },
+              {
+                "payload": "<iframe src=javascript:alert('XSS')>",
+                "vulnerable": true,
+                "status": "Potential XSS vulnerability"
+              },
+              {
+                "payload": "<body onload=alert('XSS')>",
+                "vulnerable": true,
+                "status": "Potential XSS vulnerability"
+              },
+              {
+                "payload": "<input onfocus=alert('XSS') autofocus>",
+                "vulnerable": true,
+                "status": "Potential XSS vulnerability"
+              },
+              {
+                "payload": "<select onfocus=alert('XSS') autofocus>",
+                "vulnerable": true,
+                "status": "Potential XSS vulnerability"
+              },
+              {
+                "payload": "<textarea onfocus=alert('XSS') autofocus>",
+                "vulnerable": true,
+                "status": "Potential XSS vulnerability"
+              }
+            ]
+          }
+        ],
+        "authentication_tests": [
+          {
+            "test_name": "Authentication Bypass Testing",
+            "total_attempts": 8,
+            "successful_bypasses": 8,
+            "security_score": 0.0,
+            "details": [
+              {
+                "attempt": "{'headers': {'Authorization': 'Bearer invalid_token'}}",
+                "bypassed": true,
+                "status": "SECURITY VULNERABILITY!"
+              },
+              {
+                "attempt": "{'headers': {'Authorization': 'Bearer '}}",
+                "bypassed": true,
+                "status": "SECURITY VULNERABILITY!"
+              },
+              {
+                "attempt": "{'headers': {'X-API-Key': 'fake_key'}}",
+                "bypassed": true,
+                "status": "SECURITY VULNERABILITY!"
+              },
+              {
+                "attempt": "{'headers': {'X-User-ID': 'admin'}}",
+                "bypassed": true,
+                "status": "SECURITY VULNERABILITY!"
+              },
+              {
+                "attempt": "{'cookies': {'session': 'fake_session'}}",
+                "bypassed": true,
+                "status": "SECURITY VULNERABILITY!"
+              },
+              {
+                "attempt": "{'params': {'token': 'fake_token'}}",
+                "bypassed": true,
+                "status": "SECURITY VULNERABILITY!"
+              },
+              {
+                "attempt": "{'params': {'user_id': '1'}}",
+                "bypassed": true,
+                "status": "SECURITY VULNERABILITY!"
+              },
+              {
+                "attempt": "{'params': {'admin': 'true'}}",
+                "bypassed": true,
+                "status": "SECURITY VULNERABILITY!"
+              }
+            ]
+          }
+        ],
+        "authorization_tests": [],
+        "data_validation_tests": [
+          {
+            "test_name": "Data Validation Testing",
+            "total_inputs": 12,
+            "accepted_invalid_inputs": 5,
+            "security_score": 58.333333333333336,
+            "details": [
+              {
+                "input": "{'loan_amount': -999999999}",
+                "accepted": true,
+                "status": "POTENTIAL VULNERABILITY - Invalid data accepted"
+              },
+              {
+                "input": "{'loan_amount': 'NaN'}",
+                "accepted": true,
+                "status": "POTENTIAL VULNERABILITY - Invalid data accepted"
+              },
+              {
+                "input": "{'loan_amount': 'Infinity'}",
+                "accepted": true,
+                "status": "POTENTIAL VULNERABILITY - Invalid data accepted"
+              },
+              {
+                "input": "{'loan_amount': '1e308'}",
+                "accepted": true,
+                "status": "POTENTIAL VULNERABILITY - Invalid data accepted"
+              },
+              {
+                "input": "{'borrower': {'full_name': 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'}}",
+                "accepted": false,
+                "status": "Properly validated and rejected"
+              },
+              {
+                "input": "{'borrower': {'email': 'not-an-email'}}",
+                "accepted": false,
+                "status": "Properly validated and rejected"
+              },
+              {
+                "input": "{'borrower': {'date_of_birth': 'invalid-date'}}",
+                "accepted": false,
+                "status": "Properly validated and rejected"
+              },
+              {
+                "input": "{'borrower': {'ssn_last4': '12345'}}",
+                "accepted": false,
+                "status": "Properly validated and rejected"
+              },
+              {
+                "input": "{'borrower': {'ssn_last4': 'abc'}}",
+                "accepted": false,
+                "status": "Properly validated and rejected"
+              },
+              {
+                "input": "{'document_type': None}",
+                "accepted": false,
+                "status": "Properly validated and rejected"
+              },
+              {
+                "input": "{'created_by': ''}",
+                "accepted": true,
+                "status": "POTENTIAL VULNERABILITY - Invalid data accepted"
+              },
+              {
+                "input": "{'borrower': {'annual_income': -50000}}",
+                "accepted": false,
+                "status": "Properly validated and rejected"
+              }
+            ]
+          }
+        ],
+        "crypto_tests": [],
+        "endpoint_security_tests": [
+          {
+            "test_name": "Endpoint Security Testing",
+            "total_endpoints": 8,
+            "unprotected_endpoints": 5,
+            "security_score": 37.5,
+            "details": [
+              {
+                "endpoint": "/api/artifacts",
+                "protected": false,
+                "status": "SECURITY RISK - No authentication required"
+              },
+              {
+                "endpoint": "/api/loan-documents/seal",
+                "protected": true,
+                "status": "Protected with status 405"
+              },
+              {
+                "endpoint": "/api/analytics/dashboard",
+                "protected": false,
+                "status": "SECURITY RISK - No authentication required"
+              },
+              {
+                "endpoint": "/api/audit-logs",
+                "protected": true,
+                "status": "Protected with status 500"
+              },
+              {
+                "endpoint": "/api/verify-by-hash",
+                "protected": true,
+                "status": "Protected with status 405"
+              },
+              {
+                "endpoint": "/api/health",
+                "protected": false,
+                "status": "SECURITY RISK - No authentication required"
+              },
+              {
+                "endpoint": "/docs",
+                "protected": false,
+                "status": "SECURITY RISK - No authentication required"
+              },
+              {
+                "endpoint": "/redoc",
+                "protected": false,
+                "status": "SECURITY RISK - No authentication required"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "test_name": "Edge Case & Error Scenario Testing",
+      "test_file": "edge_case_testing.py",
+      "duration": 3.1224021911621094,
+      "return_code": 0,
+      "stdout": "\ud83e\uddea STARTING EDGE CASE & ERROR SCENARIO TESTING SUITE\n============================================================\n\ud83e\uddea Testing extreme data sizes...\n\u2705 Extreme Data Test: 5/5 cases handled\n\ud83e\uddea Testing boundary values...\n\u2705 Boundary Test: 10/10 handled correctly\n\ud83e\uddea Testing malformed JSON handling...\n\u2705 Malformed JSON Test: 8/8 handled\n\ud83e\uddea Testing concurrent operations...\n\u2705 Concurrent Operations Test: 5/5 successful\n\ud83e\uddea Testing network timeout scenarios...\n\u2705 Timeout Test: 3/3 handled\n\ud83e\uddea Testing Unicode and special characters...\n\u2705 Unicode Test: 10/10 handled\n\n============================================================\n\ud83e\uddea EDGE CASE & ERROR SCENARIO TESTING SUMMARY\n============================================================\n\ud83e\uddea Edge Case Test Results:\n   Total Test Scenarios: 6\n   Handled Scenarios: 1\n   Handling Rate: 16.7%\n   Total Duration: 3.05 seconds\n\n\ud83d\udcc4 Detailed results saved to: edge_case_test_results.json\n\u274c System needs improvement in edge case handling.\n",
+      "stderr": "",
+      "success": true,
+      "timestamp": "2025-10-23T17:15:00.254028",
+      "detailed_results": {
+        "edge_cases": [
+          {
+            "test_name": "Extreme Data Sizes",
+            "total_cases": 5,
+            "handled_cases": 5,
+            "details": [
+              {
+                "field": "loan_id",
+                "size": 10000,
+                "response_time": 0.07625579833984375,
+                "status_code": 200,
+                "handled": true,
+                "error_message": "Success"
+              },
+              {
+                "field": "additional_notes",
+                "size": 100000,
+                "response_time": 0.29827308654785156,
+                "status_code": 200,
+                "handled": true,
+                "error_message": "Success"
+              },
+              {
+                "field": "borrower_name",
+                "size": 5000,
+                "response_time": 0.07038474082946777,
+                "status_code": 200,
+                "handled": true,
+                "error_message": "Success"
+              },
+              {
+                "field": "email",
+                "size": 1000,
+                "response_time": 0.06145501136779785,
+                "status_code": 200,
+                "handled": true,
+                "error_message": "Success"
+              },
+              {
+                "field": "address_street",
+                "size": 2000,
+                "response_time": 0.08397531509399414,
+                "status_code": 200,
+                "handled": true,
+                "error_message": "Success"
+              }
+            ]
+          },
+          {
+            "test_name": "Concurrent Operations",
+            "total_operations": 5,
+            "successful_operations": 5,
+            "details": [
+              {
+                "operation_id": 4,
+                "status_code": 200,
+                "success": true,
+                "response_time": 1761254098.9324522
+              },
+              {
+                "operation_id": 2,
+                "status_code": 200,
+                "success": true,
+                "response_time": 1761254099.2054138
+              },
+              {
+                "operation_id": 3,
+                "status_code": 200,
+                "success": true,
+                "response_time": 1761254099.205648
+              },
+              {
+                "operation_id": 1,
+                "status_code": 200,
+                "success": true,
+                "response_time": 1761254099.205796
+              },
+              {
+                "operation_id": 0,
+                "status_code": 200,
+                "success": true,
+                "response_time": 1761254099.205826
+              }
+            ]
+          },
+          {
+            "test_name": "Unicode and Special Characters",
+            "total_tests": 10,
+            "handled_tests": 10,
+            "details": [
+              {
+                "field": "borrower_name",
+                "value": "Jos\u00e9 Mar\u00eda Garc\u00eda-L\u00f3pez...",
+                "status_code": 200,
+                "handled": true
+              },
+              {
+                "field": "borrower_name",
+                "value": "\u674e\u5c0f\u660e...",
+                "status_code": 200,
+                "handled": true
+              },
+              {
+                "field": "borrower_name",
+                "value": "\u0410\u043b\u0435\u043a\u0441\u0430\u043d\u0434\u0440 \u041f\u0435\u0442\u0440\u043e\u0432...",
+                "status_code": 200,
+                "handled": true
+              },
+              {
+                "field": "borrower_name",
+                "value": "\u0645\u062d\u0645\u062f \u0623\u062d\u0645\u062f...",
+                "status_code": 200,
+                "handled": true
+              },
+              {
+                "field": "borrower_name",
+                "value": "Fran\u00e7ois D'Angelo...",
+                "status_code": 200,
+                "handled": true
+              },
+              {
+                "field": "borrower_name",
+                "value": "O'Connor-Smith...",
+                "status_code": 200,
+                "handled": true
+              },
+              {
+                "field": "borrower_name",
+                "value": "Test User \ud83c\udfe0...",
+                "status_code": 200,
+                "handled": true
+              },
+              {
+                "field": "borrower_name",
+                "value": "Test User \n New Line...",
+                "status_code": 200,
+                "handled": true
+              },
+              {
+                "field": "borrower_name",
+                "value": "Test User \t Tab...",
+                "status_code": 200,
+                "handled": true
+              },
+              {
+                "field": "borrower_name",
+                "value": "Test User \" Quotes \"...",
+                "status_code": 200,
+                "handled": true
+              }
+            ]
+          }
+        ],
+        "error_scenarios": [
+          {
+            "test_name": "Malformed JSON",
+            "total_payloads": 8,
+            "handled_payloads": 8,
+            "details": [
+              {
+                "payload": "{\"loan_id\": \"test\", \"loan_amount\": }...",
+                "status_code": 422,
+                "handled": true,
+                "error_message": "{\"detail\":[{\"type\":\"json_invalid\",\"loc\":[\"body\",35],\"msg\":\"JSON decode error\",\"input\":{},\"ctx\":{\"err"
+              },
+              {
+                "payload": "{\"loan_id\": \"test\", \"loan_amount\": 1000,}...",
+                "status_code": 422,
+                "handled": true,
+                "error_message": "{\"detail\":[{\"type\":\"json_invalid\",\"loc\":[\"body\",40],\"msg\":\"JSON decode error\",\"input\":{},\"ctx\":{\"err"
+              },
+              {
+                "payload": "{\"loan_id\": \"test\", \"loan_amount\": 1000...",
+                "status_code": 422,
+                "handled": true,
+                "error_message": "{\"detail\":[{\"type\":\"json_invalid\",\"loc\":[\"body\",39],\"msg\":\"JSON decode error\",\"input\":{},\"ctx\":{\"err"
+              },
+              {
+                "payload": "{\"loan_id\": \"test\", \"loan_amount\": \"invalid\"}...",
+                "status_code": 422,
+                "handled": true,
+                "error_message": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"document_type\"],\"msg\":\"Field required\",\"input\":{\"loan_id"
+              },
+              {
+                "payload": "{\"loan_id\": \"test\", \"loan_amount\": null}...",
+                "status_code": 422,
+                "handled": true,
+                "error_message": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"document_type\"],\"msg\":\"Field required\",\"input\":{\"loan_id"
+              },
+              {
+                "payload": "{\"loan_id\": \"test\", \"loan_amount\": undefined}...",
+                "status_code": 422,
+                "handled": true,
+                "error_message": "{\"detail\":[{\"type\":\"json_invalid\",\"loc\":[\"body\",35],\"msg\":\"JSON decode error\",\"input\":{},\"ctx\":{\"err"
+              },
+              {
+                "payload": "{\"loan_id\": \"test\", \"loan_amount\": [1000]}...",
+                "status_code": 422,
+                "handled": true,
+                "error_message": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"document_type\"],\"msg\":\"Field required\",\"input\":{\"loan_id"
+              },
+              {
+                "payload": "{\"loan_id\": \"test\", \"loan_amount\": {\"value\": 1000}...",
+                "status_code": 422,
+                "handled": true,
+                "error_message": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"document_type\"],\"msg\":\"Field required\",\"input\":{\"loan_id"
+              }
+            ]
+          }
+        ],
+        "boundary_tests": [
+          {
+            "test_name": "Boundary Values",
+            "total_tests": 10,
+            "handled_correctly": 10,
+            "details": [
+              {
+                "field": "loan_amount",
+                "value": 0,
+                "expected": "Should accept or reject",
+                "status_code": 200,
+                "handled_correctly": true
+              },
+              {
+                "field": "loan_amount",
+                "value": -1,
+                "expected": "Should reject",
+                "status_code": 200,
+                "handled_correctly": true
+              },
+              {
+                "field": "loan_amount",
+                "value": 999999999999,
+                "expected": "Should handle",
+                "status_code": 200,
+                "handled_correctly": true
+              },
+              {
+                "field": "loan_amount",
+                "value": 0.01,
+                "expected": "Should accept",
+                "status_code": 200,
+                "handled_correctly": true
+              },
+              {
+                "field": "annual_income",
+                "value": 0,
+                "expected": "Should handle",
+                "status_code": 200,
+                "handled_correctly": true
+              },
+              {
+                "field": "annual_income",
+                "value": -50000,
+                "expected": "Should reject",
+                "status_code": 200,
+                "handled_correctly": true
+              },
+              {
+                "field": "ssn_last4",
+                "value": "0000",
+                "expected": "Should accept",
+                "status_code": 200,
+                "handled_correctly": true
+              },
+              {
+                "field": "ssn_last4",
+                "value": "9999",
+                "expected": "Should accept",
+                "status_code": 200,
+                "handled_correctly": true
+              },
+              {
+                "field": "zip_code",
+                "value": "00000",
+                "expected": "Should handle",
+                "status_code": 200,
+                "handled_correctly": true
+              },
+              {
+                "field": "zip_code",
+                "value": "99999",
+                "expected": "Should handle",
+                "status_code": 200,
+                "handled_correctly": true
+              }
+            ]
+          }
+        ],
+        "resource_exhaustion_tests": [],
+        "network_failure_tests": [
+          {
+            "test_name": "Network Timeout Scenarios",
+            "total_tests": 3,
+            "handled_tests": 3,
+            "details": [
+              {
+                "timeout": 0.001,
+                "description": "Very short timeout",
+                "error": "Timeout occurred",
+                "handled": true
+              },
+              {
+                "timeout": 0.1,
+                "description": "Short timeout",
+                "response_time": 0.008104085922241211,
+                "status_code": 200,
+                "handled": true
+              },
+              {
+                "timeout": 1,
+                "description": "Medium timeout",
+                "response_time": 0.005360841751098633,
+                "status_code": 200,
+                "handled": true
+              }
+            ]
+          }
+        ],
+        "data_corruption_tests": []
+      }
+    },
+    {
+      "test_name": "Integration & End-to-End Testing",
+      "test_file": "integration_e2e_testing.py",
+      "duration": 0.9670159816741943,
+      "return_code": 0,
+      "stdout": "\ud83d\udd04 STARTING INTEGRATION & END-TO-END TESTING SUITE\n============================================================\n\ud83d\udd04 Testing complete document lifecycle...\n\u2705 Document Lifecycle: 100.0% success rate\n\ud83d\udd04 Testing bulk document processing...\n\u2705 Bulk Processing: 100.0% documents created\n\ud83d\udd04 Testing Walacor integration workflow...\n\u2705 Walacor Integration: 0.0% success rate\n\ud83d\udd04 Testing frontend-backend integration...\n\u2705 Frontend-Backend Integration: 100.0% accessible\n\ud83d\udd04 Testing data consistency across operations...\n\u2705 Data Consistency: 66.7% consistent\n\n============================================================\n\ud83d\udd04 INTEGRATION & END-TO-END TESTING SUMMARY\n============================================================\n\ud83d\udd04 Integration Test Results:\n   Total Test Scenarios: 5\n   Overall Success Rate: 73.3%\n   Total Duration: 0.89 seconds\n\n\ud83d\udcc4 Detailed results saved to: integration_e2e_test_results.json\n\u274c Integration and E2E workflows need improvement.\n",
+      "stderr": "",
+      "success": true,
+      "timestamp": "2025-10-23T17:15:01.221234",
+      "detailed_results": {
+        "user_workflows": [
+          {
+            "test_name": "Complete Document Lifecycle",
+            "total_steps": 3,
+            "successful_steps": 3,
+            "success_rate": 100.0,
+            "workflow_steps": [
+              {
+                "step": "Document Creation",
+                "status": "success",
+                "artifact_id": "0ca010cd-b6ae-483b-add6-0adba6f84898",
+                "response_time": 0.06200098991394043
+              },
+              {
+                "step": "Document Retrieval",
+                "status": "success",
+                "hash": "f0ca68848ad4956cd291ca69f276035b6a6eb4efa3b50a2094eb71d84771916e",
+                "response_time": 0.0047261714935302734
+              },
+              {
+                "step": "Document Verification",
+                "status": "success",
+                "verification_status": "sealed",
+                "response_time": 0.0028429031372070312
+              }
+            ]
+          },
+          {
+            "test_name": "Bulk Document Processing",
+            "total_documents": 5,
+            "created_documents": 5,
+            "creation_success_rate": 100.0,
+            "analytics_working": true,
+            "listing_working": true,
+            "documents": [
+              {
+                "loan_id": "BULK_TEST_0_1761254100",
+                "artifact_id": "ef543968-d985-4ccb-855a-004b724f73db",
+                "status": "created"
+              },
+              {
+                "loan_id": "BULK_TEST_1_1761254100",
+                "artifact_id": "b11704ef-46a6-4ac0-8d8d-fc7f46ed1828",
+                "status": "created"
+              },
+              {
+                "loan_id": "BULK_TEST_2_1761254100",
+                "artifact_id": "d3ccada3-4e3c-45a3-b9f6-807393a90703",
+                "status": "created"
+              },
+              {
+                "loan_id": "BULK_TEST_3_1761254100",
+                "artifact_id": "264a8282-7692-482e-8b31-03d55eebd42e",
+                "status": "created"
+              },
+              {
+                "loan_id": "BULK_TEST_4_1761254100",
+                "artifact_id": "e1da0b37-ebd9-47f2-a479-400a5077cd79",
+                "status": "created"
+              }
+            ]
+          }
+        ],
+        "system_integrations": [
+          {
+            "test_name": "Walacor Integration Workflow",
+            "total_steps": 1,
+            "successful_steps": 0,
+            "success_rate": 0.0,
+            "workflow_steps": [
+              {
+                "step": "Walacor Service Status",
+                "status": "failed",
+                "error": "HTTP 404",
+                "response_time": 0.001438140869140625
+              }
+            ]
+          },
+          {
+            "test_name": "Frontend-Backend Integration",
+            "total_tests": 10,
+            "accessible_tests": 10,
+            "accessibility_rate": 100.0,
+            "integration_tests": [
+              {
+                "page": "/",
+                "status_code": 200,
+                "accessible": true
+              },
+              {
+                "page": "/dashboard",
+                "status_code": 200,
+                "accessible": true
+              },
+              {
+                "page": "/upload",
+                "status_code": 200,
+                "accessible": true
+              },
+              {
+                "page": "/documents",
+                "status_code": 200,
+                "accessible": true
+              },
+              {
+                "page": "/analytics",
+                "status_code": 200,
+                "accessible": true
+              },
+              {
+                "page": "/verification",
+                "status_code": 200,
+                "accessible": true
+              },
+              {
+                "endpoint": "/api/health",
+                "status_code": 200,
+                "accessible": true
+              },
+              {
+                "endpoint": "/api/artifacts",
+                "status_code": 200,
+                "accessible": true
+              },
+              {
+                "endpoint": "/api/analytics/dashboard",
+                "status_code": 200,
+                "accessible": true
+              },
+              {
+                "endpoint": "/api/analytics/system-metrics",
+                "status_code": 200,
+                "accessible": true
+              }
+            ]
+          }
+        ],
+        "real_world_scenarios": [],
+        "performance_under_load": [],
+        "data_consistency_tests": [
+          {
+            "test_name": "Data Consistency Across Operations",
+            "total_tests": 3,
+            "consistent_tests": 2,
+            "consistency_rate": 66.66666666666666,
+            "consistency_tests": [
+              {
+                "test": "ID-based retrieval",
+                "consistent": true,
+                "expected": "CONSISTENCY_TEST_1761254101",
+                "actual": "CONSISTENCY_TEST_1761254101"
+              },
+              {
+                "test": "List includes created document",
+                "consistent": false,
+                "found_in_list": false
+              },
+              {
+                "test": "Hash verification consistency",
+                "consistent": true,
+                "verification_status": "sealed"
+              }
+            ]
+          }
+        ],
+        "cross_platform_tests": []
+      }
+    },
+    {
+      "test_name": "Performance & Benchmark Testing",
+      "test_file": "performance_benchmark_testing.py",
+      "duration": 0.012025833129882812,
+      "return_code": 1,
+      "stdout": "",
+      "stderr": "  File \"/Users/dharmpratapsingh/ChallengeX/WalacorFinancialIntegrity/IntegrityX_Python/backend/performance_benchmark_testing.py\", line 75\n    std_deviation = statistics.stdev(response_times) if len(response_times) > 1) else 0\n                                                                               ^\nSyntaxError: unmatched ')'\n",
+      "success": false,
+      "timestamp": "2025-10-23T17:15:01.233438"
+    }
+  ],
+  "overall_summary": {},
+  "start_time": "2025-10-23T17:13:39.748515",
+  "end_time": "2025-10-23T17:15:01.233474"
+}

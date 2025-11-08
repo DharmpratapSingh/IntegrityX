@@ -1,0 +1,29 @@
+{
+  "loan_id": "b0f6130b-6ea5-32d8-94dd-c99da0f67024",
+  "loanId": "b0f6130b-6ea5-32d8-94dd-c99da0f67024",
+  "document_type": "loan_application",
+  "loan_amount": 50000,
+  "loan_term_months": 480,
+  "interest_rate": 5.25,
+  "property_address": "8181 Monique Extensions Suite 588, Lake Alaynastad, Florida 19855, Saudi Arabia",
+  "additional_notes": "Dolorem et at omnis.",
+  "borrower": {
+    "full_name": "Maryjane Green",
+    "email": "jkuphal@yahoo.com",
+    "phone": "+1-136-487-6883",
+    "date_of_birth": "1981-08-16",
+    "ssn_last4": "4105",
+    "id_type": "drivers_license",
+    "id_last4": "1751",
+    "employment_status": "employed",
+    "annual_income": 230177,
+    "co_borrower_name": null,
+    "address": {
+      "street": "8181 Monique Extensions Suite 588",
+      "city": "Lake Alaynastad",
+      "state": "Florida",
+      "zip_code": "19855",
+      "country": "Saudi Arabia"
+    }
+  }
+}

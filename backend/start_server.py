@@ -19,7 +19,7 @@ if __name__ == "__main__":
             "main:app",
             host="0.0.0.0",
             port=8000,
-            reload=True,
+            reload=False,
             log_level="info"
         )
     except KeyboardInterrupt:
@@ -27,3 +27,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"❌ Server startup failed: {e}")
         sys.exit(1)
+
+
+
