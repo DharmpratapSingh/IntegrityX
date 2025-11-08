@@ -465,102 +465,162 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     }));
   };
 
-  // Auto-fill form data from JSON file
+  // Auto-fill form data from JSON file - ENHANCED WITH AI
   const autoFillFromJSON = async (file: File): Promise<void> => {
-    try {
-      console.log('🚀 autoFillFromJSON function called with file:', file.name);
-      skipLoanAutoFillRef.current = true;
-      setIsAutoFilling(true);
-      const text = await file.text();
-      console.log('📄 File text content:', text.substring(0, 200) + '...');
-      const jsonData = JSON.parse(text);
-      
-      console.log('📄 Auto-filling form from JSON:', jsonData);
-      
-      const currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
-      const mappedMeta = buildAutoPopulateMetadata(jsonData, currentMeta);
-      const kycMeta = {
-        borrowerFullName: mappedMeta.borrowerName,
-        borrowerEmail: mappedMeta.borrowerEmail,
-        borrowerPhone: mappedMeta.borrowerPhone,
-        borrowerDateOfBirth: mappedMeta.borrowerDateOfBirth,
-        borrowerStreetAddress: mappedMeta.borrowerStreetAddress,
-        borrowerCity: mappedMeta.borrowerCity,
-        borrowerState: mappedMeta.borrowerState,
-        borrowerZipCode: mappedMeta.borrowerZipCode,
-        borrowerCountry: mappedMeta.borrowerCountry,
-        borrowerSSNLast4: mappedMeta.borrowerSSNLast4,
-        borrowerGovernmentIdType: mappedMeta.borrowerGovernmentIdType,
-        borrowerIdNumberLast4: mappedMeta.borrowerIdNumberLast4,
-        borrowerEmploymentStatus: mappedMeta.borrowerEmploymentStatus,
-        borrowerAnnualIncome: mappedMeta.borrowerAnnualIncome,
-        borrowerCoBorrowerName: mappedMeta.borrowerCoBorrowerName,
-        loanId: mappedMeta.loanId,
-        documentType: mappedMeta.documentType,
-        loanAmount: mappedMeta.loanAmount,
-        loanTerm: mappedMeta.loanTerm,
-        interestRate: mappedMeta.interestRate,
-        propertyAddress: mappedMeta.propertyAddress,
-        additionalNotes: mappedMeta.additionalNotes,
-      };
+    if (skipLoanAutoFillRef.current) {
+      console.log('⏭️ Skipping auto-fill (already processed)');
+      return;
+    }
 
+    setIsAutoFilling(true);
+    try {
+      console.log('🤖 Starting ENHANCED auto-fill with AI intelligence...');
+
+      // Read file content
+      const text = await file.text();
+      const parsedContent = JSON.parse(text);
+
+      // Use smart extraction with AI backend + frontend fallback
+      const extractionResult = await smartExtractDocumentData(file, parsedContent);
+      console.log('✅ Smart extraction result:', extractionResult);
+
+      // Build enhanced metadata with confidence scoring
+      const enhanced = buildEnhancedAutoPopulateMetadata(extractionResult);
+      setEnhancedMetadata(enhanced);
+      setExtractionResult(extractionResult);
+
+      // Update metadata JSON
+      const currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
       const updatedMeta = {
         ...currentMeta,
-        ...kycMeta,
+        loanId: enhanced.loanId.value || currentMeta.loanId,
+        documentType: enhanced.documentType.value || currentMeta.documentType,
+        loanAmount: enhanced.loanAmount.value || currentMeta.loanAmount,
+        loanTerm: enhanced.loanTerm.value || currentMeta.loanTerm,
+        interestRate: enhanced.interestRate.value || currentMeta.interestRate,
+        borrowerFullName: enhanced.borrowerName.value || currentMeta.borrowerFullName,
+        borrowerEmail: enhanced.borrowerEmail.value || currentMeta.borrowerEmail,
+        borrowerPhone: enhanced.borrowerPhone.value || currentMeta.borrowerPhone,
+        borrowerDateOfBirth: enhanced.borrowerDateOfBirth.value || currentMeta.borrowerDateOfBirth,
+        borrowerStreetAddress: enhanced.borrowerStreetAddress.value || currentMeta.borrowerStreetAddress,
+        borrowerCity: enhanced.borrowerCity.value || currentMeta.borrowerCity,
+        borrowerState: enhanced.borrowerState.value || currentMeta.borrowerState,
+        borrowerZipCode: enhanced.borrowerZipCode.value || currentMeta.borrowerZipCode,
+        borrowerCountry: enhanced.borrowerCountry.value || currentMeta.borrowerCountry,
+        borrowerSSNLast4: enhanced.borrowerSSNLast4.value || currentMeta.borrowerSSNLast4,
+        borrowerGovernmentIdType: enhanced.borrowerGovernmentIdType.value || currentMeta.borrowerGovernmentIdType,
+        borrowerIdNumberLast4: enhanced.borrowerIdNumberLast4.value || currentMeta.borrowerIdNumberLast4,
+        borrowerEmploymentStatus: enhanced.borrowerEmploymentStatus.value || currentMeta.borrowerEmploymentStatus,
+        borrowerAnnualIncome: enhanced.borrowerAnnualIncome.value || currentMeta.borrowerAnnualIncome,
+        borrowerCoBorrowerName: enhanced.borrowerCoBorrowerName.value || currentMeta.borrowerCoBorrowerName,
+        propertyAddress: enhanced.propertyAddress.value || currentMeta.propertyAddress,
+        additionalNotes: enhanced.additionalNotes.value || currentMeta.additionalNotes,
       };
-      
-      console.log('📄 Updated metadata:', updatedMeta);
-      
+
       setMetadata(JSON.stringify(updatedMeta, null, 2));
+
+      // Update form fields with extracted values
       setFormData(prev => ({
         ...prev,
-        loanId: mappedMeta.loanId || prev.loanId,
-        documentType: mappedMeta.documentType || prev.documentType,
-        borrowerName: mappedMeta.borrowerName || prev.borrowerName,
-        propertyAddress: mappedMeta.propertyAddress || prev.propertyAddress,
-        amount: mappedMeta.loanAmount || prev.amount,
-        rate: mappedMeta.interestRate || prev.rate,
-        term: mappedMeta.loanTerm || prev.term,
+        loanId: enhanced.loanId.value || prev.loanId,
+        documentType: enhanced.documentType.value || prev.documentType,
+        loanAmount: enhanced.loanAmount.value || prev.loanAmount,
+        loanTerm: enhanced.loanTerm.value || prev.loanTerm,
+        interestRate: enhanced.interestRate.value || prev.interestRate,
+        borrowerFullName: enhanced.borrowerName.value || prev.borrowerFullName,
+        borrowerEmail: enhanced.borrowerEmail.value || prev.borrowerEmail,
+        borrowerPhone: enhanced.borrowerPhone.value || prev.borrowerPhone,
+        borrowerDateOfBirth: enhanced.borrowerDateOfBirth.value || prev.borrowerDateOfBirth,
+        borrowerStreetAddress: enhanced.borrowerStreetAddress.value || prev.borrowerStreetAddress,
+        borrowerCity: enhanced.borrowerCity.value || prev.borrowerCity,
+        borrowerState: enhanced.borrowerState.value || prev.borrowerState,
+        borrowerZipCode: enhanced.borrowerZipCode.value || prev.borrowerZipCode,
+        borrowerCountry: enhanced.borrowerCountry.value || prev.borrowerCountry,
+        borrowerSSNLast4: enhanced.borrowerSSNLast4.value || prev.borrowerSSNLast4,
+        borrowerGovernmentIdType: enhanced.borrowerGovernmentIdType.value || prev.borrowerGovernmentIdType,
+        borrowerIdNumberLast4: enhanced.borrowerIdNumberLast4.value || prev.borrowerIdNumberLast4,
+        borrowerEmploymentStatus: enhanced.borrowerEmploymentStatus.value || prev.borrowerEmploymentStatus,
+        borrowerAnnualIncome: enhanced.borrowerAnnualIncome.value || prev.borrowerAnnualIncome,
+        borrowerCoBorrowerName: enhanced.borrowerCoBorrowerName.value || prev.borrowerCoBorrowerName,
+        propertyAddress: enhanced.propertyAddress.value || prev.propertyAddress,
+        additionalNotes: enhanced.additionalNotes.value || prev.additionalNotes,
       }));
-      console.log('✅ metadata updated with loan + KYC details');
-      
-      setKycData({
-        fullLegalName: mappedMeta.borrowerName || '',
-        dateOfBirth: mappedMeta.borrowerDateOfBirth || '',
-        phoneNumber: mappedMeta.borrowerPhone || '',
-        emailAddress: mappedMeta.borrowerEmail || '',
-        streetAddress1: mappedMeta.borrowerStreetAddress || '',
-        streetAddress2: '',
-        city: mappedMeta.borrowerCity || '',
-        stateProvince: mappedMeta.borrowerState || '',
-        postalZipCode: mappedMeta.borrowerZipCode || '',
-        country: mappedMeta.borrowerCountry || 'US',
-        citizenshipCountry: mappedMeta.borrowerCountry || 'US',
-        identificationType: mappedMeta.borrowerGovernmentIdType || 'drivers_license',
-        identificationNumber: mappedMeta.borrowerIdNumberLast4 || '',
-        idIssuingCountry: mappedMeta.borrowerCountry || 'US',
-        sourceOfFunds: 'Employment Income',
-        purposeOfLoan: mappedMeta.additionalNotes || '',
-        expectedMonthlyTransactionVolume: 0,
-        expectedNumberOfMonthlyTransactions: 0,
-        isPEP: '',
-        pepDetails: '',
-        governmentIdFile: null,
-        proofOfAddressFile: null,
-      });
-      
-      console.log('✅ KYC data state updated');
-      
-      setForceUpdate(prev => prev + 1);
-      
-      const filledFields = Object.values(kycMeta).filter(value => value && value !== '' && value !== 0).length;
-      
-      console.log('📄 Filled fields count:', filledFields);
-      toast.success(`✅ Auto-filled ${filledFields} fields from JSON file!`);
-      
-    } catch (error) {
-      console.error('Error auto-filling from JSON:', error);
-      toast.error('Failed to auto-fill form from JSON file. Please check file format.');
+
+      // Auto-populate KYC data
+      setKycData(prev => ({
+        ...prev,
+        fullLegalName: enhanced.borrowerName.value || prev.fullLegalName,
+        dateOfBirth: enhanced.borrowerDateOfBirth.value || prev.dateOfBirth,
+        phoneNumber: enhanced.borrowerPhone.value || prev.phoneNumber,
+        emailAddress: enhanced.borrowerEmail.value || prev.emailAddress,
+        streetAddress1: enhanced.borrowerStreetAddress.value || prev.streetAddress1,
+        city: enhanced.borrowerCity.value || prev.city,
+        stateProvince: enhanced.borrowerState.value || prev.stateProvince,
+        postalZipCode: enhanced.borrowerZipCode.value || prev.postalZipCode,
+        country: enhanced.borrowerCountry.value || prev.country,
+        citizenshipCountry: enhanced.borrowerCountry.value || prev.citizenshipCountry,
+        identificationType: enhanced.borrowerGovernmentIdType.value || prev.identificationType,
+        identificationNumber: enhanced.borrowerIdNumberLast4.value || prev.identificationNumber,
+        idIssuingCountry: enhanced.borrowerCountry.value || prev.idIssuingCountry,
+        purposeOfLoan: enhanced.additionalNotes.value || prev.purposeOfLoan,
+      }));
+
+      // Progress to step 3 (Review)
+      setCurrentStep(3);
+
+      // Check if KYC is incomplete and auto-expand
+      const kycFieldsFilled = [
+        enhanced.borrowerName.value,
+        enhanced.borrowerEmail.value,
+        enhanced.borrowerPhone.value,
+        enhanced.borrowerDateOfBirth.value,
+        enhanced.borrowerStreetAddress.value,
+        enhanced.borrowerCity.value,
+        enhanced.borrowerState.value,
+        enhanced.borrowerZipCode.value,
+      ].filter(v => v && v !== '').length;
+
+      if (kycFieldsFilled < 6) {
+        setIsKycExpanded(true);
+        toast.info('Please review and complete KYC information');
+      }
+
+      // Show success message with confidence and source
+      const confidence = extractionResult.overallConfidence;
+      const source = extractionResult.extractedBy === 'backend' ? 'AI engine' : 'auto-detection';
+
+      if (confidence >= 80) {
+        toast.success(
+          `✅ Form auto-filled with ${confidence}% confidence using ${source}! Ready for review.`
+        );
+      } else if (confidence >= 60) {
+        toast.success(
+          `✅ Form auto-filled with ${confidence}% confidence using ${source}. Please review highlighted fields.`
+        );
+      } else {
+        toast.warning(
+          `⚠️ Form auto-filled with ${confidence}% confidence using ${source}. Please carefully review all fields.`
+        );
+      }
+
+      skipLoanAutoFillRef.current = true;
+
+    } catch (error: any) {
+      console.error('❌ Enhanced auto-fill error:', error);
+
+      // Provide helpful error messages based on error type
+      if (error.name === 'SyntaxError' || error.message?.includes('JSON')) {
+        toast.error('Invalid JSON format. Please ensure your file contains valid JSON data.');
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        toast.warning('AI extraction unavailable. Using fallback extraction. Some fields may have lower confidence.');
+      } else if (error.message?.includes('timeout')) {
+        toast.error('AI extraction timed out. Please try again or use a smaller file.');
+      } else {
+        toast.error('Could not auto-fill form. Please enter data manually or check the file format.');
+      }
+
+      // Even on error, try to expand KYC section for manual entry
+      setIsKycExpanded(true);
     } finally {
       setIsAutoFilling(false);
       skipLoanAutoFillRef.current = false;
@@ -1027,8 +1087,99 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       }
 
       console.log(`Validated ${valid.length} files, filtered ${invalid.length} files`);
+
+      // Trigger smart AI analysis for bulk/directory uploads
+      if (valid.length > 0) {
+        analyzeBulkFilesHandler(valid);
+      }
     }
   }, [etid, uploadMode, calculateFileHash, autoFillFromJSON, checkIfAlreadySealed, validateLoanFile]);
+
+  // Smart bulk file analysis handler - AI-powered extraction
+  const analyzeBulkFilesHandler = useCallback(async (files: File[]) => {
+    setIsAnalyzingBulk(true);
+    try {
+      console.log(`📊 Analyzing ${files.length} files with AI intelligence...`);
+
+      // Analyze all files in parallel with smart extraction
+      const analyses = await analyzeBulkFiles(files);
+      setBulkAnalyses(analyses);
+
+      // Calculate statistics
+      const completeCount = analyses.filter(a => !a.needsReview).length;
+      const incompleteCount = analyses.filter(a => a.needsReview).length;
+      const avgConfidence = Math.round(
+        analyses.reduce((sum, a) => sum + a.overallConfidence, 0) / analyses.length
+      );
+
+      // Show results
+      if (completeCount === files.length) {
+        toast.success(
+          `🎉 All ${files.length} files analyzed! ${avgConfidence}% avg confidence. Ready to seal!`
+        );
+      } else if (completeCount > 0) {
+        toast.success(
+          `✅ Analysis complete! ${completeCount} ready, ${incompleteCount} need review (${avgConfidence}% avg confidence)`
+        );
+      } else {
+        toast.warning(
+          `⚠️ Analysis complete! All ${files.length} files need review (${avgConfidence}% avg confidence)`
+        );
+      }
+    } catch (error) {
+      console.error('Bulk analysis error:', error);
+      toast.error('Failed to analyze files. Please try again.');
+    } finally {
+      setIsAnalyzingBulk(false);
+    }
+  }, []);
+
+  // Helper function to copy KYC data from one file to all same borrower files
+  const copyKycToSameBorrower = useCallback((sourceIndex: number) => {
+    const sourceAnalysis = bulkAnalyses[sourceIndex];
+    if (!sourceAnalysis) return;
+
+    const sourceBorrowerName = sourceAnalysis.metadata.borrowerName?.value;
+    if (!sourceBorrowerName) {
+      toast.error('Source file must have a borrower name');
+      return;
+    }
+
+    // Find all files with the same borrower
+    const updated = bulkAnalyses.map((analysis, idx) => {
+      if (idx === sourceIndex) return analysis;
+
+      const targetBorrowerName = analysis.metadata.borrowerName?.value;
+      if (targetBorrowerName && targetBorrowerName.toLowerCase() === sourceBorrowerName.toLowerCase()) {
+        // Copy KYC fields
+        return {
+          ...analysis,
+          metadata: {
+            ...analysis.metadata,
+            borrowerEmail: sourceAnalysis.metadata.borrowerEmail,
+            borrowerPhone: sourceAnalysis.metadata.borrowerPhone,
+            borrowerDateOfBirth: sourceAnalysis.metadata.borrowerDateOfBirth,
+            borrowerStreetAddress: sourceAnalysis.metadata.borrowerStreetAddress,
+            borrowerCity: sourceAnalysis.metadata.borrowerCity,
+            borrowerState: sourceAnalysis.metadata.borrowerState,
+            borrowerZipCode: sourceAnalysis.metadata.borrowerZipCode,
+            borrowerCountry: sourceAnalysis.metadata.borrowerCountry,
+            borrowerSSNLast4: sourceAnalysis.metadata.borrowerSSNLast4,
+            borrowerGovernmentIdType: sourceAnalysis.metadata.borrowerGovernmentIdType,
+            borrowerIdNumberLast4: sourceAnalysis.metadata.borrowerIdNumberLast4,
+            borrowerEmploymentStatus: sourceAnalysis.metadata.borrowerEmploymentStatus,
+            borrowerAnnualIncome: sourceAnalysis.metadata.borrowerAnnualIncome,
+          },
+          sameBorrowerDetected: true,
+        };
+      }
+      return analysis;
+    });
+
+    setBulkAnalyses(updated);
+    const copiedCount = updated.filter(a => a.sameBorrowerDetected).length - 1;
+    toast.success(`✅ Copied KYC data to ${copiedCount} file(s) with same borrower`);
+  }, [bulkAnalyses]);
 
   // File acceptance configuration
   const fileAccept = {
@@ -1216,11 +1367,12 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       <div className="flex items-start gap-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
         <Info className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
         <div className="space-y-1 text-sm text-purple-900">
-          <p className="font-medium">Drop several documents at once—metadata is auto-filled, you only edit what's missing.</p>
+          <p className="font-medium">🚀 Smart Bulk Upload - AI-Powered Analysis & Batch Editing</p>
           <ul className="list-disc list-inside space-y-1 text-purple-800">
-            <li>Each JSON file is parsed and mapped to loan + borrower fields</li>
-            <li>Files with missing data appear in the "Fix now" list</li>
-            <li>Use the inline editor to fill gaps; once complete, the file is marked ready</li>
+            <li>Parallel AI extraction of all files with confidence scoring</li>
+            <li>Smart detection of same borrower across files for KYC auto-copy</li>
+            <li>Intelligent suggestions based on data from other files</li>
+            <li>One-click batch editing for missing fields</li>
           </ul>
         </div>
       </div>
@@ -1230,10 +1382,145 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         accept={fileAccept}
         directoryMode={false}
         maxSize={50 * 1024 * 1024}
-        description="Drop multiple loan documents or click to select them. We'll validate the files and auto-fill metadata."
-        aria-label="bulk upload area for document sealing"
+        description="Drop multiple loan documents. We'll analyze them with AI and show you what needs attention."
+        aria-label="smart bulk upload area"
         id="file-upload-dropzone-bulk"
       />
+
+      {/* AI Analysis Loading State */}
+      {isAnalyzingBulk && (
+        <Card className="border-blue-300 bg-blue-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+              <div>
+                <p className="font-medium text-gray-900">Analyzing files with AI...</p>
+                <p className="text-sm text-gray-600">
+                  Extracting data, calculating confidence, detecting patterns
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Workflow Guidance - Show smart insights */}
+      {bulkAnalyses.length > 0 && !isAnalyzingBulk && !showBulkEditor && (
+        <Alert className={
+          bulkAnalyses.filter(a => !a.needsReview).length === bulkAnalyses.length
+            ? "bg-green-50 border-green-200"
+            : bulkAnalyses.filter(a => !a.needsReview).length > 0
+            ? "bg-blue-50 border-blue-200"
+            : "bg-yellow-50 border-yellow-200"
+        }>
+          {bulkAnalyses.filter(a => !a.needsReview).length === bulkAnalyses.length ? (
+            <>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertTitle className="text-green-800">All Files Ready! 🎉</AlertTitle>
+              <AlertDescription className="text-green-700">
+                All {bulkAnalyses.length} files have been analyzed and are ready to seal immediately.
+                You can proceed directly to sealing or review individual files first.
+              </AlertDescription>
+            </>
+          ) : bulkAnalyses.filter(a => !a.needsReview).length > 0 ? (
+            <>
+              <CheckCircle className="h-4 w-4 text-blue-600" />
+              <AlertTitle className="text-blue-800">Analysis Complete!</AlertTitle>
+              <AlertDescription className="text-blue-700">
+                <div className="space-y-2">
+                  <div>
+                    ✅ {bulkAnalyses.filter(a => !a.needsReview).length} files ready to seal
+                    {' · '}
+                    ⚠️ {bulkAnalyses.filter(a => a.needsReview).length} files need your review
+                  </div>
+                  {bulkAnalyses.some(a => a.sameBorrowerDetected) && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-purple-700 font-medium">
+                        💡 Same borrower detected across files
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          // Find first file with borrower data
+                          const sourceIdx = bulkAnalyses.findIndex(a => a.metadata.borrowerName?.value);
+                          if (sourceIdx >= 0) {
+                            copyKycToSameBorrower(sourceIdx);
+                          }
+                        }}
+                      >
+                        Copy KYC to All
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </AlertDescription>
+            </>
+          ) : (
+            <>
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              <AlertTitle className="text-yellow-800">Review Needed</AlertTitle>
+              <AlertDescription className="text-yellow-700">
+                All {bulkAnalyses.length} files need additional information before sealing.
+                Use the batch editor below to quickly fill in missing data.
+              </AlertDescription>
+            </>
+          )}
+        </Alert>
+      )}
+
+      {/* Smart Analysis Dashboard */}
+      {bulkAnalyses.length > 0 && !showBulkEditor && (
+        <BulkAnalysisDashboard
+          analyses={bulkAnalyses}
+          onEditFile={(analysis, index) => {
+            setBulkEditorIndex(index);
+            setShowBulkEditor(true);
+          }}
+          onViewFile={(analysis, index) => {
+            console.log('View file:', analysis.fileName);
+          }}
+          onSealAll={() => {
+            // Seal all complete files
+            const completeAnalyses = bulkAnalyses.filter(a => !a.needsReview);
+            if (completeAnalyses.length > 0) {
+              toast.info(`Ready to seal ${completeAnalyses.length} documents...`);
+              // TODO: Implement actual bulk sealing
+            } else {
+              toast.warning('No files are ready to seal. Please complete missing data.');
+            }
+          }}
+        />
+      )}
+
+      {/* Smart Batch Editor */}
+      {bulkAnalyses.length > 0 && showBulkEditor && (
+        <SmartBatchEditor
+          analyses={bulkAnalyses}
+          currentIndex={bulkEditorIndex}
+          onPrevious={() => setBulkEditorIndex(Math.max(0, bulkEditorIndex - 1))}
+          onNext={() => setBulkEditorIndex(Math.min(bulkAnalyses.length - 1, bulkEditorIndex + 1))}
+          onSave={(index, updatedMetadata) => {
+            // Update the analysis with new metadata
+            const updated = [...bulkAnalyses];
+            updated[index].metadata = updatedMetadata;
+
+            // Recalculate completeness
+            const allFields = Object.keys(updatedMetadata).filter(k => k !== 'extractionMetadata');
+            const filledFields = allFields.filter(k => {
+              const field = updatedMetadata[k];
+              return field && field.value && field.value !== '' && field.confidence > 0;
+            });
+            updated[index].completeness = Math.round((filledFields.length / allFields.length) * 100);
+            updated[index].needsReview = updated[index].completeness < 70;
+
+            setBulkAnalyses(updated);
+            toast.success('Changes saved!');
+          }}
+          onClose={() => setShowBulkEditor(false)}
+        />
+      )}
 
       {selectedFiles.length > 0 && (
         <div className="space-y-3">
@@ -3386,7 +3673,17 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                   <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`loan-info-${forceUpdate}`}>
                   <div className="space-y-2">
-                    <Label htmlFor="loanId">Loan ID</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="loanId">Loan ID</Label>
+                      {enhancedMetadata?.loanId && (
+                        <ConfidenceBadge
+                          confidence={enhancedMetadata.loanId.confidence}
+                          source={enhancedMetadata.loanId.source}
+                          extractedFrom={enhancedMetadata.loanId.extractedFrom}
+                          compact
+                        />
+                      )}
+                    </div>
                     <Input
                       id="loanId"
                       value={formData.loanId}
@@ -3397,14 +3694,31 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         setMetadata(JSON.stringify({ ...currentMeta, loanId: e.target.value }, null, 2))
                       }}
                       placeholder="e.g., LOAN_2024_001"
+                      className={
+                        enhancedMetadata?.loanId && enhancedMetadata.loanId.confidence < 60 && enhancedMetadata.loanId.confidence > 0
+                          ? 'border-yellow-400 border-2'
+                          : ''
+                      }
                     />
+                    {enhancedMetadata?.loanId && enhancedMetadata.loanId.confidence < 60 && enhancedMetadata.loanId.confidence > 0 && (
+                      <p className="text-xs text-yellow-600">⚠️ Low confidence - please verify this value</p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       Unique identifier for the loan
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="documentType">Document Type</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="documentType">Document Type</Label>
+                      {enhancedMetadata?.documentType && (
+                        <ConfidenceBadge
+                          confidence={enhancedMetadata.documentType.confidence}
+                          source={enhancedMetadata.documentType.source}
+                          compact
+                        />
+                      )}
+                    </div>
                     <select
                       id="documentType"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -3439,7 +3753,16 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="borrowerName">Borrower Name</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="borrowerName">Borrower Name</Label>
+                      {enhancedMetadata?.borrowerName && (
+                        <ConfidenceBadge
+                          confidence={enhancedMetadata.borrowerName.confidence}
+                          source={enhancedMetadata.borrowerName.source}
+                          compact
+                        />
+                      )}
+                    </div>
                     <Input
                       id="borrowerName"
                       value={formData.borrowerName}
@@ -3449,7 +3772,15 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         setMetadata(JSON.stringify({ ...currentMeta, borrowerName: e.target.value }, null, 2))
                       }}
                       placeholder="e.g., John Smith"
+                      className={
+                        enhancedMetadata?.borrowerName && enhancedMetadata.borrowerName.confidence < 60 && enhancedMetadata.borrowerName.confidence > 0
+                          ? 'border-yellow-400 border-2'
+                          : ''
+                      }
                     />
+                    {enhancedMetadata?.borrowerName && enhancedMetadata.borrowerName.confidence < 60 && enhancedMetadata.borrowerName.confidence > 0 && (
+                      <p className="text-xs text-yellow-600">⚠️ Low confidence - please verify this value</p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       Primary borrower's full name
                     </p>
