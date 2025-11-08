@@ -44,6 +44,17 @@ import { buildAutoPopulateMetadata, type AutoPopulateMetadata } from '@/utils/lo
 import { SuccessCelebration } from '@/components/SuccessCelebration'
 import { ProgressSteps, CompactProgressSteps } from '@/components/ui/progress-steps'
 import { HelpTooltip, SecurityLevelTooltips, KYCTooltips, BlockchainTooltips } from '@/components/ui/help-tooltip'
+import {
+  smartExtractDocumentData,
+  buildEnhancedAutoPopulateMetadata,
+  analyzeBulkFiles,
+  type BulkFileAnalysis,
+  type EnhancedAutoPopulateMetadata,
+  type SmartExtractionResult
+} from '@/utils/smartAutoPopulate'
+import { BulkAnalysisDashboard } from '@/components/BulkAnalysisDashboard'
+import { SmartBatchEditor } from '@/components/SmartBatchEditor'
+import { ConfidenceBadge, FieldConfidenceWrapper } from '@/components/ui/confidence-badge'
 
 interface UploadResult {
   artifactId: string;
@@ -273,6 +284,16 @@ export default function UploadPage() {
   const [editingMetadata, setEditingMetadata] = useState<AutoPopulateMetadata | null>(null);
 const [showMetadataEditor, setShowMetadataEditor] = useState(false);
 const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([]);
+
+  // Smart bulk upload state
+  const [bulkAnalyses, setBulkAnalyses] = useState<BulkFileAnalysis[]>([])
+  const [isAnalyzingBulk, setIsAnalyzingBulk] = useState(false)
+  const [showBulkEditor, setShowBulkEditor] = useState(false)
+  const [bulkEditorIndex, setBulkEditorIndex] = useState(0)
+
+  // Enhanced auto-populate for single file
+  const [enhancedMetadata, setEnhancedMetadata] = useState<EnhancedAutoPopulateMetadata | null>(null)
+  const [extractionResult, setExtractionResult] = useState<SmartExtractionResult | null>(null)
 
   // Duplicate detection handlers
   const handleDuplicateFound = (response: DuplicateCheckResponse) => {
