@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { json as fetchJson } from '@/utils/api'
 import { getCurrentEasternTime, formatEasternTimeWithTZ } from '@/utils/timezone'
+import apiConfig from '@/lib/api-config'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -91,10 +92,10 @@ export default function IntegratedDashboard() {
         
         // Fetch real data from multiple backend endpoints with timeout
         const [documentsRes, analyticsRes, healthRes, dailyRes] = await Promise.all([
-          fetchJson<any>('http://localhost:8000/api/artifacts', { timeoutMs: 3000 }).catch(() => ({ ok: false })),
-          fetchJson<any>('http://localhost:8000/api/analytics/system-metrics', { timeoutMs: 3000 }).catch(() => ({ ok: false })),
-          fetchJson<any>('http://localhost:8000/api/health', { timeoutMs: 3000 }).catch(() => ({ ok: false })),
-          fetchJson<any>('http://localhost:8000/api/analytics/daily-activity', { timeoutMs: 3000 }).catch(() => ({ ok: false }))
+          fetchJson<any>(apiConfig.artifacts.list(), { timeoutMs: 3000 }).catch(() => ({ ok: false })),
+          fetchJson<any>(apiConfig.analytics.systemMetrics, { timeoutMs: 3000 }).catch(() => ({ ok: false })),
+          fetchJson<any>(apiConfig.health, { timeoutMs: 3000 }).catch(() => ({ ok: false })),
+          fetchJson<any>(apiConfig.analytics.dailyActivity, { timeoutMs: 3000 }).catch(() => ({ ok: false }))
         ])
 
         let totalDocs = 0
