@@ -16,6 +16,8 @@ import {
   sanitizeNotes,
 } from '@/utils/dataSanitization'
 
+import { detectFraud, FraudDetectionResult } from '@/utils/fraudDetectionEngine'
+
 // ============================================================================
 // ENHANCED AUTO-POPULATE WITH BACKEND INTEGRATION
 // ============================================================================
@@ -33,6 +35,7 @@ export interface SmartExtractionResult {
   overallConfidence: number
   extractedBy: 'backend' | 'frontend'
   warnings?: string[]
+  fraudDetection?: FraudDetectionResult
 }
 
 export interface EnhancedAutoPopulateMetadata {
@@ -78,6 +81,7 @@ export interface EnhancedAutoPopulateMetadata {
     extractedBy: 'backend' | 'frontend'
     timestamp: string
     warnings: string[]
+    fraudDetection?: FraudDetectionResult
   }
 }
 
@@ -119,58 +123,55 @@ export async function extractWithBackendAI(file: File): Promise<SmartExtractionR
 
 /**
  * Fallback to frontend extraction if backend fails
+ * NOW USES INTELLIGENT EXTRACTION - WORKS WITH ANY JSON STRUCTURE!
  */
 export async function extractWithFrontendFallback(
   fileContent: Record<string, any>
 ): Promise<SmartExtractionResult> {
-  // Use existing frontend logic as fallback
-  const candidatePaths: Record<string, string[]> = {
-    loanId: ['loan_id', 'loanId', 'application_id', 'loan_details.loan_id', 'loanDetails.loanId', 'id', 'loan_number'],
-    documentType: ['document_type', 'documentType', 'loan_details.document_type', 'type', 'doc_type'],
-    loanAmount: ['loan_amount', 'loanAmount', 'loan_details.loan_amount', 'loanDetails.loanAmount', 'amount', 'principal'],
-    loanTerm: ['loan_term', 'loanTerm', 'loan_term_months', 'loan_details.loan_term_months', 'term', 'term_months'],
-    interestRate: ['interest_rate', 'interestRate', 'loan_details.interest_rate', 'rate', 'apr'],
-    propertyStreet: ['property_address', 'propertyAddress', 'property_information.property_address', 'property.address', 'property.street'],
-    borrowerFullName: ['borrower.full_name', 'borrower.name', 'borrowerName', 'borrower_information.personal_details.full_name', 'name', 'full_name'],
-    borrowerEmail: ['borrower.email', 'borrower_information.personal_details.email', 'email', 'contact.email'],
-    borrowerPhone: ['borrower.phone', 'borrower_information.personal_details.phone', 'phone', 'contact.phone', 'phone_number'],
-    borrowerDob: ['borrower.date_of_birth', 'borrower_information.personal_details.date_of_birth', 'dob', 'date_of_birth', 'birth_date'],
-    borrowerSSN: ['borrower.ssn_last4', 'borrower_information.personal_details.ssn_last4', 'ssn_last4', 'ssn'],
-    idType: ['borrower.id_type', 'borrower_information.identification.id_type', 'id_type', 'government_id_type'],
-    idLast4: ['borrower.id_last4', 'borrower_information.identification.id_last4', 'id_last4', 'id_number'],
-    employmentStatus: ['borrower.employment_status', 'borrower_information.employment.status', 'employment_status', 'employment'],
-    annualIncome: ['borrower.annual_income', 'borrower_information.employment.annual_income', 'annual_income', 'income'],
-    coBorrowerName: ['borrower.co_borrower_name', 'borrower_information.co_borrower_name', 'co_borrower', 'co_borrower_name'],
-    additionalNotes: ['additional_notes', 'notes', 'loan_details.notes', 'comments', 'remarks'],
-  }
+  console.log('🧠 Using INTELLIGENT extraction (works with ANY structure)...')
 
+  // Import intelligent extractor
+  const { intelligentExtract } = await import('@/utils/intelligentExtractor')
+
+  // Use intelligent extraction - NO HARDCODED PATHS!
+  const intelligentResults = intelligentExtract(fileContent)
+
+  // Convert to SmartExtractionResult format
   const fields: Record<string, any> = {}
   const confidenceScores: Record<string, number> = {}
+  const warnings: string[] = []
 
-  // Extract each field with confidence based on match quality
-  for (const [fieldName, paths] of Object.entries(candidatePaths)) {
-    for (let i = 0; i < paths.length; i++) {
-      const value = getNestedValue(fileContent, paths[i])
-      if (value !== undefined && value !== null && value !== '') {
-        fields[fieldName] = value
-        // Earlier paths in array = higher confidence
-        // First path: 90%, second: 75%, third: 60%, rest: 50%
-        confidenceScores[fieldName] = i === 0 ? 90 : i === 1 ? 75 : i === 2 ? 60 : 50
-        break
+  for (const [fieldName, result] of Object.entries(intelligentResults)) {
+    if (result.confidence > 0) {
+      fields[fieldName] = result.value
+      confidenceScores[fieldName] = result.confidence
+
+      // Add warning if confidence is low but we found something
+      if (result.confidence < 60) {
+        warnings.push(`Low confidence for ${fieldName}: found "${result.value}" at ${result.extractedFrom}`)
       }
     }
   }
 
-  const totalFields = Object.keys(candidatePaths).length
+  const totalFields = Object.keys(intelligentResults).length
   const extractedFields = Object.keys(fields).length
-  const overallConfidence = Math.round((extractedFields / totalFields) * 100)
+
+  // Calculate weighted confidence (better reflection of quality)
+  const totalConfidence = Object.values(confidenceScores).reduce((sum, conf) => sum + conf, 0)
+  const overallConfidence = extractedFields > 0
+    ? Math.round(totalConfidence / totalFields)
+    : 0
+
+  console.log(`✅ Intelligent extraction: ${extractedFields}/${totalFields} fields (${overallConfidence}% confidence)`)
 
   return {
     fields,
     confidenceScores,
     overallConfidence,
     extractedBy: 'frontend',
-    warnings: extractedFields < totalFields / 2 ? ['Many fields could not be extracted. Manual review recommended.'] : []
+    warnings: extractedFields < totalFields / 2
+      ? ['Many fields could not be extracted. Manual review recommended.', ...warnings]
+      : warnings
   }
 }
 
@@ -195,30 +196,41 @@ export async function smartExtractDocumentData(
   file: File,
   fileContent?: Record<string, any>
 ): Promise<SmartExtractionResult> {
+  let extractionResult: SmartExtractionResult
+
   try {
     // Try backend AI first
     console.log('🤖 Attempting backend AI extraction...')
     const backendResult = await extractWithBackendAI(file)
     console.log('✅ Backend extraction successful:', backendResult)
-    return backendResult
+    extractionResult = backendResult
   } catch (error) {
     console.warn('⚠️ Backend extraction failed, using frontend fallback:', error)
 
     // Fallback to frontend extraction
     if (fileContent) {
-      return extractWithFrontendFallback(fileContent)
-    }
-
-    // If no file content provided, try to read the file
-    try {
-      const text = await file.text()
-      const parsed = JSON.parse(text)
-      return extractWithFrontendFallback(parsed)
-    } catch (parseError) {
-      console.error('Failed to parse file for frontend fallback:', parseError)
-      throw new Error('Could not extract data from file')
+      extractionResult = await extractWithFrontendFallback(fileContent)
+    } else {
+      // If no file content provided, try to read the file
+      try {
+        const text = await file.text()
+        const parsed = JSON.parse(text)
+        extractionResult = await extractWithFrontendFallback(parsed)
+      } catch (parseError) {
+        console.error('Failed to parse file for frontend fallback:', parseError)
+        throw new Error('Could not extract data from file')
+      }
     }
   }
+
+  // Run fraud detection on extracted data
+  console.log('🔍 Running fraud detection analysis...')
+  const fraudAnalysis = detectFraud(extractionResult.fields, file.name)
+  extractionResult.fraudDetection = fraudAnalysis
+
+  console.log(`🚨 Fraud Risk Score: ${fraudAnalysis.fraudRiskScore}/100 (${fraudAnalysis.riskLevel})`)
+
+  return extractionResult
 }
 
 // ============================================================================
@@ -318,7 +330,8 @@ export function buildEnhancedAutoPopulateMetadata(
       overallConfidence: extractionResult.overallConfidence,
       extractedBy: extractionResult.extractedBy,
       timestamp: new Date().toISOString(),
-      warnings: extractionResult.warnings || []
+      warnings: extractionResult.warnings || [],
+      fraudDetection: extractionResult.fraudDetection
     }
   }
 }
