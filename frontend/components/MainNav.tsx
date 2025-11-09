@@ -15,7 +15,7 @@ export default function MainNav() {
     { name: 'Upload', href: '/upload', icon: Upload },
     { name: 'Documents', href: '/documents', icon: FileText },
     { name: 'Verification', href: '/verification', icon: Shield },
-    { name: 'Forensics', href: '/forensics', icon: Search },
+    { name: 'Security', href: '/security', icon: Shield },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   ]
 
