@@ -2,7 +2,19 @@
 const nextConfig = {
   output: 'standalone',
   images: {
-    domains: [`${process.env.NEXT_PUBLIC_AWS_S3_BUCKET}.s3.${process.env.NEXT_PUBLIC_AWS_REGION}.amazonaws.com`],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.s3.*.amazonaws.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '8000',
+        pathname: '/**',
+      },
+    ],
   },
 };
 

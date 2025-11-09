@@ -49,6 +49,7 @@ import {
   type BorrowerInfo,
   type AuditEvent
 } from '@/lib/api/verification';
+import apiConfig from '@/lib/api-config';
 
 interface Document {
   id: string;
@@ -151,7 +152,7 @@ export default function VerifyPage() {
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
-        const response = await fetchJson<any>('http://localhost:8000/api/artifacts?limit=50', {
+        const response = await fetchJson<any>(apiConfig.artifacts.list(50), {
           timeoutMs: 5000,
           retries: 1
         });
@@ -192,8 +193,8 @@ export default function VerifyPage() {
   useEffect(() => {
     const loadMetrics = async () => {
       const [daily, metrics] = await Promise.all([
-        fetchJson<any>('http://localhost:8000/api/analytics/daily-activity', { timeoutMs: 3000 }).catch(() => ({ ok: false })),
-        fetchJson<any>('http://localhost:8000/api/verification/metrics', { timeoutMs: 3000 }).catch(() => ({ ok: false }))
+        fetchJson<any>(apiConfig.analytics.dailyActivity, { timeoutMs: 3000 }).catch(() => ({ ok: false })),
+        fetchJson<any>(apiConfig.verification.metrics, { timeoutMs: 3000 }).catch(() => ({ ok: false }))
       ]);
       if (daily?.ok) {
         const payload = (daily as any).data;
@@ -216,7 +217,7 @@ export default function VerifyPage() {
     setProofResult(null);
 
     try {
-      const response = await fetchWithTimeout('http://localhost:8000/api/verify-by-document', {
+      const response = await fetchWithTimeout(apiConfig.verification.verifyByDocument, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -311,7 +312,7 @@ export default function VerifyPage() {
     setProofResult(null);
 
     try {
-      const resp = await fetchJson<ApiResponse<VerifyResult>>(`http://localhost:8000/api/verify?hash=${fileHash}`, {
+      const resp = await fetchJson<ApiResponse<VerifyResult>>(apiConfig.verification.verifyByHash(fileHash), {
         timeoutMs: 8000
       });
       

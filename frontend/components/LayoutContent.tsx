@@ -9,11 +9,13 @@ export function LayoutContent({ children }: Readonly<{ children: React.ReactNode
   const pathname = usePathname()
 
   // Check if current route is public
+  // Must match middleware.ts public routes
   const isPublicRoute =
     pathname === '/' ||
     pathname.startsWith('/sign-in') ||
     pathname.startsWith('/sign-up') ||
-    pathname === '/landing'
+    pathname.startsWith('/landing') ||
+    pathname.startsWith('/redirect')
 
   return (
     <>

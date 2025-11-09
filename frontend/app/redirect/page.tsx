@@ -11,8 +11,8 @@ export default function RedirectPage() {
   useEffect(() => {
     if (isLoaded) {
       if (user) {
-        // User is authenticated, redirect to dashboard
-        router.push('/')
+        // User is authenticated, redirect directly to integrated dashboard
+        router.push('/integrated-dashboard')
       } else {
         // User is not authenticated, redirect to landing page
         router.push('/landing')
