@@ -4053,8 +4053,6 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                     </div>
                   </div>
                 </details>
-                  </CardContent>
-                </Card>
               </>
             )}
 
