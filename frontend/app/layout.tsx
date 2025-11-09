@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
-import { shadc } from "@clerk/themes";
 import { LayoutContent } from "@/components/LayoutContent";
 import { Toaster } from "react-hot-toast";
 
@@ -31,9 +30,8 @@ export default function RootLayout({
   return (
     <ClerkProvider
       appearance={{
-        baseTheme: shadc, // Use shadcn/ui theme for consistent styling
         variables: {
-          colorPrimary: '#2563eb', // IntegrityX blue brand color
+          colorPrimary: '#2563eb',
           borderRadius: '0.75rem',
         },
       }}
