@@ -273,7 +273,7 @@ export default function SecurityPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Link href="/verify">
+                <Link href="/zkp-verify">
                   <Button variant="secondary" size="sm">
                     ZKP Verify <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -425,7 +425,7 @@ export default function SecurityPage() {
             </Card>
           </Link>
 
-          <Link href="/verify" className="block">
+          <Link href="/zkp-verify" className="block">
             <Card className="border-2 border-transparent hover:border-purple-300 transition-all cursor-pointer h-full">
               <CardContent className="pt-6 text-center">
                 <Lock className="h-12 w-12 text-purple-600 mx-auto mb-4" />
@@ -434,7 +434,7 @@ export default function SecurityPage() {
                   Verify documents without revealing private borrower data
                 </p>
                 <Button className="w-full" variant="outline">
-                  Go to Verify <ArrowRight className="h-4 w-4 ml-2" />
+                  Go to ZKP Verify <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </CardContent>
             </Card>
