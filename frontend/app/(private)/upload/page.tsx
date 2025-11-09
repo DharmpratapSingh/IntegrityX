@@ -3804,667 +3804,262 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                   <CardHeader>
                     <CardTitle>Loan Information</CardTitle>
                     <CardDescription>
-                      Provide loan details and document context (optional)
+                      Loan-specific transaction details (borrower information collected in KYC section above)
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`loan-info-${forceUpdate}`}>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="loanId">Loan ID</Label>
-                      {enhancedMetadata?.loanId && (
-                        <ConfidenceBadge
-                          confidence={enhancedMetadata.loanId.confidence}
-                          source={enhancedMetadata.loanId.source}
-                          extractedFrom={enhancedMetadata.loanId.extractedFrom}
-                          compact
+                    {/* Row 1: Loan ID and Document Type */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`loan-info-${forceUpdate}`}>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="loanId">Loan ID</Label>
+                          {enhancedMetadata?.loanId && (
+                            <ConfidenceBadge
+                              confidence={enhancedMetadata.loanId.confidence}
+                              source={enhancedMetadata.loanId.source}
+                              extractedFrom={enhancedMetadata.loanId.extractedFrom}
+                              compact
+                            />
+                          )}
+                        </div>
+                        <Input
+                          id="loanId"
+                          value={formData.loanId}
+                          onChange={(e) => {
+                            console.log('🔍 Loan ID field changed to:', e.target.value);
+                            setFormData(prev => ({ ...prev, loanId: e.target.value }));
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, loanId: e.target.value }, null, 2))
+                          }}
+                          placeholder="e.g., LOAN_2024_001"
+                          className={
+                            enhancedMetadata?.loanId && enhancedMetadata.loanId.confidence < 60 && enhancedMetadata.loanId.confidence > 0
+                              ? 'border-yellow-400 border-2'
+                              : ''
+                          }
                         />
-                      )}
-                    </div>
-                    <Input
-                      id="loanId"
-                      value={formData.loanId}
-                      onChange={(e) => {
-                        console.log('🔍 Loan ID field changed to:', e.target.value);
-                        setFormData(prev => ({ ...prev, loanId: e.target.value }));
-                        const currentMeta = JSON.parse(metadata || '{}')
-                        setMetadata(JSON.stringify({ ...currentMeta, loanId: e.target.value }, null, 2))
-                      }}
-                      placeholder="e.g., LOAN_2024_001"
-                      className={
-                        enhancedMetadata?.loanId && enhancedMetadata.loanId.confidence < 60 && enhancedMetadata.loanId.confidence > 0
-                          ? 'border-yellow-400 border-2'
-                          : ''
-                      }
-                    />
-                    {enhancedMetadata?.loanId && enhancedMetadata.loanId.confidence < 60 && enhancedMetadata.loanId.confidence > 0 && (
-                      <p className="text-xs text-yellow-600">⚠️ Low confidence - please verify this value</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Unique identifier for the loan
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="documentType">Document Type</Label>
-                      {enhancedMetadata?.documentType && (
-                        <ConfidenceBadge
-                          confidence={enhancedMetadata.documentType.confidence}
-                          source={enhancedMetadata.documentType.source}
-                          compact
-                        />
-                      )}
-                    </div>
-                    <select
-                      id="documentType"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      value={formData.documentType}
-                      onChange={(e) => {
-                        setFormData(prev => ({ ...prev, documentType: e.target.value }));
-                        const currentMeta = JSON.parse(metadata || '{}')
-                        setMetadata(JSON.stringify({ ...currentMeta, documentType: e.target.value }, null, 2))
-                      }}
-                    >
-                      <option value="">Select document type</option>
-                      <option value="loan_application">Loan Application</option>
-                      <option value="credit_report">Credit Report</option>
-                      <option value="property_appraisal">Property Appraisal</option>
-                      <option value="income_verification">Income Verification</option>
-                      <option value="bank_statements">Bank Statements</option>
-                      <option value="tax_returns">Tax Returns</option>
-                      <option value="employment_verification">Employment Verification</option>
-                      <option value="underwriting_decision">Underwriting Decision</option>
-                      <option value="closing_disclosure">Closing Disclosure</option>
-                      <option value="title_insurance">Title Insurance</option>
-                      <option value="homeowners_insurance">Homeowners Insurance</option>
-                      <option value="flood_certificate">Flood Certificate</option>
-                      <option value="compliance_document">Compliance Document</option>
-                      <option value="other">Other</option>
-                    </select>
-                    <p className="text-xs text-muted-foreground">
-                      Type of document being uploaded
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="borrowerName">Borrower Name</Label>
-                      {enhancedMetadata?.borrowerName && (
-                        <ConfidenceBadge
-                          confidence={enhancedMetadata.borrowerName.confidence}
-                          source={enhancedMetadata.borrowerName.source}
-                          compact
-                        />
-                      )}
-                    </div>
-                    <Input
-                      id="borrowerName"
-                      value={formData.borrowerName}
-                      onChange={(e) => {
-                        setFormData(prev => ({ ...prev, borrowerName: e.target.value }));
-                        const currentMeta = JSON.parse(metadata || '{}')
-                        setMetadata(JSON.stringify({ ...currentMeta, borrowerName: e.target.value }, null, 2))
-                      }}
-                      placeholder="e.g., John Smith"
-                      className={
-                        enhancedMetadata?.borrowerName && enhancedMetadata.borrowerName.confidence < 60 && enhancedMetadata.borrowerName.confidence > 0
-                          ? 'border-yellow-400 border-2'
-                          : ''
-                      }
-                    />
-                    {enhancedMetadata?.borrowerName && enhancedMetadata.borrowerName.confidence < 60 && enhancedMetadata.borrowerName.confidence > 0 && (
-                      <p className="text-xs text-yellow-600">⚠️ Low confidence - please verify this value</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Primary borrower's full name
-                    </p>
-                  </div>
-                  </div>
-
-                {/* Privacy Notice Banner */}
-                {!privacyNoticeDismissed && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 relative">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-blue-800">
-                          <span className="font-medium">ℹ️ Identity Information</span> - We collect minimal borrower identity data solely for creating an immutable audit trail. This data is cryptographically sealed in the blockchain but is not used for lending decisions or identity verification. Sensitive data (SSN, ID numbers) are collected in truncated format (last 4 digits only).
+                        {enhancedMetadata?.loanId && enhancedMetadata.loanId.confidence < 60 && enhancedMetadata.loanId.confidence > 0 && (
+                          <p className="text-xs text-yellow-600">⚠️ Low confidence - please verify this value</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          Unique identifier for the loan
                         </p>
                       </div>
-                      <button
-                        onClick={handleDismissPrivacyNotice}
-                        className="flex-shrink-0 text-blue-400 hover:text-blue-600 transition-colors"
-                        aria-label="Dismiss privacy notice"
-                      >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Borrower Information (For Audit Trail) */}
-                <div className="space-y-4 pt-4 border-t">
-                  <div>
-                    <h3 className="text-lg font-semibold">Borrower Information (For Audit Trail)</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Essential borrower identity fields that will be sealed in the blockchain
-                    </p>
-                  </div>
-
-                  {/* Basic Identity */}
-                  <div className="space-y-4">
-                    <h4 className="text-md font-medium">Basic Identity</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerFullName" className="flex items-center gap-1">
-                          Full Name <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerFullName"
-                          value={formData.borrowerFullName}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerFullName', e.target.value)}
-                          placeholder="Primary borrower's legal name"
-                          className={hasFieldError('borrowerFullName') ? 'border-red-500' : ''}
-                        />
-                        {getFieldError('borrowerFullName') && (
-                          <p className="text-sm text-red-500 flex items-center gap-1">
-                            <AlertCircle className="h-3 w-3" />
-                            {getFieldError('borrowerFullName')}
-                          </p>
-                        )}
-                      </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="borrowerDateOfBirth" className="flex items-center gap-1">
-                          Date of Birth <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerDateOfBirth"
-                          type="date"
-                          value={formData.borrowerDateOfBirth}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerDateOfBirth', e.target.value)}
-                          className={borrowerErrors.borrowerDateOfBirth ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerDateOfBirth && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerDateOfBirth}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerEmail" className="flex items-center gap-1">
-                          Email Address <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerEmail"
-                          type="email"
-                          value={formData.borrowerEmail}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerEmail', e.target.value)}
-                          placeholder="borrower@example.com"
-                          className={hasFieldError('borrowerEmail') ? 'border-red-500' : ''}
-                        />
-                        {getFieldError('borrowerEmail') && (
-                          <p className="text-sm text-red-500 flex items-center gap-1">
-                            <AlertCircle className="h-3 w-3" />
-                            {getFieldError('borrowerEmail')}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerPhone" className="flex items-center gap-1">
-                          Phone Number <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerPhone"
-                          type="tel"
-                          value={formData.borrowerPhone}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerPhone', e.target.value)}
-                          placeholder="+1-555-123-4567"
-                          className={borrowerErrors.borrowerPhone ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerPhone && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerPhone}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Address */}
-                  <div className="space-y-4">
-                    <h4 className="text-md font-medium">Address</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="borrowerStreetAddress" className="flex items-center gap-1">
-                          Street Address <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerStreetAddress"
-                          value={formData.borrowerStreetAddress}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerStreetAddress', e.target.value)}
-                          placeholder="123 Main Street"
-                          className={borrowerErrors.borrowerStreetAddress ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerStreetAddress && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerStreetAddress}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerCity" className="flex items-center gap-1">
-                          City <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerCity"
-                          value={formData.borrowerCity}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerCity', e.target.value)}
-                          placeholder="Anytown"
-                          className={borrowerErrors.borrowerCity ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerCity && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerCity}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerState" className="flex items-center gap-1">
-                          State <span className="text-red-500">*</span>
-                        </Label>
-                        <Select
-                          value={formData.borrowerState}
-                          onValueChange={(value) => handleBorrowerFieldChange('borrowerState', value)}
-                        >
-                          <SelectTrigger className={borrowerErrors.borrowerState ? 'border-red-500' : ''}>
-                            <SelectValue placeholder="Select state" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="AL">Alabama</SelectItem>
-                            <SelectItem value="AK">Alaska</SelectItem>
-                            <SelectItem value="AZ">Arizona</SelectItem>
-                            <SelectItem value="AR">Arkansas</SelectItem>
-                            <SelectItem value="CA">California</SelectItem>
-                            <SelectItem value="CO">Colorado</SelectItem>
-                            <SelectItem value="CT">Connecticut</SelectItem>
-                            <SelectItem value="DE">Delaware</SelectItem>
-                            <SelectItem value="FL">Florida</SelectItem>
-                            <SelectItem value="GA">Georgia</SelectItem>
-                            <SelectItem value="HI">Hawaii</SelectItem>
-                            <SelectItem value="ID">Idaho</SelectItem>
-                            <SelectItem value="IL">Illinois</SelectItem>
-                            <SelectItem value="IN">Indiana</SelectItem>
-                            <SelectItem value="IA">Iowa</SelectItem>
-                            <SelectItem value="KS">Kansas</SelectItem>
-                            <SelectItem value="KY">Kentucky</SelectItem>
-                            <SelectItem value="LA">Louisiana</SelectItem>
-                            <SelectItem value="ME">Maine</SelectItem>
-                            <SelectItem value="MD">Maryland</SelectItem>
-                            <SelectItem value="MA">Massachusetts</SelectItem>
-                            <SelectItem value="MI">Michigan</SelectItem>
-                            <SelectItem value="MN">Minnesota</SelectItem>
-                            <SelectItem value="MS">Mississippi</SelectItem>
-                            <SelectItem value="MO">Missouri</SelectItem>
-                            <SelectItem value="MT">Montana</SelectItem>
-                            <SelectItem value="NE">Nebraska</SelectItem>
-                            <SelectItem value="NV">Nevada</SelectItem>
-                            <SelectItem value="NH">New Hampshire</SelectItem>
-                            <SelectItem value="NJ">New Jersey</SelectItem>
-                            <SelectItem value="NM">New Mexico</SelectItem>
-                            <SelectItem value="NY">New York</SelectItem>
-                            <SelectItem value="NC">North Carolina</SelectItem>
-                            <SelectItem value="ND">North Dakota</SelectItem>
-                            <SelectItem value="OH">Ohio</SelectItem>
-                            <SelectItem value="OK">Oklahoma</SelectItem>
-                            <SelectItem value="OR">Oregon</SelectItem>
-                            <SelectItem value="PA">Pennsylvania</SelectItem>
-                            <SelectItem value="RI">Rhode Island</SelectItem>
-                            <SelectItem value="SC">South Carolina</SelectItem>
-                            <SelectItem value="SD">South Dakota</SelectItem>
-                            <SelectItem value="TN">Tennessee</SelectItem>
-                            <SelectItem value="TX">Texas</SelectItem>
-                            <SelectItem value="UT">Utah</SelectItem>
-                            <SelectItem value="VT">Vermont</SelectItem>
-                            <SelectItem value="VA">Virginia</SelectItem>
-                            <SelectItem value="WA">Washington</SelectItem>
-                            <SelectItem value="WV">West Virginia</SelectItem>
-                            <SelectItem value="WI">Wisconsin</SelectItem>
-                            <SelectItem value="WY">Wyoming</SelectItem>
-                            <SelectItem value="DC">District of Columbia</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {borrowerErrors.borrowerState && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerState}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerZipCode" className="flex items-center gap-1">
-                          ZIP Code <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerZipCode"
-                          value={formData.borrowerZipCode}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerZipCode', e.target.value)}
-                          placeholder="12345"
-                          className={borrowerErrors.borrowerZipCode ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerZipCode && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerZipCode}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerCountry" className="flex items-center gap-1">
-                          Country <span className="text-red-500">*</span>
-                        </Label>
-                        <Select
-                          value={formData.borrowerCountry}
-                          onValueChange={(value) => handleBorrowerFieldChange('borrowerCountry', value)}
-                        >
-                          <SelectTrigger className={borrowerErrors.borrowerCountry ? 'border-red-500' : ''}>
-                            <SelectValue placeholder="Select country" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="US">United States</SelectItem>
-                            <SelectItem value="CA">Canada</SelectItem>
-                            <SelectItem value="MX">Mexico</SelectItem>
-                            <SelectItem value="GB">United Kingdom</SelectItem>
-                            <SelectItem value="DE">Germany</SelectItem>
-                            <SelectItem value="FR">France</SelectItem>
-                            <SelectItem value="IT">Italy</SelectItem>
-                            <SelectItem value="ES">Spain</SelectItem>
-                            <SelectItem value="AU">Australia</SelectItem>
-                            <SelectItem value="JP">Japan</SelectItem>
-                            <SelectItem value="CN">China</SelectItem>
-                            <SelectItem value="IN">India</SelectItem>
-                            <SelectItem value="BR">Brazil</SelectItem>
-                            <SelectItem value="AR">Argentina</SelectItem>
-                            <SelectItem value="OTHER">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {borrowerErrors.borrowerCountry && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerCountry}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Identity Reference */}
-                  <div className="space-y-4">
-                    <h4 className="text-md font-medium">Identity Reference</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerSSNLast4" className="flex items-center gap-1">
-                          Social Security Number (Last 4 digits only) <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerSSNLast4"
-                          type="text"
-                          maxLength={4}
-                          value={formData.borrowerSSNLast4}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerSSNLast4', e.target.value)}
-                          placeholder="1234"
-                          className={borrowerErrors.borrowerSSNLast4 ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerSSNLast4 && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerSSNLast4}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerGovernmentIdType">Government ID Type</Label>
-                        <Select
-                          value={formData.borrowerGovernmentIdType}
-                          onValueChange={(value) => {
-                            const currentMeta = JSON.parse(metadata || '{}')
-                            setMetadata(JSON.stringify({ ...currentMeta, borrowerGovernmentIdType: value }, null, 2))
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select ID type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="driver_license">Driver's License</SelectItem>
-                            <SelectItem value="passport">Passport</SelectItem>
-                            <SelectItem value="state_id">State ID</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerIdNumberLast4">ID Number (Last 4 digits only)</Label>
-                        <Input
-                          id="borrowerIdNumberLast4"
-                          type="text"
-                          maxLength={4}
-                          value={formData.borrowerIdNumberLast4}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerIdNumberLast4', e.target.value)}
-                          placeholder="1234"
-                          className={borrowerErrors.borrowerIdNumberLast4 ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerIdNumberLast4 && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerIdNumberLast4}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Loan-Specific */}
-                  <div className="space-y-4">
-                    <h4 className="text-md font-medium">Loan-Specific</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerEmploymentStatus" className="flex items-center gap-1">
-                          Employment Status <span className="text-red-500">*</span>
-                        </Label>
-                        <Select
-                          value={formData.borrowerEmploymentStatus}
-                          onValueChange={(value) => handleBorrowerFieldChange('borrowerEmploymentStatus', value)}
-                        >
-                          <SelectTrigger className={borrowerErrors.borrowerEmploymentStatus ? 'border-red-500' : ''}>
-                            <SelectValue placeholder="Select employment status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="employed">Employed</SelectItem>
-                            <SelectItem value="self_employed">Self-Employed</SelectItem>
-                            <SelectItem value="retired">Retired</SelectItem>
-                            <SelectItem value="unemployed">Unemployed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {borrowerErrors.borrowerEmploymentStatus && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerEmploymentStatus}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerAnnualIncome" className="flex items-center gap-1">
-                          Annual Income <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerAnnualIncome"
-                          type="number"
-                          value={formData.borrowerAnnualIncome}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerAnnualIncome', e.target.value)}
-                          placeholder="75000"
-                          className={borrowerErrors.borrowerAnnualIncome ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerAnnualIncome && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerAnnualIncome}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerCoBorrowerName">Co-Borrower Name</Label>
-                        <Input
-                          id="borrowerCoBorrowerName"
-                          value={formData.borrowerCoBorrowerName}
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="documentType">Document Type</Label>
+                          {enhancedMetadata?.documentType && (
+                            <ConfidenceBadge
+                              confidence={enhancedMetadata.documentType.confidence}
+                              source={enhancedMetadata.documentType.source}
+                              compact
+                            />
+                          )}
+                        </div>
+                        <select
+                          id="documentType"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          value={formData.documentType}
                           onChange={(e) => {
+                            setFormData(prev => ({ ...prev, documentType: e.target.value }));
                             const currentMeta = JSON.parse(metadata || '{}')
-                            setMetadata(JSON.stringify({ ...currentMeta, borrowerCoBorrowerName: e.target.value }, null, 2))
+                            setMetadata(JSON.stringify({ ...currentMeta, documentType: e.target.value }, null, 2))
                           }}
-                          placeholder="Jane Smith (optional)"
-                        />
+                        >
+                          <option value="">Select document type</option>
+                          <option value="loan_application">Loan Application</option>
+                          <option value="credit_report">Credit Report</option>
+                          <option value="property_appraisal">Property Appraisal</option>
+                          <option value="income_verification">Income Verification</option>
+                          <option value="bank_statements">Bank Statements</option>
+                          <option value="tax_returns">Tax Returns</option>
+                          <option value="employment_verification">Employment Verification</option>
+                          <option value="underwriting_decision">Underwriting Decision</option>
+                          <option value="closing_disclosure">Closing Disclosure</option>
+                          <option value="title_insurance">Title Insurance</option>
+                          <option value="homeowners_insurance">Homeowners Insurance</option>
+                          <option value="flood_certificate">Flood Certificate</option>
+                          <option value="compliance_document">Compliance Document</option>
+                          <option value="other">Other</option>
+                        </select>
+                        <p className="text-xs text-muted-foreground">
+                          Type of document being uploaded
+                        </p>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="loanAmount">Loan Amount</Label>
-                      {enhancedMetadata?.loanAmount && (
-                        <ConfidenceBadge
-                          confidence={enhancedMetadata.loanAmount.confidence}
-                          source={enhancedMetadata.loanAmount.source}
-                          compact
+                    {/* Row 2: Loan Amount, Term, and Interest Rate */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="loanAmount">Loan Amount</Label>
+                          {enhancedMetadata?.loanAmount && (
+                            <ConfidenceBadge
+                              confidence={enhancedMetadata.loanAmount.confidence}
+                              source={enhancedMetadata.loanAmount.source}
+                              compact
+                            />
+                          )}
+                        </div>
+                        <Input
+                          id="loanAmount"
+                          type="number"
+                          value={formData.loanAmount}
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, loanAmount: e.target.value }));
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, loanAmount: e.target.value }, null, 2))
+                          }}
+                          placeholder="e.g., 250000"
+                          className={
+                            enhancedMetadata?.loanAmount && enhancedMetadata.loanAmount.confidence < 60 && enhancedMetadata.loanAmount.confidence > 0
+                              ? 'border-yellow-400 border-2'
+                              : ''
+                          }
                         />
-                      )}
-                    </div>
-                    <Input
-                      id="loanAmount"
-                      type="number"
-                      value={formData.loanAmount}
-                      onChange={(e) => {
-                        setFormData(prev => ({ ...prev, loanAmount: e.target.value }));
-                        const currentMeta = JSON.parse(metadata || '{}')
-                        setMetadata(JSON.stringify({ ...currentMeta, loanAmount: e.target.value }, null, 2))
-                      }}
-                      placeholder="e.g., 250000"
-                      className={
-                        enhancedMetadata?.loanAmount && enhancedMetadata.loanAmount.confidence < 60 && enhancedMetadata.loanAmount.confidence > 0
-                          ? 'border-yellow-400 border-2'
-                          : ''
-                      }
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Loan amount in USD
-                    </p>
-                  </div>
+                        <p className="text-xs text-muted-foreground">
+                          Loan amount in USD
+                        </p>
+                      </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="interestRate">Interest Rate (%)</Label>
-                      {enhancedMetadata?.interestRate && (
-                        <ConfidenceBadge
-                          confidence={enhancedMetadata.interestRate.confidence}
-                          source={enhancedMetadata.interestRate.source}
-                          compact
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="loanTerm">Loan Term</Label>
+                          {enhancedMetadata?.loanTerm && (
+                            <ConfidenceBadge
+                              confidence={enhancedMetadata.loanTerm.confidence}
+                              source={enhancedMetadata.loanTerm.source}
+                              compact
+                            />
+                          )}
+                        </div>
+                        <Input
+                          id="loanTerm"
+                          type="number"
+                          value={formData.loanTerm}
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, loanTerm: e.target.value }));
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, loanTerm: e.target.value }, null, 2))
+                          }}
+                          placeholder="e.g., 360"
+                          className={
+                            enhancedMetadata?.loanTerm && enhancedMetadata.loanTerm.confidence < 60 && enhancedMetadata.loanTerm.confidence > 0
+                              ? 'border-yellow-400 border-2'
+                              : ''
+                          }
                         />
-                      )}
-                    </div>
-                    <Input
-                      id="interestRate"
-                      type="number"
-                      step="0.01"
-                      value={formData.interestRate}
-                      onChange={(e) => {
-                        setFormData(prev => ({ ...prev, interestRate: e.target.value }));
-                        const currentMeta = JSON.parse(metadata || '{}')
-                        setMetadata(JSON.stringify({ ...currentMeta, interestRate: e.target.value }, null, 2))
-                      }}
-                      placeholder="e.g., 3.5"
-                      className={
-                        enhancedMetadata?.interestRate && enhancedMetadata.interestRate.confidence < 60 && enhancedMetadata.interestRate.confidence > 0
-                          ? 'border-yellow-400 border-2'
-                          : ''
-                      }
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Annual interest rate percentage
-                    </p>
-                  </div>
+                        <p className="text-xs text-muted-foreground">
+                          Loan term in months
+                        </p>
+                      </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="loanTerm">Loan Term (months)</Label>
-                      {enhancedMetadata?.loanTerm && (
-                        <ConfidenceBadge
-                          confidence={enhancedMetadata.loanTerm.confidence}
-                          source={enhancedMetadata.loanTerm.source}
-                          compact
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="interestRate">Interest Rate</Label>
+                          {enhancedMetadata?.interestRate && (
+                            <ConfidenceBadge
+                              confidence={enhancedMetadata.interestRate.confidence}
+                              source={enhancedMetadata.interestRate.source}
+                              compact
+                            />
+                          )}
+                        </div>
+                        <Input
+                          id="interestRate"
+                          type="number"
+                          step="0.01"
+                          value={formData.interestRate}
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, interestRate: e.target.value }));
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, interestRate: e.target.value }, null, 2))
+                          }}
+                          placeholder="e.g., 4.5"
+                          className={
+                            enhancedMetadata?.interestRate && enhancedMetadata.interestRate.confidence < 60 && enhancedMetadata.interestRate.confidence > 0
+                              ? 'border-yellow-400 border-2'
+                              : ''
+                          }
                         />
-                      )}
+                        <p className="text-xs text-muted-foreground">
+                          Annual interest rate (%)
+                        </p>
+                      </div>
                     </div>
-                    <Input
-                      id="loanTerm"
-                      type="number"
-                      value={formData.loanTerm}
-                      onChange={(e) => {
-                        setFormData(prev => ({ ...prev, loanTerm: e.target.value }));
-                        const currentMeta = JSON.parse(metadata || '{}')
-                        setMetadata(JSON.stringify({ ...currentMeta, loanTerm: e.target.value }, null, 2))
-                      }}
-                      placeholder="e.g., 360"
-                      className={
-                        enhancedMetadata?.loanTerm && enhancedMetadata.loanTerm.confidence < 60 && enhancedMetadata.loanTerm.confidence > 0
-                          ? 'border-yellow-400 border-2'
-                          : ''
-                      }
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Loan duration in months
-                    </p>
-                  </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="propertyAddress">Property Address</Label>
-                      {enhancedMetadata?.propertyAddress && (
-                        <ConfidenceBadge
-                          confidence={enhancedMetadata.propertyAddress.confidence}
-                          source={enhancedMetadata.propertyAddress.source}
-                          compact
-                        />
-                      )}
+                    {/* Row 3: Property Address (full width) */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="propertyAddress">Property Address</Label>
+                        {enhancedMetadata?.propertyAddress && (
+                          <ConfidenceBadge
+                            confidence={enhancedMetadata.propertyAddress.confidence}
+                            source={enhancedMetadata.propertyAddress.source}
+                            compact
+                          />
+                        )}
+                      </div>
+                      <Input
+                        id="propertyAddress"
+                        value={formData.propertyAddress}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, propertyAddress: e.target.value }));
+                          const currentMeta = JSON.parse(metadata || '{}')
+                          setMetadata(JSON.stringify({ ...currentMeta, propertyAddress: e.target.value }, null, 2))
+                        }}
+                        placeholder="e.g., 123 Main St, Anytown, CA 12345"
+                        className={
+                          enhancedMetadata?.propertyAddress && enhancedMetadata.propertyAddress.confidence < 60 && enhancedMetadata.propertyAddress.confidence > 0
+                            ? 'border-yellow-400 border-2'
+                            : ''
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Full address of the property being financed
+                      </p>
                     </div>
-                    <Input
-                      id="propertyAddress"
-                      type="text"
-                      value={formData.propertyAddress}
-                      onChange={(e) => {
-                        setFormData(prev => ({ ...prev, propertyAddress: e.target.value }));
-                        const currentMeta = JSON.parse(metadata || '{}')
-                        setMetadata(JSON.stringify({ ...currentMeta, propertyAddress: e.target.value }, null, 2))
-                      }}
-                      placeholder="e.g., 123 Main St, Anytown, CA 12345"
-                      className={
-                        enhancedMetadata?.propertyAddress && enhancedMetadata.propertyAddress.confidence < 60 && enhancedMetadata.propertyAddress.confidence > 0
-                          ? 'border-yellow-400 border-2'
-                          : ''
-                      }
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Full address of the property being financed
-                    </p>
-                  </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Additional Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.additionalNotes}
-                    onChange={(e) => {
-                      setFormData(prev => ({ ...prev, additionalNotes: e.target.value }));
-                      const currentMeta = JSON.parse(metadata || '{}')
-                      setMetadata(JSON.stringify({ ...currentMeta, notes: e.target.value }, null, 2))
-                    }}
-                    placeholder="Any additional information about this document..."
-                    rows={3}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Optional notes or comments about the document
-                  </p>
-                </div>
+                    {/* Row 4: Additional Notes */}
+                    <div className="space-y-2">
+                      <Label htmlFor="additionalNotes">Additional Notes</Label>
+                      {enhancedMetadata?.additionalNotes && enhancedMetadata.additionalNotes.confidence > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+                          <span className={`px-2 py-0.5 rounded-full ${
+                            enhancedMetadata.additionalNotes.confidence >= 80
+                              ? 'bg-green-100 text-green-700'
+                              : enhancedMetadata.additionalNotes.confidence >= 60
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {enhancedMetadata.additionalNotes.confidence}% confidence
+                          </span>
+                          <span>Auto-populated from file</span>
+                        </div>
+                      )}
+                      <Textarea
+                        id="additionalNotes"
+                        value={formData.additionalNotes}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, additionalNotes: e.target.value }));
+                          const currentMeta = JSON.parse(metadata || '{}')
+                          setMetadata(JSON.stringify({ ...currentMeta, additionalNotes: e.target.value }, null, 2))
+                        }}
+                        placeholder="Any additional information about this loan document..."
+                        rows={3}
+                        className={
+                          enhancedMetadata?.additionalNotes && enhancedMetadata.additionalNotes.confidence < 60 && enhancedMetadata.additionalNotes.confidence > 0
+                            ? 'border-yellow-400 border-2'
+                            : ''
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Optional notes or comments about the loan document
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Advanced Options (Collapsible) */}
                 <details className="group">
@@ -4500,8 +4095,6 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                     </div>
                   </div>
                 </details>
-                  </CardContent>
-                </Card>
               </>
             )}
 
