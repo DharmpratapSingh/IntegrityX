@@ -26,39 +26,13 @@ export default function SignInPage() {
         </div>
 
         {/* Clerk Sign In Component */}
+        {/* Now using shadcn theme globally - only override for glassmorphism effect */}
         <div className="animate-slide-up">
           <SignIn
             appearance={{
-              variables: {
-                colorPrimary: '#2563eb',
-                colorBackground: '#ffffff',
-                colorInputBackground: '#f9fafb',
-                colorInputText: '#111827',
-                colorText: '#1f2937',
-                colorTextSecondary: '#6b7280',
-                colorDanger: '#ef4444',
-                colorSuccess: '#10b981',
-                colorWarning: '#f59e0b',
-                borderRadius: '0.75rem',
-                fontFamily: 'Inter, system-ui, sans-serif',
-              },
               elements: {
-                rootBox: 'mx-auto',
                 card: 'shadow-2xl bg-white/95 backdrop-blur-xl border-0',
-                headerTitle: 'text-gray-900 font-bold text-2xl',
-                headerSubtitle: 'text-gray-600',
-                socialButtonsBlockButton: 'border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200',
-                socialButtonsBlockButtonText: 'font-medium text-gray-700',
                 formButtonPrimary: 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200',
-                formFieldInput: 'border-gray-200 focus:border-blue-500 focus:ring-blue-500',
-                footerActionLink: 'text-blue-600 hover:text-blue-700 font-medium',
-                identityPreviewText: 'text-gray-700 font-medium',
-                identityPreviewEditButton: 'text-blue-600 hover:text-blue-700',
-                formFieldLabel: 'text-gray-700 font-medium',
-                formFieldInputShowPasswordButton: 'text-gray-500 hover:text-gray-700',
-                dividerLine: 'bg-gray-200',
-                dividerText: 'text-gray-500',
-                otpCodeFieldInput: 'border-gray-300 focus:border-blue-500',
               }
             }}
             redirectUrl="/integrated-dashboard"
