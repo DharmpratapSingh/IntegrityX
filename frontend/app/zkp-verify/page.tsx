@@ -18,6 +18,7 @@ import {
   type VerificationResult
 } from '@/utils/zkpProofGenerator';
 import { fetchJson } from '@/utils/api';
+import apiConfig from '@/lib/api-config';
 import toast from 'react-hot-toast';
 
 interface Document {
@@ -41,7 +42,7 @@ export default function VerifyPage() {
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
-        const response = await fetchJson<any>('http://localhost:8000/api/artifacts?limit=50', {
+        const response = await fetchJson<any>(apiConfig.artifacts.list(50), {
           timeoutMs: 5000,
           retries: 1
         });
