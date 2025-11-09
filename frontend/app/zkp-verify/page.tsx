@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Shield, Lock, CheckCircle2, Download, Copy, AlertCircle, Loader2, FileKey, ArrowLeft } from 'lucide-react';
+import { Shield, Lock, CheckCircle2, Download, Copy, AlertCircle, Loader2, FileKey, ArrowLeft, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   fetchAndGenerateProof,
   verifyZKProof,
@@ -16,7 +17,16 @@ import {
   type ZKPProof,
   type VerificationResult
 } from '@/utils/zkpProofGenerator';
+import { fetchJson } from '@/utils/api';
 import toast from 'react-hot-toast';
+
+interface Document {
+  id: string;
+  loan_id: string;
+  borrower_name: string;
+  document_type: string;
+  upload_date: string;
+}
 
 export default function VerifyPage() {
   const searchParams = useSearchParams();
@@ -24,6 +34,31 @@ export default function VerifyPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [proof, setProof] = useState<ZKPProof | null>(null);
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(true);
+
+  // Fetch available documents
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      try {
+        const response = await fetchJson<any>('http://localhost:8000/api/artifacts?limit=50', {
+          timeoutMs: 5000,
+          retries: 1
+        });
+
+        if (response && response.ok && response.data) {
+          const artifacts = response.data.data?.artifacts || [];
+          setDocuments(artifacts);
+        }
+      } catch (error) {
+        console.error('Failed to fetch documents:', error);
+      } finally {
+        setLoadingDocs(false);
+      }
+    };
+
+    fetchDocuments();
+  }, []);
 
   // Auto-fill artifact ID from URL query parameter
   useEffect(() => {
@@ -175,10 +210,47 @@ export default function VerifyPage() {
           <CardHeader>
             <CardTitle>Generate Verification Proof</CardTitle>
             <CardDescription>
-              Enter an Artifact ID to generate a Zero Knowledge Proof. No private data will be exposed.
+              Select a document or enter an Artifact ID to generate a Zero Knowledge Proof. No private data will be exposed.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Document Selector */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Choose from your documents</label>
+              <Select
+                value={artifactId}
+                onValueChange={(value) => setArtifactId(value)}
+                disabled={loadingDocs || documents.length === 0}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={loadingDocs ? "Loading documents..." : documents.length === 0 ? "No documents found" : "Select a document"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {documents.map((doc) => (
+                    <SelectItem key={doc.id} value={doc.id}>
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        <span>
+                          {doc.loan_id} - {doc.borrower_name} ({doc.document_type})
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* OR Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or enter manually</span>
+              </div>
+            </div>
+
+            {/* Manual Input */}
             <div className="flex gap-4">
               <Input
                 placeholder="Enter Artifact ID (e.g., art_abc123xyz)"
@@ -206,8 +278,8 @@ export default function VerifyPage() {
               </Button>
             </div>
 
-            <p className="text-xs text-muted-foreground mt-3">
-              💡 Tip: Find Artifact IDs in your Documents page or from blockchain transaction receipts
+            <p className="text-xs text-muted-foreground">
+              💡 {documents.length > 0 ? `${documents.length} documents available` : "Upload documents to see them here"}
             </p>
           </CardContent>
         </Card>
