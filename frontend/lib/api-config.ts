@@ -55,8 +55,8 @@ export const apiConfig = {
 
   // Upload endpoints
   upload: {
-    ingestJson: `${API_BASE_URL}/ingest-json`,
-    ingestPacket: `${API_BASE_URL}/ingest-packet`,
+    ingestJson: `${API_BASE_URL}/api/ingest-json`,
+    ingestPacket: `${API_BASE_URL}/api/ingest-packet`,
   },
 
   // ZKP endpoints

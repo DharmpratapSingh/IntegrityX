@@ -1,57 +1,50 @@
 'use client'
 
 import { useAuth } from '@clerk/nextjs'
-import { useRouter, usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
 // List of public routes that don't require authentication
-const publicRoutes = ['/sign-in', '/sign-up', '/landing']
+const publicRoutes = ['/', '/sign-in', '/sign-up', '/sign-out', '/landing', '/redirect']
 
 export function ForceAuth({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth()
-  const router = useRouter()
   const pathname = usePathname()
-  const [checkingAuth, setCheckingAuth] = useState(true)
 
-  useEffect(() => {
-    if (!isLoaded) return
+  // Determine if we're on a public route
+  const isPublicRoute = publicRoutes.some(route =>
+    pathname === route || pathname?.startsWith(route + '/')
+  )
 
-    const isPublicRoute = publicRoutes.includes(pathname || '')
-
-    // If on public route, allow access
-    if (isPublicRoute) {
-      setCheckingAuth(false)
-      return
-    }
-
-    // For private routes: require authentication
-    // If not signed in, redirect to sign-in
-    if (!isSignedIn && !isPublicRoute) {
-      router.push('/sign-in')
-      return
-    }
-
-    // Signed in on private route - allow access
-    if (isSignedIn && !isPublicRoute) {
-      setCheckingAuth(false)
-      return
-    }
-
-    setCheckingAuth(false)
-  }, [isLoaded, isSignedIn, pathname, router])
-
-  // Show loading during auth check or if not authenticated on private route
-  if (checkingAuth || (!isSignedIn && !publicRoutes.includes(pathname || ''))) {
+  // Show loading only during initial Clerk load
+  if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <LoadingSpinner size="lg" className="mx-auto mb-4" />
-          <p className="text-gray-600">Authenticating...</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     )
   }
 
-  return <>{children}</>
+  // Allow public routes without check
+  if (isPublicRoute) {
+    return <>{children}</>
+  }
+
+  // For private routes, show if signed in, otherwise middleware will redirect
+  if (isSignedIn) {
+    return <>{children}</>
+  }
+
+  // Not signed in on private route - show loading while middleware redirects
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <LoadingSpinner size="lg" className="mx-auto mb-4" />
+        <p className="text-gray-600">Redirecting to sign in...</p>
+      </div>
+    </div>
+  )
 }

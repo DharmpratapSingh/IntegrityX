@@ -8,6 +8,16 @@ import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
+const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+if (!clerkPublishableKey) {
+  console.error(
+    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not set. Clerk authentication UI will not load. Update frontend/.env.local with a valid publishable key."
+  );
+} else {
+  console.log("Clerk publishable key detected:", clerkPublishableKey);
+}
+
 export const metadata: Metadata = {
   title: "Walacor Financial Integrity Platform",
   description: "Secure document verification, attestations, and compliance management",
@@ -29,10 +39,10 @@ export default function RootLayout({
       }}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
+      signInFallbackRedirectUrl="/integrated-dashboard"
+      signUpFallbackRedirectUrl="/integrated-dashboard"
       afterSignOutUrl="/sign-in"
-      afterSignInUrl="/integrated-dashboard"
-      afterSignUpUrl="/integrated-dashboard"
-      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      publishableKey={clerkPublishableKey}
     >
       <html lang="en">
         <body className={inter.className}>
