@@ -24,11 +24,12 @@ export default function RootLayout({
       afterSignOutUrl="/sign-in"
       afterSignInUrl="/integrated-dashboard"
       afterSignUpUrl="/integrated-dashboard"
+      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
     >
       <html lang="en">
         <body className={inter.className}>
           <LayoutContent>{children}</LayoutContent>
-          <Toaster 
+          <Toaster
             position="top-right"
             toastOptions={{
               duration: 4000,

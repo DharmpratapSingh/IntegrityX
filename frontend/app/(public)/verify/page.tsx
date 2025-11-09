@@ -8,14 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Upload, 
-  FileText, 
-  Hash, 
-  CheckCircle, 
-  AlertTriangle, 
-  Loader2, 
-  Eye, 
+import {
+  Upload,
+  FileText,
+  Hash,
+  CheckCircle,
+  AlertTriangle,
+  Loader2,
+  Eye,
   Copy,
   ExternalLink,
   Shield,
@@ -43,12 +43,21 @@ import { LineageGraph } from '@/components/provenance/LineageGraph';
 import { ProvenanceLinker } from '@/components/provenance/ProvenanceLinker';
 import { EnhancedVerificationResult } from '@/components/verification/EnhancedVerificationResult';
 import { json as fetchJson, fetchWithTimeout } from '@/utils/api';
-import { 
-  getBorrowerInfo, 
-  getAuditTrail, 
-  type BorrowerInfo, 
-  type AuditEvent 
+import {
+  getBorrowerInfo,
+  getAuditTrail,
+  type BorrowerInfo,
+  type AuditEvent
 } from '@/lib/api/verification';
+
+interface Document {
+  id: string;
+  loan_id: string;
+  borrower_name: string;
+  document_type: string;
+  upload_date: string;
+  hash: string;
+}
 
 // Types
 interface VerifyResult {
@@ -133,6 +142,38 @@ export default function VerifyPage() {
   const [isDownloadingProofBundle, setIsDownloadingProofBundle] = useState(false);
   const [showAuditTrail, setShowAuditTrail] = useState(false);
   const [showCryptographicProof, setShowCryptographicProof] = useState(false);
+
+  // Document selector state
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(true);
+
+  // Fetch available documents
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      try {
+        const response = await fetchJson<any>('http://localhost:8000/api/artifacts?limit=50', {
+          timeoutMs: 5000,
+          retries: 1
+        });
+
+        if (response && response.ok && response.data) {
+          const artifacts = response.data.data?.artifacts || [];
+          // Extract hash from each artifact for verification
+          const docsWithHash = artifacts.map((doc: any) => ({
+            ...doc,
+            hash: doc.hash || doc.document_hash || ''
+          }));
+          setDocuments(docsWithHash);
+        }
+      } catch (error) {
+        console.error('Failed to fetch documents:', error);
+      } finally {
+        setLoadingDocs(false);
+      }
+    };
+
+    fetchDocuments();
+  }, []);
 
   // Check for hash or artifact_id in URL params
   useEffect(() => {
@@ -405,7 +446,7 @@ export default function VerifyPage() {
               Verification Input
             </CardTitle>
             <CardDescription>
-              Provide either a file upload or document hash for verification
+              Upload a file, select from your documents, or enter a document hash for verification
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -430,9 +471,55 @@ export default function VerifyPage() {
               </div>
             </div>
 
+            {/* OR Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or</span>
+              </div>
+            </div>
+
+            {/* Document Selector */}
+            <div className="space-y-2">
+              <Label htmlFor="document-select">Choose from your documents</Label>
+              <Select
+                value={fileHash}
+                onValueChange={(value) => setFileHash(value)}
+                disabled={loadingDocs || documents.length === 0}
+              >
+                <SelectTrigger id="document-select" className="w-full">
+                  <SelectValue placeholder={loadingDocs ? "Loading documents..." : documents.length === 0 ? "No documents found" : "Select a document"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {documents.map((doc) => (
+                    <SelectItem key={doc.id} value={doc.hash}>
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        <span>
+                          {doc.loan_id} - {doc.borrower_name} ({doc.document_type})
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* OR Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or enter manually</span>
+              </div>
+            </div>
+
             {/* Hash Input */}
             <div className="space-y-2">
-              <Label htmlFor="hash-input">Or Enter Document Hash</Label>
+              <Label htmlFor="hash-input">Enter Document Hash</Label>
               <div className="flex gap-2">
                 <Input
                   id="hash-input"
@@ -452,6 +539,11 @@ export default function VerifyPage() {
                   </Button>
                 )}
               </div>
+              {documents.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  💡 {documents.length} documents available to select above
+                </p>
+              )}
             </div>
 
             {/* ETID Selection */}
