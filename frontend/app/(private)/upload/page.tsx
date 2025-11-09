@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Hash, Shield, ArrowLeft, ChevronDown, ChevronUp, User, HelpCircle, AlertCircle, X, RefreshCw, Mail, Download, UserCheck, FileCheck, AlertTriangle, Info, Sparkles } from 'lucide-react';
+import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Hash, Shield, ArrowLeft, ChevronDown, ChevronUp, User, HelpCircle, AlertCircle, X, RefreshCw, Mail, Download, UserCheck, FileCheck, AlertTriangle, Info, Sparkles, TrendingUp, Lightbulb, Zap, BarChart3 } from 'lucide-react';
 import { simpleToast as toast } from '@/components/ui/simple-toast';
 import { sealLoanDocument, sealLoanDocumentMaximumSecurity, sealLoanDocumentQuantumSafe, type LoanData, type BorrowerInfo } from '@/lib/api/loanDocuments';
 import { DuplicateDetection } from '@/components/DuplicateDetection';
@@ -4380,12 +4380,15 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           </CardContent>
         </Card>
 
-        {/* Sidebar */}
-        <div className="lg:col-span-1 space-y-6">
+        {/* Sidebar - Sticky */}
+        <div className="lg:col-span-1 space-y-6 lg:sticky lg:top-24 lg:self-start">
           {/* Quick Actions */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Quick Actions</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Zap className="h-4 w-4 text-blue-500" />
+                Quick Actions
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <Button
@@ -4406,6 +4409,84 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 <FileCheck className="h-4 w-4 mr-2" />
                 {showValidationSummary ? 'Hide' : 'Show'} Validation
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Upload Statistics */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-green-500" />
+                Upload Stats
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Today</p>
+                    <p className="text-lg font-bold">24</p>
+                  </div>
+                </div>
+                <TrendingUp className="h-4 w-4 text-green-500" />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Success Rate</p>
+                    <p className="text-lg font-bold">99.8%</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Upload className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Avg Time</p>
+                    <p className="text-lg font-bold">&lt; 2s</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tips & Help */}
+          <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Lightbulb className="h-4 w-4 text-yellow-500" />
+                Quick Tips
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex gap-2">
+                <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-gray-700">
+                  <strong>AI Auto-fill:</strong> Upload a document and watch as AI extracts loan and borrower data automatically.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Sparkles className="h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-gray-700">
+                  <strong>Demo Mode:</strong> Try the demo to see sample data and fraud detection in action.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Shield className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-gray-700">
+                  <strong>Blockchain:</strong> All documents are sealed on Walacor blockchain for immutable audit trails.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>
