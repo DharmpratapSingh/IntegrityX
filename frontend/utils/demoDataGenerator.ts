@@ -122,10 +122,14 @@ export function generateDemoLoanDocument(
   const name = randomItem(sampleNames);
   const location = randomItem(sampleCities);
   const street = randomItem(sampleStreets);
-  const loanAmount = randomNumber(100000, 1000000);
+
+  // DEMO MODE: Use suspicious round number for fraud detection demo
+  const loanAmount = 500000; // Suspiciously round number
   const interestRate = Number((Math.random() * 5 + 3).toFixed(2)); // 3% - 8%
   const loanTerm = randomItem([180, 240, 300, 360]); // 15, 20, 25, 30 years
-  const annualIncome = randomNumber(50000, 250000);
+
+  // DEMO MODE: Low income for high loan amount (triggers fraud detection)
+  const annualIncome = 40000; // $500k loan on $40k income = 12.5x ratio (CRITICAL)
 
   return {
     loan_id: loanId,
