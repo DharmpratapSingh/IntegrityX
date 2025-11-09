@@ -358,6 +358,15 @@ export default function IntegratedDashboard() {
             {/* Demo Mode and Quick Actions */}
             <div className="flex flex-wrap items-center gap-4 pt-6">
               <DemoModeButton />
+              <Link href="/security">
+                <Button
+                  size="lg"
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 shadow-lg"
+                >
+                  <Shield className="h-5 w-5 mr-2" />
+                  Security Dashboard
+                </Button>
+              </Link>
               <Link href="/upload">
                 <Button
                   size="lg"
