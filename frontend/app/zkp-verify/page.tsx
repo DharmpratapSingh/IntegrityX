@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Shield, Lock, CheckCircle2, Download, Copy, AlertCircle, Loader2, FileKey } from 'lucide-react';
+import Link from 'next/link';
+import { Shield, Lock, CheckCircle2, Download, Copy, AlertCircle, Loader2, FileKey, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -112,6 +113,28 @@ export default function VerifyPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10"></div>
 
         <div className="relative max-w-7xl mx-auto px-6 py-16">
+          {/* Breadcrumb Navigation */}
+          <div className="flex items-center gap-3 mb-6">
+            <Link
+              href="/security"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-sm"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Security
+            </Link>
+            {artifactId && (
+              <>
+                <span className="text-white/50">•</span>
+                <Link
+                  href={`/documents/${artifactId}`}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-sm"
+                >
+                  View Document
+                </Link>
+              </>
+            )}
+          </div>
+
           <div className="flex items-center gap-4 mb-6">
             <div className="p-4 bg-white/10 backdrop-blur-sm rounded-2xl">
               <Shield className="h-12 w-12" />

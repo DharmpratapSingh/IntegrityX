@@ -3111,21 +3111,34 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         
         <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
           <div className="space-y-6">
-            <div className="flex items-center gap-4 mb-4">
-              <Link
-                href="/integrated-dashboard"
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Link>
-              <div className="space-y-3">
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-                  Upload Documents
-                </h1>
-                <p className="text-lg md:text-xl text-blue-100 max-w-3xl">
-                  Secure blockchain verification in seconds
-                </p>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/integrated-dashboard"
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Link>
+                <div className="space-y-3">
+                  <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+                    Upload Documents
+                  </h1>
+                  <p className="text-lg md:text-xl text-blue-100 max-w-3xl">
+                    Secure blockchain verification in seconds
+                  </p>
+                </div>
               </div>
+              {!isDemoMode && (
+                <Link href="/upload?mode=demo">
+                  <Button
+                    variant="outline"
+                    className="bg-white/10 hover:bg-white/20 text-white border-white/30 gap-2"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Try Demo
+                  </Button>
+                </Link>
+              )}
             </div>
 
             <div className="grid gap-4 md:grid-cols-3 pt-4">
@@ -3170,6 +3183,29 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 space-y-8">
+        {/* Demo Mode Banner */}
+        {isDemoMode && (
+          <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl p-4 shadow-xl border-2 border-green-400">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Sparkles className="h-6 w-6 text-white animate-pulse" />
+                <div>
+                  <h3 className="text-white font-bold text-lg">🎬 Demo Mode Active</h3>
+                  <p className="text-white/90 text-sm">You're viewing pre-filled sample data for demonstration purposes</p>
+                </div>
+              </div>
+              <Link href="/upload">
+                <Button
+                  variant="outline"
+                  className="bg-white/20 hover:bg-white/30 text-white border-white/40"
+                >
+                  Exit Demo
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Progress Indicator */}
         <div className="flex items-center gap-4 p-4 bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl">
           <div className="flex items-center gap-2">
