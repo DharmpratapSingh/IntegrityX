@@ -4319,7 +4319,16 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                   <div className="space-y-2">
-                    <Label htmlFor="loanAmount">Loan Amount</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="loanAmount">Loan Amount</Label>
+                      {enhancedMetadata?.loanAmount && (
+                        <ConfidenceBadge
+                          confidence={enhancedMetadata.loanAmount.confidence}
+                          source={enhancedMetadata.loanAmount.source}
+                          compact
+                        />
+                      )}
+                    </div>
                     <Input
                       id="loanAmount"
                       type="number"
@@ -4330,6 +4339,11 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         setMetadata(JSON.stringify({ ...currentMeta, loanAmount: e.target.value }, null, 2))
                       }}
                       placeholder="e.g., 250000"
+                      className={
+                        enhancedMetadata?.loanAmount && enhancedMetadata.loanAmount.confidence < 60 && enhancedMetadata.loanAmount.confidence > 0
+                          ? 'border-yellow-400 border-2'
+                          : ''
+                      }
                     />
                     <p className="text-xs text-muted-foreground">
                       Loan amount in USD
@@ -4337,7 +4351,16 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="interestRate">Interest Rate (%)</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="interestRate">Interest Rate (%)</Label>
+                      {enhancedMetadata?.interestRate && (
+                        <ConfidenceBadge
+                          confidence={enhancedMetadata.interestRate.confidence}
+                          source={enhancedMetadata.interestRate.source}
+                          compact
+                        />
+                      )}
+                    </div>
                     <Input
                       id="interestRate"
                       type="number"
@@ -4349,6 +4372,11 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         setMetadata(JSON.stringify({ ...currentMeta, interestRate: e.target.value }, null, 2))
                       }}
                       placeholder="e.g., 3.5"
+                      className={
+                        enhancedMetadata?.interestRate && enhancedMetadata.interestRate.confidence < 60 && enhancedMetadata.interestRate.confidence > 0
+                          ? 'border-yellow-400 border-2'
+                          : ''
+                      }
                     />
                     <p className="text-xs text-muted-foreground">
                       Annual interest rate percentage
@@ -4356,7 +4384,16 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="loanTerm">Loan Term (months)</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="loanTerm">Loan Term (months)</Label>
+                      {enhancedMetadata?.loanTerm && (
+                        <ConfidenceBadge
+                          confidence={enhancedMetadata.loanTerm.confidence}
+                          source={enhancedMetadata.loanTerm.source}
+                          compact
+                        />
+                      )}
+                    </div>
                     <Input
                       id="loanTerm"
                       type="number"
@@ -4367,6 +4404,11 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         setMetadata(JSON.stringify({ ...currentMeta, loanTerm: e.target.value }, null, 2))
                       }}
                       placeholder="e.g., 360"
+                      className={
+                        enhancedMetadata?.loanTerm && enhancedMetadata.loanTerm.confidence < 60 && enhancedMetadata.loanTerm.confidence > 0
+                          ? 'border-yellow-400 border-2'
+                          : ''
+                      }
                     />
                     <p className="text-xs text-muted-foreground">
                       Loan duration in months
@@ -4374,7 +4416,16 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="propertyAddress">Property Address</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="propertyAddress">Property Address</Label>
+                      {enhancedMetadata?.propertyAddress && (
+                        <ConfidenceBadge
+                          confidence={enhancedMetadata.propertyAddress.confidence}
+                          source={enhancedMetadata.propertyAddress.source}
+                          compact
+                        />
+                      )}
+                    </div>
                     <Input
                       id="propertyAddress"
                       type="text"
@@ -4384,10 +4435,15 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         const currentMeta = JSON.parse(metadata || '{}')
                         setMetadata(JSON.stringify({ ...currentMeta, propertyAddress: e.target.value }, null, 2))
                       }}
-                      placeholder="e.g., 123 Main St, City, ST 12345"
+                      placeholder="e.g., 123 Main St, Anytown, CA 12345"
+                      className={
+                        enhancedMetadata?.propertyAddress && enhancedMetadata.propertyAddress.confidence < 60 && enhancedMetadata.propertyAddress.confidence > 0
+                          ? 'border-yellow-400 border-2'
+                          : ''
+                      }
                     />
                     <p className="text-xs text-muted-foreground">
-                      Property being financed
+                      Full address of the property being financed
                     </p>
                   </div>
                 </div>
