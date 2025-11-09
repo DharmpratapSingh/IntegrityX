@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { json as fetchJson } from '@/utils/api'
 import { getCurrentEasternTime, formatEasternTimeWithTZ } from '@/utils/timezone'
@@ -14,7 +14,9 @@ import {
   CheckCircle,
   Layers,
   Shield,
-  Zap
+  Zap,
+  AlertTriangle,
+  RefreshCcw
 } from 'lucide-react'
 
 // Import our components
@@ -22,6 +24,7 @@ import AIDocumentProcessingInterface from '@/components/AIDocumentProcessingInte
 import BulkOperationsInterface from '@/components/BulkOperationsInterface'
 import AnalyticsDashboard from '@/components/AnalyticsDashboard'
 import { Button } from '@/components/ui/button'
+import toast from 'react-hot-toast'
 
 interface DashboardStats {
   totalDocuments: number
@@ -56,6 +59,8 @@ interface DocumentSummary {
 export default function IntegratedDashboard() {
   const [activeTab, setActiveTab] = useState('overview')
   const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [stats, setStats] = useState<DashboardStats>({
     totalDocuments: 0,
     sealedDocuments: 0,
@@ -83,8 +88,11 @@ export default function IntegratedDashboard() {
     backend: false
   })
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
+    setIsLoading(true)
+    setHasError(false)
+    setErrorMessage(null)
+    try {
       try {
         // Add timeout to prevent infinite loading
         const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 3000))
@@ -96,6 +104,12 @@ export default function IntegratedDashboard() {
           fetchJson<any>('http://localhost:8000/api/health', { timeoutMs: 3000 }).catch(() => ({ ok: false })),
           fetchJson<any>('http://localhost:8000/api/analytics/daily-activity', { timeoutMs: 3000 }).catch(() => ({ ok: false }))
         ])
+
+        const responses = [documentsRes, analyticsRes, healthRes, dailyRes]
+        const hasSuccessfulResponse = responses.some((resp) => resp?.ok)
+        if (!hasSuccessfulResponse) {
+          throw new Error('Unable to reach backend services. Start the API server and try again.')
+        }
 
         let totalDocs = 0
         let documentsList: any[] = []
@@ -246,25 +260,38 @@ export default function IntegratedDashboard() {
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error)
         setRecentDocuments([])
+        setHasError(true)
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'Unexpected error while loading dashboard metrics. Please try again.'
+        )
+        toast.error('Dashboard data unavailable. Check backend status and retry.')
       } finally {
         setIsLoading(false)
       }
     }
+  }, [])
 
+  useEffect(() => {
     fetchDashboardData()
-    
+
     // Force load after 5 seconds maximum (backup timeout)
     const maxLoadTimeout = setTimeout(() => {
       setIsLoading(false)
     }, 5000)
-    
+
     // Refresh data every 30 seconds
     const interval = setInterval(fetchDashboardData, 30000)
     return () => {
       clearInterval(interval)
       clearTimeout(maxLoadTimeout)
     }
-  }, [])
+  }, [fetchDashboardData])
+
+  const handleRetry = useCallback(() => {
+    fetchDashboardData()
+  }, [fetchDashboardData])
 
   const formatTimeAgo = (dateString: string | undefined): string => {
     if (!dateString) return 'Unknown'
@@ -287,6 +314,32 @@ export default function IntegratedDashboard() {
     }
     const days = Math.round(diffMs / day)
     return `${days} day${days === 1 ? '' : 's'} ago`
+  }
+
+  if (hasError && !isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
+        <div className="max-w-md w-full space-y-6 rounded-2xl border border-red-100 bg-white p-8 shadow-xl">
+          <div className="flex justify-center">
+            <AlertTriangle className="h-12 w-12 text-red-500" />
+          </div>
+          <div className="space-y-2 text-center">
+            <h2 className="text-2xl font-semibold text-gray-900">Backend Unreachable</h2>
+            <p className="text-gray-600">
+              {errorMessage ?? 'We could not load live metrics. Ensure the backend API is running and then retry.'}
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-3">
+            <Button variant="outline" onClick={handleRetry} className="gap-2">
+              <RefreshCcw className="h-4 w-4" /> Retry loading
+            </Button>
+            <Link href="/upload">
+              <Button variant="secondary">Go to Uploads</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (isLoading) {
