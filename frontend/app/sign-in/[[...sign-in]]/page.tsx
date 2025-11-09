@@ -2,6 +2,7 @@
 
 import { SignIn } from "@clerk/nextjs";
 
+// Premium themed sign-in page with Client Component support
 export default function SignInPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 px-4 relative overflow-hidden">
