@@ -4,6 +4,28 @@ Complete visual guide of all user journeys through the IntegrityX platform.
 
 ---
 
+## 🔔 Implementation Notes (Updated)
+
+**Demo Mode:**
+- Triggered via URL parameter: `/upload?mode=demo`
+- Available from:
+  - Dashboard: "Try Demo Upload" button
+  - Upload page: "Try Demo" button (shown when NOT in demo mode)
+- When active, shows green banner: "🎬 Demo Mode Active" with "Exit Demo" button
+- Auto-generates fraud-triggering sample data (no manual setup required)
+
+**Navigation:**
+- Success modal closes before navigating to ZKP page (clean transition)
+- ZKP page includes breadcrumb: "Back to Security" and "View Document" (if artifact ID present)
+- All pages accessible via top navigation bar
+
+**Zero Knowledge Proof:**
+- Artifact ID auto-fills from URL parameter (`?artifact=ABC123`)
+- Toast notification confirms when loaded from URL
+- Seamless flow: Upload → Seal → Success Modal → "Generate ZKP Proof" → ZKP page (ID pre-filled)
+
+---
+
 ## 📋 Table of Contents
 
 1. [Demo Flow - Quick Try (4 clicks)](#1-demo-flow---quick-try)
@@ -49,6 +71,11 @@ Complete visual guide of all user journeys through the IntegrityX platform.
 │
 │  🎬 Demo mode detected! Generating demo data...
 │  ✨ Demo loaded! Review the auto-filled form with fraud detection.
+│
+│  ╔═══════════════════════════════════════════════════════════════╗
+│  ║ 🎬 DEMO MODE ACTIVE                              [Exit Demo] ║
+│  ║ You're viewing pre-filled sample data for demonstration      ║
+│  ╚═══════════════════════════════════════════════════════════════╝
 │
 │  ┌──────────────────────────────────────────────────────────────┐
 │  │ 📄 Document Upload                                           │
