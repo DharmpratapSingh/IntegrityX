@@ -191,6 +191,9 @@ export default function UploadPage() {
     loanId: '',
     documentType: 'loan_application',
     loanAmount: '',
+    loanTerm: '',
+    interestRate: '',
+    propertyAddress: '',
     borrowerName: '',
     additionalNotes: '',
     borrowerFullName: '',
@@ -510,11 +513,14 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       default:
         sanitizedValue = sanitizeText(value);
     }
-    
+
+    // Update formData with sanitized value for consistency
+    setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
+
     const currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
     const updatedMeta = { ...currentMeta, [field]: sanitizedValue };
     setMetadata(JSON.stringify(updatedMeta, null, 2));
-    
+
     // Validate the sanitized field
     const error = validateBorrowerField(field, sanitizedValue);
     setBorrowerErrors(prev => ({
@@ -3965,10 +3971,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         <Input
                           id="borrowerFullName"
                           value={formData.borrowerFullName}
-                          onChange={(e) => {
-                            setFormData(prev => ({ ...prev, borrowerFullName: e.target.value }));
-                            handleBorrowerFieldChange('borrowerFullName', e.target.value);
-                          }}
+                          onChange={(e) => handleBorrowerFieldChange('borrowerFullName', e.target.value)}
                           placeholder="Primary borrower's legal name"
                           className={hasFieldError('borrowerFullName') ? 'border-red-500' : ''}
                         />
@@ -4330,6 +4333,61 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                     />
                     <p className="text-xs text-muted-foreground">
                       Loan amount in USD
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="interestRate">Interest Rate (%)</Label>
+                    <Input
+                      id="interestRate"
+                      type="number"
+                      step="0.01"
+                      value={formData.interestRate}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, interestRate: e.target.value }));
+                        const currentMeta = JSON.parse(metadata || '{}')
+                        setMetadata(JSON.stringify({ ...currentMeta, interestRate: e.target.value }, null, 2))
+                      }}
+                      placeholder="e.g., 3.5"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Annual interest rate percentage
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="loanTerm">Loan Term (months)</Label>
+                    <Input
+                      id="loanTerm"
+                      type="number"
+                      value={formData.loanTerm}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, loanTerm: e.target.value }));
+                        const currentMeta = JSON.parse(metadata || '{}')
+                        setMetadata(JSON.stringify({ ...currentMeta, loanTerm: e.target.value }, null, 2))
+                      }}
+                      placeholder="e.g., 360"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Loan duration in months
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="propertyAddress">Property Address</Label>
+                    <Input
+                      id="propertyAddress"
+                      type="text"
+                      value={formData.propertyAddress}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, propertyAddress: e.target.value }));
+                        const currentMeta = JSON.parse(metadata || '{}')
+                        setMetadata(JSON.stringify({ ...currentMeta, propertyAddress: e.target.value }, null, 2))
+                      }}
+                      placeholder="e.g., 123 Main St, City, ST 12345"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Property being financed
                     </p>
                   </div>
                 </div>
