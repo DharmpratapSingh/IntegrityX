@@ -94,12 +94,11 @@ export default function IntegratedDashboard() {
     setHasError(false)
     setErrorMessage(null)
     try {
-      try {
-        // Add timeout to prevent infinite loading
-        const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 3000))
-        
-        // Fetch real data from multiple backend endpoints with timeout
-        const [documentsRes, analyticsRes, healthRes, dailyRes] = await Promise.all([
+      // Add timeout to prevent infinite loading
+      const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 3000))
+      
+      // Fetch real data from multiple backend endpoints with timeout
+      const [documentsRes, analyticsRes, healthRes, dailyRes] = await Promise.all([
           fetchJson<any>(apiConfig.artifacts.list(), { timeoutMs: 3000 }).catch(() => ({ ok: false })),
           fetchJson<any>(apiConfig.analytics.systemMetrics, { timeoutMs: 3000 }).catch(() => ({ ok: false })),
           fetchJson<any>(apiConfig.health, { timeoutMs: 3000 }).catch(() => ({ ok: false })),
@@ -257,20 +256,18 @@ export default function IntegratedDashboard() {
             bulk: { value: 0, change: 0 }
           }
         })
-
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error)
-        setRecentDocuments([])
-        setHasError(true)
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : 'Unexpected error while loading dashboard metrics. Please try again.'
-        )
-        toast.error('Dashboard data unavailable. Check backend status and retry.')
-      } finally {
-        setIsLoading(false)
-      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error)
+      setRecentDocuments([])
+      setHasError(true)
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unexpected error while loading dashboard metrics. Please try again.'
+      )
+      toast.error('Dashboard data unavailable. Check backend status and retry.')
+    } finally {
+      setIsLoading(false)
     }
   }, [])
 
