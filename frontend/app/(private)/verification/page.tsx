@@ -267,48 +267,6 @@ export default function VerificationPage() {
         </button>
       </div>
 
-      {/* Input Section - Removed old wrapper */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Enter Information</h2>
-        
-        {/* Keep original grid structure but hidden */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{display: 'none'}}>
-          <button
-            onClick={() => setVerificationType('hash')}
-            className={`p-4 border rounded-lg transition-colors ${
-              verificationType === 'hash'
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-200 hover:bg-gray-50'
-            }`}
-          >
-            <div className="flex items-center space-x-3">
-              <Hash className="h-5 w-5" />
-              <div className="text-left">
-                <div className="font-medium">Hash Verification</div>
-                <div className="text-sm text-gray-500">Verify using document hash</div>
-              </div>
-            </div>
-          </button>
-          
-          <button
-            onClick={() => setVerificationType('document')}
-            className={`p-4 border rounded-lg transition-colors ${
-              verificationType === 'document'
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-200 hover:bg-gray-50'
-            }`}
-          >
-            <div className="flex items-center space-x-3">
-              <FileText className="h-5 w-5" />
-              <div className="text-left">
-                <div className="font-medium">Document Info</div>
-                <div className="text-sm text-gray-500">Verify using document details</div>
-              </div>
-            </div>
-          </button>
-        </div>
-      </div>
-
       {/* Input Section */}
       <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Enter Information</h2>

@@ -28,9 +28,17 @@ export default function SignInPage() {
         </div>
 
         {/* Clerk Sign In Component */}
+        {/* Now using shadcn theme globally - only override for glassmorphism effect */}
         <div className="animate-slide-up">
           <SignIn
             appearance={{
+              elements: {
+                card: 'shadow-2xl bg-white/95 backdrop-blur-xl border-0',
+                formButtonPrimary: 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200',
+              }
+            }}
+            redirectUrl="/integrated-dashboard"
+          />
                   variables: {
                     colorPrimary: '#2563eb',
                     colorBackground: '#ffffff',
