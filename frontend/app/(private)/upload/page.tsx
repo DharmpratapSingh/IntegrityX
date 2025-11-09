@@ -56,6 +56,7 @@ import { BulkAnalysisDashboard } from '@/components/BulkAnalysisDashboard'
 import { SmartBatchEditor } from '@/components/SmartBatchEditor'
 import { ConfidenceBadge, FieldConfidenceWrapper } from '@/components/ui/confidence-badge'
 import { FraudRiskBadge, FraudRiskInlineBadge } from '@/components/FraudRiskBadge'
+import { generateDemoDocumentSet, generateDemoKYCData } from '@/utils/demoDataGenerator'
 
 interface UploadResult {
   artifactId: string;
@@ -217,63 +218,54 @@ export default function UploadPage() {
   // Demo Mode: Auto-load demo data if coming from dashboard
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const isDemo = params.get('demo') === 'true';
+    const isDemo = params.get('mode') === 'demo';
 
     if (isDemo && typeof window !== 'undefined') {
-      console.log('🎬 Demo mode detected! Loading demo data...');
+      console.log('🎬 Demo mode detected! Generating demo data...');
       setIsDemoMode(true);
 
       try {
-        const demoDocsStr = sessionStorage.getItem('demoDocuments');
-        const demoKYCStr = sessionStorage.getItem('demoKYC');
+        // Generate demo data on the fly
+        const demoDocuments = generateDemoDocumentSet();
+        const demoKYC = generateDemoKYCData();
 
-        if (demoDocsStr) {
-          const demoDocuments = JSON.parse(demoDocsStr);
-          console.log('📄 Found demo documents:', demoDocuments);
+        console.log('📄 Generated demo documents:', demoDocuments);
+        console.log('👤 Generated demo KYC:', demoKYC);
 
-          // Convert first demo document to File and auto-upload
-          if (demoDocuments && demoDocuments.length > 0) {
-            const firstDoc = demoDocuments[0];
-            const jsonContent = JSON.stringify(firstDoc.data, null, 2);
-            const blob = new Blob([jsonContent], { type: 'application/json' });
-            const demoFile = new File([blob], firstDoc.fileName, { type: 'application/json' });
+        // Convert first demo document to File and auto-upload
+        if (demoDocuments && demoDocuments.length > 0) {
+          const firstDoc = demoDocuments[0];
+          const jsonContent = JSON.stringify(firstDoc.data, null, 2);
+          const blob = new Blob([jsonContent], { type: 'application/json' });
+          const demoFile = new File([blob], firstDoc.fileName, { type: 'application/json' });
 
-            // Simulate file drop
-            setTimeout(() => {
-              console.log('🚀 Auto-uploading demo file...');
-              setFile(demoFile);
-              setCurrentStep(2);
-
-              // Trigger auto-fill
-              autoFillFromJSON(demoFile).then(() => {
-                toast.success('✨ Demo loaded! Review the auto-filled form.');
-              }).catch(error => {
-                console.error('Demo auto-fill error:', error);
-                toast.error('Demo loaded but auto-fill failed. Please review form.');
-              });
-            }, 1000);
-          }
-        }
-
-        if (demoKYCStr) {
-          const demoKYC = JSON.parse(demoKYCStr);
-          console.log('👤 Found demo KYC:', demoKYC);
-
-          // Pre-fill KYC data
+          // Simulate file drop
           setTimeout(() => {
-            setKycData(prev => ({
-              ...prev,
-              ...demoKYC
-            }));
-          }, 1500);
+            console.log('🚀 Auto-uploading demo file...');
+            setFile(demoFile);
+            setCurrentStep(2);
+
+            // Trigger auto-fill
+            autoFillFromJSON(demoFile).then(() => {
+              toast.success('✨ Demo loaded! Review the auto-filled form with fraud detection.');
+            }).catch(error => {
+              console.error('Demo auto-fill error:', error);
+              toast.error('Demo loaded but auto-fill failed. Please review form.');
+            });
+          }, 1000);
         }
 
-        // Clear demo mode from sessionStorage after loading
-        sessionStorage.removeItem('demoMode');
+        // Pre-fill KYC data
+        setTimeout(() => {
+          setKycData(prev => ({
+            ...prev,
+            ...demoKYC
+          }));
+        }, 1500);
 
       } catch (error) {
-        console.error('Error loading demo data:', error);
-        toast.error('Failed to load demo data');
+        console.error('Error generating demo data:', error);
+        toast.error('Failed to generate demo data');
       }
     }
   }, []); // Run once on mount

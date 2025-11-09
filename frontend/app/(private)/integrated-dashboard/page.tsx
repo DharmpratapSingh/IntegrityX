@@ -21,7 +21,6 @@ import {
 import AIDocumentProcessingInterface from '@/components/AIDocumentProcessingInterface'
 import BulkOperationsInterface from '@/components/BulkOperationsInterface'
 import AnalyticsDashboard from '@/components/AnalyticsDashboard'
-import { DemoModeButton } from '@/components/DemoModeButton'
 import { Button } from '@/components/ui/button'
 
 interface DashboardStats {
@@ -357,23 +356,32 @@ export default function IntegratedDashboard() {
 
             {/* Demo Mode and Quick Actions */}
             <div className="flex flex-wrap items-center gap-4 pt-6">
-              <DemoModeButton />
-              <Link href="/security">
+              <Link href="/upload?mode=demo">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 shadow-lg"
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-lg"
                 >
-                  <Shield className="h-5 w-5 mr-2" />
-                  Security Dashboard
+                  <Zap className="h-5 w-5 mr-2" />
+                  Try Demo Upload
                 </Button>
               </Link>
               <Link href="/upload">
                 <Button
                   size="lg"
+                  className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white border-0 shadow-lg"
+                >
+                  <FileText className="h-5 w-5 mr-2" />
+                  Upload Document
+                </Button>
+              </Link>
+              <Link href="/security">
+                <Button
+                  size="lg"
                   variant="outline"
                   className="bg-white/10 hover:bg-white/20 text-white border-white/30"
                 >
-                  Upload Document
+                  <Shield className="h-5 w-5 mr-2" />
+                  Security Overview
                 </Button>
               </Link>
               <Link href="/verification">
