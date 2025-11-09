@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Shield, Lock, CheckCircle2, Download, Copy, AlertCircle, Loader2, FileKey } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,10 +18,21 @@ import {
 import toast from 'react-hot-toast';
 
 export default function VerifyPage() {
+  const searchParams = useSearchParams();
   const [artifactId, setArtifactId] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [proof, setProof] = useState<ZKPProof | null>(null);
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+
+  // Auto-fill artifact ID from URL query parameter
+  useEffect(() => {
+    const artifactParam = searchParams.get('artifact');
+    if (artifactParam) {
+      setArtifactId(artifactParam);
+      // Show a toast to inform user
+      toast.success('Artifact ID loaded from URL. Click "Generate Proof" to continue.');
+    }
+  }, [searchParams]);
 
   const handleGenerateProof = async () => {
     if (!artifactId.trim()) {
