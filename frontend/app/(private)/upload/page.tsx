@@ -66,10 +66,18 @@ interface UploadResult {
   quantum_safe_seal?: {
     algorithm: string;
     timestamp: string;
+    quantum_resistant_hashes?: string[];
+    quantum_safe_signatures?: string[];
+    algorithms_used?: string[];
   };
   comprehensive_seal?: {
     timestamp: string;
     algorithm: string;
+    security_level?: string;
+    tamper_resistance?: string;
+    multi_hash_algorithms?: string[];
+    pki_signature?: string;
+    verification_methods?: string[];
   };
 }
 
@@ -2114,34 +2122,33 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         const annualIncomeNumber = parseFloat(meta.borrowerAnnualIncome || '0');
 
         const loanData: LoanData = {
-          loan_id: meta.loanId || `loan-${Date.now()}-${index}`,
-          document_type: (meta.documentType as LoanData['document_type']) || 'loan_application',
-          loan_amount: Number.isNaN(loanAmountNumber) ? 0 : loanAmountNumber,
-          borrower_name: meta.borrowerName || meta.borrowerFullName || '',
-          additional_notes: meta.additionalNotes || undefined
+          loanId: meta.loanId || `loan-${Date.now()}-${index}`,
+          documentType: meta.documentType || 'loan_application',
+          borrowerName: meta.borrowerName || '',
+          propertyAddress: meta.propertyAddress || '',
+          amount: String(Number.isNaN(loanAmountNumber) ? 0 : loanAmountNumber),
+          rate: meta.interestRate || '',
+          term: meta.loanTerm || '',
+          notes: meta.additionalNotes
         };
 
-        const borrowerFullName = meta.borrowerFullName || meta.borrowerName || '';
+        const borrowerFullName = meta.borrowerName || '';
         const borrowerInfo: BorrowerInfo = {
-          full_name: borrowerFullName,
-          date_of_birth: meta.borrowerDateOfBirth || '',
+          fullLegalName: borrowerFullName,
+          dateOfBirth: meta.borrowerDateOfBirth || '',
           email: meta.borrowerEmail || '',
-          phone: meta.borrowerPhone || '',
-          address_line1: meta.borrowerStreetAddress || '',
-          address_line2: '',
+          phoneNumber: meta.borrowerPhone || '',
+          currentAddress: meta.borrowerStreetAddress || '',
           city: meta.borrowerCity || '',
           state: meta.borrowerState || '',
-          zip_code: meta.borrowerZipCode || '',
+          zipCode: meta.borrowerZipCode || '',
           country: meta.borrowerCountry || 'US',
-          ssn_last4: meta.borrowerSSNLast4 || '',
-          id_type: (meta.borrowerGovernmentIdType as BorrowerInfo['id_type']) || 'drivers_license',
-          id_last4: meta.borrowerIdNumberLast4 || '',
-          employment_status: (meta.borrowerEmploymentStatus as BorrowerInfo['employment_status']) || 'employed',
-          annual_income_range: getIncomeRange(Number.isNaN(annualIncomeNumber) ? 0 : annualIncomeNumber),
-          co_borrower_name: meta.borrowerCoBorrowerName || '',
-          is_sealed: false,
-          walacor_tx_id: '',
-          seal_timestamp: ''
+          ssnLast4: meta.borrowerSSNLast4 || '',
+          governmentIdType: meta.borrowerGovernmentIdType || 'drivers_license',
+          governmentIdNumber: meta.borrowerIdNumberLast4 || '',
+          employmentStatus: meta.borrowerEmploymentStatus || 'employed',
+          annualIncome: String(Number.isNaN(annualIncomeNumber) ? 0 : annualIncomeNumber),
+          consentGiven: true
         };
 
         const progressValue = Math.round((index / selectedFiles.length) * 100);
@@ -2160,10 +2167,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         results.push({
           fileName: fileItem.name,
           result: {
-          artifactId: sealResponse.artifact_id,
-          walacorTxId: sealResponse.walacor_tx_id,
-          sealedAt: sealResponse.sealed_at,
-          proofBundle: sealResponse.blockchain_proof || {}
+            artifactId: sealResponse.artifactId || sealResponse.artifact_id || '',
+            walacorTxId: sealResponse.walacorTxId || sealResponse.walacor_tx_id || '',
+            sealedAt: sealResponse.sealedAt || sealResponse.sealed_at || '',
+            proofBundle: sealResponse.proofBundle || sealResponse.blockchain_proof || {}
           }
         });
 
@@ -2823,7 +2830,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
             {duplicateCheckResult && (
               <>
                 {/* Warnings */}
-                {duplicateCheckResult.warnings.length > 0 && (
+                {duplicateCheckResult.warnings && duplicateCheckResult.warnings.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="font-medium text-yellow-700">Warnings:</h4>
                     <ul className="space-y-1">
@@ -2875,7 +2882,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 )}
 
                 {/* Recommendations */}
-                {duplicateCheckResult.recommendations.length > 0 && (
+                {duplicateCheckResult.recommendations && duplicateCheckResult.recommendations.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="font-medium text-blue-700">Recommendations:</h4>
                     <ul className="space-y-1">
