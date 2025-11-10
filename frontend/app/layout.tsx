@@ -48,21 +48,25 @@ export default function RootLayout({
           <Toaster
             position="top-right"
             toastOptions={{
-              duration: 4000,
+              duration: 3000,
               style: {
-                background: '#363636',
-                color: '#fff',
+                background: '#ffffff',
+                color: '#0f172a',
+                border: '1px solid #e2e8f0',
+                fontFamily: 'Inter, system-ui, sans-serif',
               },
               success: {
-                duration: 3000,
                 style: {
-                  background: '#10b981',
+                  background: '#f0fdf4',
+                  color: '#166534',
+                  border: '1px solid #bbf7d0',
                 },
               },
               error: {
-                duration: 4000,
                 style: {
-                  background: '#ef4444',
+                  background: '#fef2f2',
+                  color: '#991b1b',
+                  border: '1px solid #fecaca',
                 },
               },
             }}
