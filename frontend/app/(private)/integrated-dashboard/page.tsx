@@ -26,6 +26,7 @@ import BulkOperationsInterface from '@/components/BulkOperationsInterface'
 import AnalyticsDashboard from '@/components/AnalyticsDashboard'
 import { Button } from '@/components/ui/button'
 import toast from 'react-hot-toast'
+import { HashVisualizerSmall } from '@/components/HashVisualizer'
 
 interface DashboardStats {
   totalDocuments: number
@@ -55,6 +56,7 @@ interface DocumentSummary {
   loanId?: string
   status: 'sealed' | 'processing'
   createdBy?: string
+  hash?: string
 }
 
 export default function IntegratedDashboard() {
@@ -145,13 +147,17 @@ export default function IntegratedDashboard() {
             const status: 'sealed' | 'processing' =
               doc.walacor_tx_id || doc.blockchain_seal ? 'sealed' : 'processing'
 
+            // Extract hash for visualization (prefer payload_sha256, fall back to walacor_tx_id or ID)
+            const hash = doc.payload_sha256 || doc.walacor_tx_id || doc.id
+
             return {
               id: doc.id,
               title,
               createdAt: doc.created_at,
               loanId: doc.loan_id,
               status,
-              createdBy: doc.created_by
+              createdBy: doc.created_by,
+              hash
             }
           })
         )
@@ -614,21 +620,26 @@ export default function IntegratedDashboard() {
                             className="flex flex-wrap items-center justify-between gap-4 p-4 border border-gray-200 dark:border-gray-800 rounded-lg hover:border-elite-blue hover:shadow-sm hover-lift transition-all duration-200"
                           >
                             <div className="flex items-center gap-4 min-w-0">
-                              <div className="p-3 bg-blue-500/10 rounded-xl">
-                                <FileText className="h-5 w-5 text-blue-600" />
-                              </div>
+                              {/* Cryptographic Hash Art - Unique visual fingerprint */}
+                              {doc.hash && (
+                                <HashVisualizerSmall
+                                  hash={doc.hash}
+                                  className="flex-shrink-0"
+                                />
+                              )}
+
                               <div className="min-w-0 space-y-1">
                                 <Link
                                   href={`/documents/${doc.id}`}
-                                  className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors truncate block"
+                                  className="text-sm font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate block"
                                   title={doc.title}
                                 >
                                   {doc.title}
                                 </Link>
-                                <p className="text-xs text-gray-500 truncate font-mono">
-                                  {doc.id}
+                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate font-mono">
+                                  {doc.hash ? `${doc.hash.slice(0, 16)}...` : doc.id}
                                 </p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
                                   {doc.loanId ? `Loan ${doc.loanId}` : 'Loan ID unavailable'} · {formatTimeAgo(doc.createdAt)}
                                 </p>
                               </div>
@@ -667,14 +678,14 @@ export default function IntegratedDashboard() {
                       <div className="p-4 bg-blue-500/10 rounded-full">
                         <FileText className="h-6 w-6 text-blue-500" />
                       </div>
-                      <p className="text-sm text-gray-600">
-                        No recent documents yet. Upload a document to see it appear here instantly.
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        No recent documents yet. Upload a document to see it appear here with unique cryptographic hash art.
                       </p>
                       <Link
-                        href="/documents"
+                        href="/upload"
                         className="inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
                       >
-                        Go to documents
+                        Upload your first document
                         <ArrowRight className="h-4 w-4" />
                       </Link>
                     </div>
