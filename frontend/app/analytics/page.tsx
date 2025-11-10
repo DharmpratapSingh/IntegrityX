@@ -416,11 +416,10 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-cyan-50/20 to-blue-50/20">
+    <div className="min-h-screen bg-white dark:bg-black">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-cyan-600 via-blue-500 to-purple-600 text-white">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10"></div>
+      <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white border-b border-gray-200 dark:border-gray-800">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
 
         <div className="relative max-w-7xl mx-auto px-6 py-16">
           <div className="space-y-6">
@@ -429,7 +428,7 @@ export default function AnalyticsPage() {
                 <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
                   Analytics Dashboard
                 </h1>
-                <p className="text-lg md:text-xl text-cyan-100 max-w-3xl">
+                <p className="text-lg md:text-xl text-gray-300 max-w-3xl">
                   AI-powered insights and performance metrics
                 </p>
               </div>
@@ -615,7 +614,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Time Savings Card */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6">
+                <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-3 bg-green-100 rounded-xl">
                       <Zap className="h-6 w-6 text-green-600" />
@@ -631,7 +630,7 @@ export default function AnalyticsPage() {
                       <span className="text-sm font-medium text-gray-700">AI Automated Time</span>
                       <span className="text-xl font-bold text-blue-600">{timeSavings.automated} min</span>
                     </div>
-                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-400 to-emerald-400 text-white rounded-lg">
+                    <div className="flex items-center justify-between p-4 bg-elite-green text-white rounded-lg">
                       <span className="text-sm font-semibold">Total Time Saved</span>
                       <span className="text-2xl font-bold">{timeSavings.saved} min</span>
                     </div>
@@ -648,7 +647,7 @@ export default function AnalyticsPage() {
             <div className="space-y-6">
               {/* AI Extraction Stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-6">
+                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-6">
                   <div className="flex items-center justify-between mb-2">
                     <Brain className="h-8 w-8 text-blue-600" />
                     <span className="text-sm font-medium text-blue-600">Total</span>
@@ -657,7 +656,7 @@ export default function AnalyticsPage() {
                   <p className="text-sm text-gray-600 mt-1">Total Extractions</p>
                 </div>
 
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6">
+                <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg p-6">
                   <div className="flex items-center justify-between mb-2">
                     <CheckCircle2 className="h-8 w-8 text-green-600" />
                     <span className="text-sm font-medium text-green-600">Success</span>
@@ -666,7 +665,7 @@ export default function AnalyticsPage() {
                   <p className="text-sm text-gray-600 mt-1">Successful ({Math.round((aiMetrics.successful_extractions / aiMetrics.total_extractions) * 100) || 0}%)</p>
                 </div>
 
-                <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-6">
+                <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900 rounded-lg p-6">
                   <div className="flex items-center justify-between mb-2">
                     <Clock className="h-8 w-8 text-purple-600" />
                     <span className="text-sm font-medium text-purple-600">Speed</span>
@@ -761,7 +760,7 @@ export default function AnalyticsPage() {
               </div>
 
               {/* Average Confidence Indicator */}
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-8">
+              <div className="bg-elite-blue dark:bg-elite-blue/90 text-white rounded-lg p-8">
                 <div className="text-center">
                   <Brain className="h-12 w-12 mx-auto mb-4" />
                   <h3 className="text-2xl font-bold mb-2">Average AI Confidence</h3>
