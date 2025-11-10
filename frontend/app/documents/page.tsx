@@ -771,11 +771,10 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50/20 to-blue-50/20">
+    <div className="min-h-screen bg-white dark:bg-black">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-purple-500 to-blue-600 text-white">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10"></div>
+      <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white border-b border-gray-200 dark:border-gray-800">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
         
         <div className="relative max-w-7xl mx-auto px-6 py-16">
           <div className="space-y-6">
@@ -784,13 +783,13 @@ export default function DocumentsPage() {
                 <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
                   Document Library
                 </h1>
-                <p className="text-lg md:text-xl text-purple-100 max-w-3xl">
+                <p className="text-lg md:text-xl text-gray-300 max-w-3xl">
                   View and manage your verified documents
                 </p>
               </div>
               <Link
                 href="/upload"
-                className="inline-flex items-center px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-105"
+                className="inline-flex items-center px-6 py-3 bg-elite-blue hover:bg-[#1d4ed8] text-white rounded-xl transition-all duration-200"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Upload Document

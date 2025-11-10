@@ -12,10 +12,10 @@ export default function SignOutPage() {
   }, [signOut]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600">
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
       <div className="text-center space-y-4">
-        <Loader2 className="h-12 w-12 animate-spin text-white mx-auto" />
-        <p className="text-white text-lg">Signing you out...</p>
+        <Loader2 className="h-12 w-12 animate-spin text-elite-blue mx-auto" />
+        <p className="text-elite-dark dark:text-white text-lg">Signing you out...</p>
       </div>
     </div>
   );

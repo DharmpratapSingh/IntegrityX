@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AccessibleDropzone } from '@/components/ui/accessible-dropzone';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -63,6 +63,22 @@ interface UploadResult {
   walacorTxId: string;
   sealedAt: string;
   proofBundle: any;
+  quantum_safe_seal?: {
+    algorithm: string;
+    timestamp: string;
+    quantum_resistant_hashes?: string[];
+    quantum_safe_signatures?: string[];
+    algorithms_used?: string[];
+  };
+  comprehensive_seal?: {
+    timestamp: string;
+    algorithm: string;
+    security_level?: string;
+    tamper_resistance?: string;
+    multi_hash_algorithms?: string[];
+    pki_signature?: string;
+    verification_methods?: string[];
+  };
 }
 
 type BulkUploadResult = {
@@ -238,9 +254,10 @@ export default function UploadPage() {
         // Convert first demo document to File and auto-upload
         if (demoDocuments && demoDocuments.length > 0) {
           const firstDoc = demoDocuments[0];
-          const jsonContent = JSON.stringify(firstDoc.data, null, 2);
+          const jsonContent = JSON.stringify(firstDoc, null, 2);
           const blob = new Blob([jsonContent], { type: 'application/json' });
-          const demoFile = new File([blob], firstDoc.fileName, { type: 'application/json' });
+          const fileName = `demo_loan_${firstDoc.security_level || 'standard'}_1.json`;
+          const demoFile = new File([blob], fileName, { type: 'application/json' });
 
           // Simulate file drop
           setTimeout(() => {
@@ -852,9 +869,9 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
   const sanitizeMetadataForSave = (metadata: AutoPopulateMetadata): AutoPopulateMetadata => ({
     loanId: sanitizeText(metadata.loanId),
     documentType: sanitizeDocumentType(metadata.documentType),
-    loanAmount: sanitizeNumber(metadata.loanAmount, 'loan_amount'),
-    loanTerm: sanitizeNumber(metadata.loanTerm, 'loan_term'),
-    interestRate: sanitizeNumber(metadata.interestRate, 'interest_rate'),
+    loanAmount: sanitizeNumber(metadata.loanAmount),
+    loanTerm: sanitizeNumber(metadata.loanTerm),
+    interestRate: sanitizeNumber(metadata.interestRate),
     borrowerName: sanitizeText(metadata.borrowerName),
     borrowerEmail: sanitizeEmail(metadata.borrowerEmail),
     borrowerPhone: sanitizePhone(metadata.borrowerPhone),
@@ -868,7 +885,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     borrowerGovernmentIdType: sanitizeGovernmentIdType(metadata.borrowerGovernmentIdType || 'drivers_license'),
     borrowerIdNumberLast4: sanitizeSSNLast4(metadata.borrowerIdNumberLast4),
     borrowerEmploymentStatus: sanitizeEmploymentStatus(metadata.borrowerEmploymentStatus),
-    borrowerAnnualIncome: sanitizeNumber(metadata.borrowerAnnualIncome, 'loan_amount'),
+    borrowerAnnualIncome: sanitizeNumber(metadata.borrowerAnnualIncome),
     borrowerCoBorrowerName: sanitizeText(metadata.borrowerCoBorrowerName),
     propertyAddress: sanitizeAddress(metadata.propertyAddress),
     additionalNotes: sanitizeNotes(metadata.additionalNotes),
@@ -1173,7 +1190,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       const completeCount = analyses.filter(a => !a.needsReview).length;
       const incompleteCount = analyses.filter(a => a.needsReview).length;
       const avgConfidence = Math.round(
-        analyses.reduce((sum, a) => sum + a.overallConfidence, 0) / analyses.length
+        analyses.reduce((sum, a) => sum + (a.overallConfidence || 0), 0) / analyses.length
       );
 
       // Show results
@@ -1634,10 +1651,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         </div>
                       </div>
                       <div className="flex items-center gap-2 pl-4">
-                        <Button size="xs" variant="outline" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                        <Button size="sm" variant="outline" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
                           Fix now
                         </Button>
-                        <Button size="xs" variant="ghost" onClick={() => handleRemoveInvalidFile(fileItem.name)}>
+                        <Button size="sm" variant="ghost" onClick={() => handleRemoveInvalidFile(fileItem.name)}>
                           Remove
                         </Button>
                       </div>
@@ -1651,7 +1668,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 </ul>
                 {validationResults.invalid.some(fileItem => (bulkFileMetadata[fileItem.name]?.documentType ?? '') === '') && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <Button size="xs" variant="secondary" onClick={() => handleApplyDocumentTypeToAll('loan_application')}>
+                    <Button size="sm" variant="secondary" onClick={() => handleApplyDocumentTypeToAll('loan_application')}>
                       Fill document type for missing files
                     </Button>
                   </div>
@@ -1671,7 +1688,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="xs" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                  <Button variant="ghost" size="sm" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
                     Edit
                   </Button>
                   <CheckCircle className="h-4 w-4 text-green-600" />
@@ -1771,10 +1788,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         </div>
                       </div>
                       <div className="flex items-centered gap-2 pl-4">
-                        <Button size="xs" variant="outline" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                        <Button size="sm" variant="outline" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
                           Fix now
                         </Button>
-                        <Button size="xs" variant="ghost" onClick={() => handleRemoveInvalidFile(fileItem.name)}>
+                        <Button size="sm" variant="ghost" onClick={() => handleRemoveInvalidFile(fileItem.name)}>
                           Remove
                         </Button>
                       </div>
@@ -1788,7 +1805,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 </ul>
                 {validationResults.invalid.some(fileItem => (bulkFileMetadata[fileItem.name]?.documentType ?? '') === '') && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <Button size="xs" variant="secondary" onClick={() => handleApplyDocumentTypeToAll('loan_application')}>
+                    <Button size="sm" variant="secondary" onClick={() => handleApplyDocumentTypeToAll('loan_application')}>
                       Fill document type for missing files
                     </Button>
                   </div>
@@ -1808,7 +1825,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="xs" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                  <Button variant="ghost" size="sm" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
                     Edit
                   </Button>
                   <CheckCircle className="h-4 w-4 text-green-600" />
@@ -1941,34 +1958,33 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         
         // Create final loan data object
         const loanData: LoanData = {
-          loan_id: sanitizedLoanData.loanId,
-          document_type: sanitizedLoanData.documentType,
-          loan_amount: parseFloat(sanitizedLoanData.loanAmount),
-          borrower_name: sanitizedLoanData.borrowerName,
-          additional_notes: sanitizedLoanData.additionalNotes
+          loanId: sanitizedLoanData.loanId,
+          documentType: sanitizedLoanData.documentType,
+          borrowerName: sanitizedLoanData.borrowerName,
+          propertyAddress: sanitizedLoanData.propertyAddress || '',
+          amount: sanitizedLoanData.loanAmount,
+          rate: sanitizedLoanData.interestRate || '',
+          term: sanitizedLoanData.loanTerm || '',
+          notes: sanitizedLoanData.additionalNotes
         };
 
         // Create final borrower data object
         const borrowerInfo: BorrowerInfo = {
-          full_name: sanitizedBorrowerData.fullName,
-          date_of_birth: sanitizedBorrowerData.dateOfBirth,
+          fullLegalName: sanitizedBorrowerData.fullName,
+          dateOfBirth: sanitizedBorrowerData.dateOfBirth,
           email: sanitizedBorrowerData.email,
-          phone: sanitizedBorrowerData.phone,
-          address_line1: sanitizedBorrowerData.streetAddress,
-          address_line2: currentMeta.borrowerStreetAddress2 || '', // Keep as is for now
+          phoneNumber: sanitizedBorrowerData.phone,
+          currentAddress: sanitizedBorrowerData.streetAddress,
           city: sanitizedBorrowerData.city,
           state: sanitizedBorrowerData.state,
-          zip_code: sanitizedBorrowerData.zipCode,
+          zipCode: sanitizedBorrowerData.zipCode,
           country: sanitizedBorrowerData.country,
-          ssn_last4: sanitizedBorrowerData.ssnLast4,
-          id_type: sanitizedBorrowerData.governmentIdType,
-          id_last4: sanitizedBorrowerData.idNumberLast4,
-          employment_status: sanitizedBorrowerData.employmentStatus,
-          annual_income_range: sanitizedBorrowerData.annualIncome,
-          co_borrower_name: sanitizedBorrowerData.coBorrowerName,
-          is_sealed: false,
-          walacor_tx_id: '',
-          seal_timestamp: ''
+          ssnLast4: sanitizedBorrowerData.ssnLast4,
+          governmentIdType: sanitizedBorrowerData.governmentIdType,
+          governmentIdNumber: sanitizedBorrowerData.idNumberLast4,
+          employmentStatus: sanitizedBorrowerData.employmentStatus,
+          annualIncome: sanitizedBorrowerData.annualIncome,
+          consentGiven: true
         };
 
         console.log('Loan data:', loanData);
@@ -2005,10 +2021,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
         // Create UploadResult for compatibility with existing UI
         const uploadResult: UploadResult = {
-          artifactId: sealResponse.artifact_id,
-          walacorTxId: sealResponse.walacor_tx_id,
-          sealedAt: sealResponse.sealed_at,
-          proofBundle: sealResponse.blockchain_proof || {}
+          artifactId: sealResponse.artifactId || sealResponse.artifact_id || '',
+          walacorTxId: sealResponse.walacorTxId || sealResponse.walacor_tx_id || '',
+          sealedAt: sealResponse.sealedAt || sealResponse.sealed_at || '',
+          proofBundle: sealResponse.proofBundle || sealResponse.blockchain_proof || {}
         };
 
         setUploadResult(uploadResult);
@@ -2106,34 +2122,33 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         const annualIncomeNumber = parseFloat(meta.borrowerAnnualIncome || '0');
 
         const loanData: LoanData = {
-          loan_id: meta.loanId || `loan-${Date.now()}-${index}`,
-          document_type: (meta.documentType as LoanData['document_type']) || 'loan_application',
-          loan_amount: Number.isNaN(loanAmountNumber) ? 0 : loanAmountNumber,
-          borrower_name: meta.borrowerName || meta.borrowerFullName || '',
-          additional_notes: meta.additionalNotes || undefined
+          loanId: meta.loanId || `loan-${Date.now()}-${index}`,
+          documentType: meta.documentType || 'loan_application',
+          borrowerName: meta.borrowerName || '',
+          propertyAddress: meta.propertyAddress || '',
+          amount: String(Number.isNaN(loanAmountNumber) ? 0 : loanAmountNumber),
+          rate: meta.interestRate || '',
+          term: meta.loanTerm || '',
+          notes: meta.additionalNotes
         };
 
-        const borrowerFullName = meta.borrowerFullName || meta.borrowerName || '';
+        const borrowerFullName = meta.borrowerName || '';
         const borrowerInfo: BorrowerInfo = {
-          full_name: borrowerFullName,
-          date_of_birth: meta.borrowerDateOfBirth || '',
+          fullLegalName: borrowerFullName,
+          dateOfBirth: meta.borrowerDateOfBirth || '',
           email: meta.borrowerEmail || '',
-          phone: meta.borrowerPhone || '',
-          address_line1: meta.borrowerStreetAddress || '',
-          address_line2: '',
+          phoneNumber: meta.borrowerPhone || '',
+          currentAddress: meta.borrowerStreetAddress || '',
           city: meta.borrowerCity || '',
           state: meta.borrowerState || '',
-          zip_code: meta.borrowerZipCode || '',
+          zipCode: meta.borrowerZipCode || '',
           country: meta.borrowerCountry || 'US',
-          ssn_last4: meta.borrowerSSNLast4 || '',
-          id_type: (meta.borrowerGovernmentIdType as BorrowerInfo['id_type']) || 'drivers_license',
-          id_last4: meta.borrowerIdNumberLast4 || '',
-          employment_status: (meta.borrowerEmploymentStatus as BorrowerInfo['employment_status']) || 'employed',
-          annual_income_range: getIncomeRange(Number.isNaN(annualIncomeNumber) ? 0 : annualIncomeNumber),
-          co_borrower_name: meta.borrowerCoBorrowerName || '',
-          is_sealed: false,
-          walacor_tx_id: '',
-          seal_timestamp: ''
+          ssnLast4: meta.borrowerSSNLast4 || '',
+          governmentIdType: meta.borrowerGovernmentIdType || 'drivers_license',
+          governmentIdNumber: meta.borrowerIdNumberLast4 || '',
+          employmentStatus: meta.borrowerEmploymentStatus || 'employed',
+          annualIncome: String(Number.isNaN(annualIncomeNumber) ? 0 : annualIncomeNumber),
+          consentGiven: true
         };
 
         const progressValue = Math.round((index / selectedFiles.length) * 100);
@@ -2152,10 +2167,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         results.push({
           fileName: fileItem.name,
           result: {
-          artifactId: sealResponse.artifact_id,
-          walacorTxId: sealResponse.walacor_tx_id,
-          sealedAt: sealResponse.sealed_at,
-          proofBundle: sealResponse.blockchain_proof || {}
+            artifactId: sealResponse.artifactId || sealResponse.artifact_id || '',
+            walacorTxId: sealResponse.walacorTxId || sealResponse.walacor_tx_id || '',
+            sealedAt: sealResponse.sealedAt || sealResponse.sealed_at || '',
+            proofBundle: sealResponse.proofBundle || sealResponse.blockchain_proof || {}
           }
         });
 
@@ -2815,7 +2830,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
             {duplicateCheckResult && (
               <>
                 {/* Warnings */}
-                {duplicateCheckResult.warnings.length > 0 && (
+                {duplicateCheckResult.warnings && duplicateCheckResult.warnings.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="font-medium text-yellow-700">Warnings:</h4>
                     <ul className="space-y-1">
@@ -2867,7 +2882,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 )}
 
                 {/* Recommendations */}
-                {duplicateCheckResult.recommendations.length > 0 && (
+                {duplicateCheckResult.recommendations && duplicateCheckResult.recommendations.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="font-medium text-blue-700">Recommendations:</h4>
                     <ul className="space-y-1">
@@ -3071,19 +3086,11 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       </Dialog>
 
       {/* Main Upload Page */}
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/20 relative overflow-hidden isolate">
-      {/* Balanced gradient background orbs */}
-      <div className="pointer-events-none absolute -z-10 top-[-220px] left-[-220px] w-[520px] h-[520px] bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full filter blur-3xl opacity-25 animate-blob" />
-      <div className="pointer-events-none absolute -z-10 top-[-200px] right-[-220px] w-[560px] h-[560px] bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-1000" />
-      <div className="pointer-events-none absolute -z-10 bottom-[-240px] left-[-220px] w-[640px] h-[640px] bg-gradient-to-br from-pink-400 to-rose-500 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
-      <div className="pointer-events-none absolute -z-10 bottom-[-220px] right-[-240px] w-[680px] h-[680px] bg-gradient-to-br from-amber-300 to-orange-500 rounded-full filter blur-3xl opacity-15 animate-blob animation-delay-3000" />
-      <div className="pointer-events-none absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-gradient-to-br from-fuchsia-400 to-sky-400 rounded-full filter blur-3xl opacity-10 animate-blob animation-delay-4000" />
-      {/* Soft radial vignette */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.15),rgba(255,255,255,0)_60%)]" />
+    <div className="min-h-screen bg-white dark:bg-black relative overflow-hidden">
 
       {/* Demo Mode Banner */}
       {isDemoMode && (
-        <div className="relative z-20 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3">
+        <div className="relative z-20 bg-elite-dark dark:bg-gray-900 text-white py-3 border-b border-elite-blue">
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -3111,9 +3118,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       )}
 
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-blue-500 to-purple-600 text-white">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10"></div>
+      <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white border-b border-gray-200 dark:border-gray-800">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
         
         <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
           <div className="space-y-6">
@@ -3191,7 +3197,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 space-y-8">
         {/* Demo Mode Banner */}
         {isDemoMode && (
-          <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl p-4 shadow-xl border-2 border-green-400">
+          <div className="bg-elite-green dark:bg-elite-green/20 rounded-2xl p-4 shadow-xl border-2 border-elite-green dark:border-elite-green/40">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Sparkles className="h-6 w-6 text-white animate-pulse" />
@@ -3213,7 +3219,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         )}
 
         {/* Progress Indicator */}
-        <div className="flex items-center gap-4 p-4 bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl">
+        <div className="flex items-center gap-4 p-4 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-2">
             <User className="h-4 w-4" />
             <span className="text-sm font-medium">KYC:</span>
@@ -4461,7 +4467,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           </Card>
 
           {/* Tips & Help */}
-          <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">
+          <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Lightbulb className="h-4 w-4 text-yellow-500" />

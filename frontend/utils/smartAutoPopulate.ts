@@ -370,6 +370,8 @@ export interface BulkFileAnalysis {
   completeness: number // Percentage of fields filled
   needsReview: boolean // True if confidence < 60% or completeness < 70%
   missingFields: string[]
+  overallConfidence?: number
+  sameBorrowerDetected?: boolean
 }
 
 /**
@@ -546,10 +548,4 @@ function normalizePhone(phone: string): string {
 // ============================================================================
 // EXPORTS
 // ============================================================================
-
-export type {
-  FieldConfidence,
-  SmartExtractionResult,
-  EnhancedAutoPopulateMetadata,
-  BulkFileAnalysis,
-}
+// Types are already exported inline at their definitions

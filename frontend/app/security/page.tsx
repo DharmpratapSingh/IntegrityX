@@ -7,15 +7,15 @@ import { Button } from '@/components/ui/button';
 
 export default function SecurityPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-white dark:bg-black">
       {/* Simple Hero */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+      <div className="bg-elite-dark dark:bg-black text-white border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="flex items-center gap-4">
             <Shield className="h-10 w-10" />
             <div>
               <h1 className="text-3xl font-bold">Security Tools</h1>
-              <p className="text-blue-100 mt-1">Fraud detection, blockchain verification, and privacy-safe auditing</p>
+              <p className="text-gray-300 mt-1">Fraud detection, blockchain verification, and privacy-safe auditing</p>
             </div>
           </div>
         </div>
