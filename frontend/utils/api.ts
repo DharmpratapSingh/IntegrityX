@@ -69,6 +69,9 @@ export async function json<T = unknown>(
   }
 }
 
+// Alias for compatibility
+export const fetchJson = json;
+
 
 
 
