@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AccessibleDropzone } from '@/components/ui/accessible-dropzone';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -63,6 +63,14 @@ interface UploadResult {
   walacorTxId: string;
   sealedAt: string;
   proofBundle: any;
+  quantum_safe_seal?: {
+    algorithm: string;
+    timestamp: string;
+  };
+  comprehensive_seal?: {
+    timestamp: string;
+    algorithm: string;
+  };
 }
 
 type BulkUploadResult = {
@@ -1634,10 +1642,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         </div>
                       </div>
                       <div className="flex items-center gap-2 pl-4">
-                        <Button size="xs" variant="outline" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                        <Button size="sm" variant="outline" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
                           Fix now
                         </Button>
-                        <Button size="xs" variant="ghost" onClick={() => handleRemoveInvalidFile(fileItem.name)}>
+                        <Button size="sm" variant="ghost" onClick={() => handleRemoveInvalidFile(fileItem.name)}>
                           Remove
                         </Button>
                       </div>
@@ -1651,7 +1659,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 </ul>
                 {validationResults.invalid.some(fileItem => (bulkFileMetadata[fileItem.name]?.documentType ?? '') === '') && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <Button size="xs" variant="secondary" onClick={() => handleApplyDocumentTypeToAll('loan_application')}>
+                    <Button size="sm" variant="secondary" onClick={() => handleApplyDocumentTypeToAll('loan_application')}>
                       Fill document type for missing files
                     </Button>
                   </div>
@@ -1671,7 +1679,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="xs" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                  <Button variant="ghost" size="sm" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
                     Edit
                   </Button>
                   <CheckCircle className="h-4 w-4 text-green-600" />
@@ -1771,10 +1779,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         </div>
                       </div>
                       <div className="flex items-centered gap-2 pl-4">
-                        <Button size="xs" variant="outline" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                        <Button size="sm" variant="outline" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
                           Fix now
                         </Button>
-                        <Button size="xs" variant="ghost" onClick={() => handleRemoveInvalidFile(fileItem.name)}>
+                        <Button size="sm" variant="ghost" onClick={() => handleRemoveInvalidFile(fileItem.name)}>
                           Remove
                         </Button>
                       </div>
@@ -1788,7 +1796,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 </ul>
                 {validationResults.invalid.some(fileItem => (bulkFileMetadata[fileItem.name]?.documentType ?? '') === '') && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <Button size="xs" variant="secondary" onClick={() => handleApplyDocumentTypeToAll('loan_application')}>
+                    <Button size="sm" variant="secondary" onClick={() => handleApplyDocumentTypeToAll('loan_application')}>
                       Fill document type for missing files
                     </Button>
                   </div>
@@ -1808,7 +1816,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="xs" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                  <Button variant="ghost" size="sm" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
                     Edit
                   </Button>
                   <CheckCircle className="h-4 w-4 text-green-600" />
