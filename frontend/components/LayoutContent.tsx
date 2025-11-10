@@ -21,7 +21,7 @@ export function LayoutContent({ children }: Readonly<{ children: React.ReactNode
     <>
       <SessionManager />
       {!isPublicRoute && <MainNav />}
-      <main className={isPublicRoute ? "" : "min-h-screen bg-gray-50"}>
+      <main className={isPublicRoute ? "" : "min-h-screen bg-white dark:bg-black"}>
         {children}
       </main>
       <ToastContainer />

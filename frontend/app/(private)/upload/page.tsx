@@ -3071,19 +3071,11 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       </Dialog>
 
       {/* Main Upload Page */}
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/20 relative overflow-hidden isolate">
-      {/* Balanced gradient background orbs */}
-      <div className="pointer-events-none absolute -z-10 top-[-220px] left-[-220px] w-[520px] h-[520px] bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full filter blur-3xl opacity-25 animate-blob" />
-      <div className="pointer-events-none absolute -z-10 top-[-200px] right-[-220px] w-[560px] h-[560px] bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-1000" />
-      <div className="pointer-events-none absolute -z-10 bottom-[-240px] left-[-220px] w-[640px] h-[640px] bg-gradient-to-br from-pink-400 to-rose-500 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
-      <div className="pointer-events-none absolute -z-10 bottom-[-220px] right-[-240px] w-[680px] h-[680px] bg-gradient-to-br from-amber-300 to-orange-500 rounded-full filter blur-3xl opacity-15 animate-blob animation-delay-3000" />
-      <div className="pointer-events-none absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-gradient-to-br from-fuchsia-400 to-sky-400 rounded-full filter blur-3xl opacity-10 animate-blob animation-delay-4000" />
-      {/* Soft radial vignette */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.15),rgba(255,255,255,0)_60%)]" />
+    <div className="min-h-screen bg-white dark:bg-black relative overflow-hidden">
 
       {/* Demo Mode Banner */}
       {isDemoMode && (
-        <div className="relative z-20 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3">
+        <div className="relative z-20 bg-elite-dark dark:bg-gray-900 text-white py-3 border-b border-elite-blue">
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -3111,9 +3103,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       )}
 
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-blue-500 to-purple-600 text-white">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10"></div>
+      <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white border-b border-gray-200 dark:border-gray-800">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
         
         <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
           <div className="space-y-6">
@@ -3191,7 +3182,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 space-y-8">
         {/* Demo Mode Banner */}
         {isDemoMode && (
-          <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl p-4 shadow-xl border-2 border-green-400">
+          <div className="bg-elite-green dark:bg-elite-green/20 rounded-2xl p-4 shadow-xl border-2 border-elite-green dark:border-elite-green/40">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Sparkles className="h-6 w-6 text-white animate-pulse" />
@@ -3213,7 +3204,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         )}
 
         {/* Progress Indicator */}
-        <div className="flex items-center gap-4 p-4 bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl">
+        <div className="flex items-center gap-4 p-4 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-2">
             <User className="h-4 w-4" />
             <span className="text-sm font-medium">KYC:</span>
@@ -4461,7 +4452,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           </Card>
 
           {/* Tips & Help */}
-          <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">
+          <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Lightbulb className="h-4 w-4 text-yellow-500" />

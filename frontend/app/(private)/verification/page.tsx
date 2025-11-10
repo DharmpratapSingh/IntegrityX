@@ -184,11 +184,10 @@ export default function VerificationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50/20 to-cyan-50/20">
+    <div className="min-h-screen bg-white dark:bg-black">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-green-600 via-emerald-500 to-cyan-600 text-white">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10"></div>
+      <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
         
         <div className="relative max-w-7xl mx-auto px-6 py-16">
           <div className="space-y-6">
@@ -202,37 +201,37 @@ export default function VerificationPage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-3 pt-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-200">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-green-100">Verified Today</p>
+                    <p className="text-sm font-medium text-gray-200">Verified Today</p>
                     <p className="text-3xl font-bold">156</p>
                   </div>
-                  <div className="p-3 bg-green-500/20 text-white rounded-xl">
+                  <div className="p-3 bg-elite-green/20 text-white rounded-xl">
                     <CheckCircle className="h-6 w-6" />
                   </div>
                 </div>
               </div>
-              
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-200">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-green-100">Success Rate</p>
+                    <p className="text-sm font-medium text-gray-200">Success Rate</p>
                     <p className="text-3xl font-bold">100%</p>
                   </div>
-                  <div className="p-3 bg-blue-500/20 text-white rounded-xl">
+                  <div className="p-3 bg-elite-blue/20 text-white rounded-xl">
                     <Shield className="h-6 w-6" />
                   </div>
                 </div>
               </div>
-              
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-200">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-green-100">Avg Time</p>
+                    <p className="text-sm font-medium text-gray-200">Avg Time</p>
                     <p className="text-3xl font-bold">&lt; 1s</p>
                   </div>
-                  <div className="p-3 bg-purple-500/20 text-white rounded-xl">
+                  <div className="p-3 bg-gray-500/20 text-white rounded-xl">
                     <Search className="h-6 w-6" />
                   </div>
                 </div>
@@ -244,23 +243,23 @@ export default function VerificationPage() {
 
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
       {/* Verification Type Selection */}
-      <div className="flex gap-2 bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-2">
+      <div className="flex gap-2 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-2">
         <button
           onClick={() => setVerificationType('hash')}
-          className={`flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
+          className={`flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
             verificationType === 'hash'
-              ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
-              : 'text-gray-600 hover:bg-gray-100'
+              ? 'bg-elite-blue text-white shadow-lg'
+              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
         >
           Verify by Hash
         </button>
         <button
           onClick={() => setVerificationType('document')}
-          className={`flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
+          className={`flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
             verificationType === 'document'
-              ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
-              : 'text-gray-600 hover:bg-gray-100'
+              ? 'bg-elite-blue text-white shadow-lg'
+              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
         >
           Verify by Document ID
@@ -268,8 +267,8 @@ export default function VerificationPage() {
       </div>
 
       {/* Input Section */}
-      <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Enter Information</h2>
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6 mb-6">
+        <h2 className="text-lg font-semibold text-elite-dark dark:text-white mb-4">Enter Information</h2>
         
         {verificationType === 'hash' ? (
           <div className="space-y-4">
@@ -288,7 +287,7 @@ export default function VerificationPage() {
                 <button
                   onClick={handleVerification}
                   disabled={loading || !hashInput.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  className="px-4 py-2 bg-elite-blue text-white rounded-md hover:bg-[#1d4ed8] disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                 >
                   {loading ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -317,7 +316,7 @@ export default function VerificationPage() {
                 <button
                   onClick={handleVerification}
                   disabled={loading || !documentInput.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  className="px-4 py-2 bg-elite-blue text-white rounded-md hover:bg-[#1d4ed8] disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                 >
                   {loading ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -334,18 +333,18 @@ export default function VerificationPage() {
 
       {/* Results Section */}
       {loading && (
-        <div className="bg-white rounded-lg shadow-sm border p-6">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6">
           <div className="flex items-center space-x-3">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            <span className="text-gray-600">Verifying document...</span>
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-elite-blue"></div>
+            <span className="text-gray-600 dark:text-gray-300">Verifying document...</span>
           </div>
         </div>
       )}
 
       {result && !loading && (
-        <div className="bg-white rounded-lg shadow-sm border p-6">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Verification Results</h2>
+            <h2 className="text-lg font-semibold text-elite-dark dark:text-white">Verification Results</h2>
             <div className={`flex items-center space-x-2 px-3 py-1 rounded-full border ${getStatusColor(result.status)}`}>
               {getStatusIcon(result.status)}
               <span className="font-medium capitalize">{result.status.replace('_', ' ')}</span>
@@ -360,7 +359,7 @@ export default function VerificationPage() {
             {result.document && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="text-md font-semibold text-gray-900 mb-3">Document Information</h3>
+                  <h3 className="text-md font-semibold text-elite-dark dark:text-white mb-3">Document Information</h3>
                   <div className="space-y-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Document ID</label>
@@ -397,7 +396,7 @@ export default function VerificationPage() {
                 </div>
 
                 <div>
-                  <h3 className="text-md font-semibold text-gray-900 mb-3">Blockchain Information</h3>
+                  <h3 className="text-md font-semibold text-elite-dark dark:text-white mb-3">Blockchain Information</h3>
                   <div className="space-y-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Walacor TX ID</label>
@@ -434,8 +433,8 @@ export default function VerificationPage() {
             )}
 
             {result.verification_details && (
-              <div className="border-t pt-4">
-                <h3 className="text-md font-semibold text-gray-900 mb-3">Verification Details</h3>
+              <div className="border-t dark:border-gray-800 pt-4">
+                <h3 className="text-md font-semibold text-elite-dark dark:text-white mb-3">Verification Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center space-x-3">
                     {result.verification_details.hash_match ? (
@@ -474,23 +473,23 @@ export default function VerificationPage() {
 
             {/* Forensic Analysis Section */}
             {result.document && (
-              <div className="border-t pt-6 mt-6">
-                <h3 className="text-md font-semibold text-gray-900 mb-4">Forensic Analysis</h3>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-gray-700 mb-4">
+              <div className="border-t dark:border-gray-800 pt-6 mt-6">
+                <h3 className="text-md font-semibold text-elite-dark dark:text-white mb-4">Forensic Analysis</h3>
+                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
                     Perform advanced forensic analysis including timeline review, document comparison, and tamper detection.
                   </p>
                   <div className="flex flex-wrap gap-3">
                     <Link
                       href={`/forensics?document=${result.document.id}`}
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                      className="inline-flex items-center px-4 py-2 bg-elite-blue text-white rounded-md hover:bg-[#1d4ed8] transition-colors"
                     >
                       <FileSearch className="h-4 w-4 mr-2" />
                       View Forensic Timeline
                     </Link>
                     <Link
                       href={`/forensics`}
-                      className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+                      className="inline-flex items-center px-4 py-2 bg-elite-dark dark:bg-gray-700 text-white rounded-md hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors"
                     >
                       <FileSearch className="h-4 w-4 mr-2" />
                       Compare Documents
