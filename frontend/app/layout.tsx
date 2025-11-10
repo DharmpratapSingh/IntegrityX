@@ -31,10 +31,16 @@ export default function RootLayout({
   return (
     <ClerkProvider
       appearance={{
-        baseTheme: shadc, // Use shadcn/ui theme for consistent styling
+        baseTheme: shadc,
         variables: {
-          colorPrimary: '#2563eb', // IntegrityX blue brand color
-          borderRadius: '0.75rem',
+          colorPrimary: '#1e52f3', // D.E. Shaw blue
+          colorBackground: '#ffffff',
+          colorText: '#0f172a',
+          colorTextSecondary: '#64748b',
+          colorSuccess: '#10b981',
+          colorDanger: '#ef4444',
+          borderRadius: '0.5rem',
+          fontFamily: 'Inter, system-ui, sans-serif',
         },
       }}
       signInUrl="/sign-in"
@@ -50,21 +56,25 @@ export default function RootLayout({
           <Toaster
             position="top-right"
             toastOptions={{
-              duration: 4000,
+              duration: 3000,
               style: {
-                background: '#363636',
-                color: '#fff',
+                background: '#ffffff',
+                color: '#0f172a',
+                border: '1px solid #e2e8f0',
+                fontFamily: 'Inter, system-ui, sans-serif',
               },
               success: {
-                duration: 3000,
                 style: {
-                  background: '#10b981',
+                  background: '#f0fdf4',
+                  color: '#166534',
+                  border: '1px solid #bbf7d0',
                 },
               },
               error: {
-                duration: 4000,
                 style: {
-                  background: '#ef4444',
+                  background: '#fef2f2',
+                  color: '#991b1b',
+                  border: '1px solid #fecaca',
                 },
               },
             }}

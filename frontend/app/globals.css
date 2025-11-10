@@ -4,49 +4,71 @@
 
 @layer base {
   :root {
-    /* Soft warm background F5EFE6 ≈ hsl(36, 43%, 93%) */
-    --background: 36 43% 93%;
-    --foreground: 222.2 84% 4.9%;
+    /* IntegrityX Elite Theme - D.E. Shaw inspired */
+    --background: 0 0% 100%; /* Pure white #FFFFFF */
+    --foreground: 222.2 84% 4.9%; /* Near black */
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
+
+    /* D.E. Shaw Blue #1e52f3 */
+    --primary: 216 100% 53%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 13% 98%; /* Very light gray */
     --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
+
+    --muted: 220 13% 96%; /* Light gray #FAFAFA */
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+
+    /* Green for verified/sealed states */
+    --accent: 142 76% 36%; /* #10b981 */
+    --accent-foreground: 0 0% 100%;
+
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%; /* Light border */
+    --input: 220 13% 91%;
+    --ring: 216 100% 53%;
     --radius: 0.5rem;
+
+    /* Elite theme custom variables */
+    --elite-blue: 216 100% 53%; /* #1e52f3 */
+    --elite-dark: 222.2 84% 4.9%; /* #0f172a */
+    --elite-gray: 215.4 16.3% 46.9%; /* #64748b */
+    --elite-green: 142 76% 36%; /* #10b981 */
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
+    /* OLED Black Theme */
+    --background: 0 0% 0%; /* True black #000000 */
+    --foreground: 0 0% 98%; /* Near white */
+    --card: 0 0% 3%; /* Very dark gray #080808 */
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3%;
+    --popover-foreground: 0 0% 98%;
+
+    /* Brighter blue for dark mode */
+    --primary: 216 100% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 10%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+
+    --accent: 142 76% 45%; /* Brighter green for dark mode */
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 15%; /* Subtle borders */
+    --input: 0 0% 15%;
+    --ring: 216 100% 60%;
   }
 }
 
@@ -54,56 +76,89 @@
   * {
     border-color: hsl(var(--border));
   }
+
   body {
-    background-color: #F5EFE6; /* soft warm background */
-    color: hsl(var(--foreground));
+    background-color: #FFFFFF; /* Pure white */
+    color: #0f172a; /* Near black */
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  .dark body {
+    background-color: #000000; /* OLED black */
+    color: #fafafa; /* Near white */
   }
 }
 
-/* Custom Animation Utilities */
+/* Minimal Animation Utilities */
 @layer utilities {
-  .animation-delay-2000 {
-    animation-delay: 2s;
+  /* Simple fade in */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
-  
-  .animation-delay-4000 {
-    animation-delay: 4s;
-  }
-  
-  .bg-size-200 {
-    background-size: 200% 200%;
-  }
-  
-  /* Gradient text utility */
-  .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600;
-  }
-  
-  /* Card gradient backgrounds for dark mode */
-  .dark .card-gradient {
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  
-  /* Shimmer effect container */
-  .shimmer-container {
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .shimmer-container::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    animation: shimmer 2s infinite;
-  }
-}
 
-/* Dark mode gradient background */
-.dark {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out;
+  }
+
+  /* Hover lift effect */
+  .hover-lift {
+    transition: transform 0.2s ease-out;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Monospace for technical data */
+  .font-mono-technical {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Courier New', monospace;
+    font-feature-settings: 'liga' 0, 'calt' 0;
+  }
+
+  /* Elite theme utilities */
+  .text-elite-blue {
+    color: #1e52f3;
+  }
+
+  .text-elite-dark {
+    color: #0f172a;
+  }
+
+  .text-elite-gray {
+    color: #64748b;
+  }
+
+  .text-elite-green {
+    color: #10b981;
+  }
+
+  .bg-elite-blue {
+    background-color: #1e52f3;
+  }
+
+  .bg-elite-dark {
+    background-color: #0f172a;
+  }
+
+  .bg-elite-light {
+    background-color: #fafafa;
+  }
+
+  .border-elite-blue {
+    border-color: #1e52f3;
+  }
+
+  /* Dark mode text colors */
+  .dark .text-elite-dark {
+    color: #fafafa;
+  }
+
+  .dark .text-elite-gray {
+    color: #94a3b8;
+  }
 }
