@@ -246,9 +246,10 @@ export default function UploadPage() {
         // Convert first demo document to File and auto-upload
         if (demoDocuments && demoDocuments.length > 0) {
           const firstDoc = demoDocuments[0];
-          const jsonContent = JSON.stringify(firstDoc.data, null, 2);
+          const jsonContent = JSON.stringify(firstDoc, null, 2);
           const blob = new Blob([jsonContent], { type: 'application/json' });
-          const demoFile = new File([blob], firstDoc.fileName, { type: 'application/json' });
+          const fileName = `demo_loan_${firstDoc.security_level || 'standard'}_1.json`;
+          const demoFile = new File([blob], fileName, { type: 'application/json' });
 
           // Simulate file drop
           setTimeout(() => {
@@ -860,9 +861,9 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
   const sanitizeMetadataForSave = (metadata: AutoPopulateMetadata): AutoPopulateMetadata => ({
     loanId: sanitizeText(metadata.loanId),
     documentType: sanitizeDocumentType(metadata.documentType),
-    loanAmount: sanitizeNumber(metadata.loanAmount, 'loan_amount'),
-    loanTerm: sanitizeNumber(metadata.loanTerm, 'loan_term'),
-    interestRate: sanitizeNumber(metadata.interestRate, 'interest_rate'),
+    loanAmount: sanitizeNumber(metadata.loanAmount),
+    loanTerm: sanitizeNumber(metadata.loanTerm),
+    interestRate: sanitizeNumber(metadata.interestRate),
     borrowerName: sanitizeText(metadata.borrowerName),
     borrowerEmail: sanitizeEmail(metadata.borrowerEmail),
     borrowerPhone: sanitizePhone(metadata.borrowerPhone),
@@ -876,7 +877,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     borrowerGovernmentIdType: sanitizeGovernmentIdType(metadata.borrowerGovernmentIdType || 'drivers_license'),
     borrowerIdNumberLast4: sanitizeSSNLast4(metadata.borrowerIdNumberLast4),
     borrowerEmploymentStatus: sanitizeEmploymentStatus(metadata.borrowerEmploymentStatus),
-    borrowerAnnualIncome: sanitizeNumber(metadata.borrowerAnnualIncome, 'loan_amount'),
+    borrowerAnnualIncome: sanitizeNumber(metadata.borrowerAnnualIncome),
     borrowerCoBorrowerName: sanitizeText(metadata.borrowerCoBorrowerName),
     propertyAddress: sanitizeAddress(metadata.propertyAddress),
     additionalNotes: sanitizeNotes(metadata.additionalNotes),
@@ -1181,7 +1182,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       const completeCount = analyses.filter(a => !a.needsReview).length;
       const incompleteCount = analyses.filter(a => a.needsReview).length;
       const avgConfidence = Math.round(
-        analyses.reduce((sum, a) => sum + a.overallConfidence, 0) / analyses.length
+        analyses.reduce((sum, a) => sum + (a.overallConfidence || 0), 0) / analyses.length
       );
 
       // Show results
@@ -1949,34 +1950,33 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         
         // Create final loan data object
         const loanData: LoanData = {
-          loan_id: sanitizedLoanData.loanId,
-          document_type: sanitizedLoanData.documentType,
-          loan_amount: parseFloat(sanitizedLoanData.loanAmount),
-          borrower_name: sanitizedLoanData.borrowerName,
-          additional_notes: sanitizedLoanData.additionalNotes
+          loanId: sanitizedLoanData.loanId,
+          documentType: sanitizedLoanData.documentType,
+          borrowerName: sanitizedLoanData.borrowerName,
+          propertyAddress: sanitizedLoanData.propertyAddress || '',
+          amount: sanitizedLoanData.loanAmount,
+          rate: sanitizedLoanData.interestRate || '',
+          term: sanitizedLoanData.loanTerm || '',
+          notes: sanitizedLoanData.additionalNotes
         };
 
         // Create final borrower data object
         const borrowerInfo: BorrowerInfo = {
-          full_name: sanitizedBorrowerData.fullName,
-          date_of_birth: sanitizedBorrowerData.dateOfBirth,
+          fullLegalName: sanitizedBorrowerData.fullName,
+          dateOfBirth: sanitizedBorrowerData.dateOfBirth,
           email: sanitizedBorrowerData.email,
-          phone: sanitizedBorrowerData.phone,
-          address_line1: sanitizedBorrowerData.streetAddress,
-          address_line2: currentMeta.borrowerStreetAddress2 || '', // Keep as is for now
+          phoneNumber: sanitizedBorrowerData.phone,
+          currentAddress: sanitizedBorrowerData.streetAddress,
           city: sanitizedBorrowerData.city,
           state: sanitizedBorrowerData.state,
-          zip_code: sanitizedBorrowerData.zipCode,
+          zipCode: sanitizedBorrowerData.zipCode,
           country: sanitizedBorrowerData.country,
-          ssn_last4: sanitizedBorrowerData.ssnLast4,
-          id_type: sanitizedBorrowerData.governmentIdType,
-          id_last4: sanitizedBorrowerData.idNumberLast4,
-          employment_status: sanitizedBorrowerData.employmentStatus,
-          annual_income_range: sanitizedBorrowerData.annualIncome,
-          co_borrower_name: sanitizedBorrowerData.coBorrowerName,
-          is_sealed: false,
-          walacor_tx_id: '',
-          seal_timestamp: ''
+          ssnLast4: sanitizedBorrowerData.ssnLast4,
+          governmentIdType: sanitizedBorrowerData.governmentIdType,
+          governmentIdNumber: sanitizedBorrowerData.idNumberLast4,
+          employmentStatus: sanitizedBorrowerData.employmentStatus,
+          annualIncome: sanitizedBorrowerData.annualIncome,
+          consentGiven: true
         };
 
         console.log('Loan data:', loanData);
@@ -2013,10 +2013,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
         // Create UploadResult for compatibility with existing UI
         const uploadResult: UploadResult = {
-          artifactId: sealResponse.artifact_id,
-          walacorTxId: sealResponse.walacor_tx_id,
-          sealedAt: sealResponse.sealed_at,
-          proofBundle: sealResponse.blockchain_proof || {}
+          artifactId: sealResponse.artifactId || sealResponse.artifact_id || '',
+          walacorTxId: sealResponse.walacorTxId || sealResponse.walacor_tx_id || '',
+          sealedAt: sealResponse.sealedAt || sealResponse.sealed_at || '',
+          proofBundle: sealResponse.proofBundle || sealResponse.blockchain_proof || {}
         };
 
         setUploadResult(uploadResult);
