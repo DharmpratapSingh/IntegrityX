@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
-import { shadc } from "@clerk/themes";
 import { LayoutContent } from "@/components/LayoutContent";
 import { Toaster } from "react-hot-toast";
 
@@ -31,16 +30,9 @@ export default function RootLayout({
   return (
     <ClerkProvider
       appearance={{
-        baseTheme: shadc,
         variables: {
-          colorPrimary: '#1e52f3', // D.E. Shaw blue
-          colorBackground: '#ffffff',
-          colorText: '#0f172a',
-          colorTextSecondary: '#64748b',
-          colorSuccess: '#10b981',
-          colorDanger: '#ef4444',
-          borderRadius: '0.5rem',
-          fontFamily: 'Inter, system-ui, sans-serif',
+          colorPrimary: '#2563eb',
+          borderRadius: '0.75rem',
         },
       }}
       signInUrl="/sign-in"
