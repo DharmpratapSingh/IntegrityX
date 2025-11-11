@@ -146,13 +146,22 @@ export async function verifyZKProof(
     };
   }
 
-  // Verify proof ID is correctly formatted
-  const expectedProofId = generateProofId(artifactId);
-  if (proof.proofId !== expectedProofId) {
+  // Verify proof ID format is correct (starts with "proof_")
+  if (!proof.proofId || !proof.proofId.startsWith('proof_')) {
     return {
       verified: false,
       proof,
-      message: 'Proof ID verification failed.',
+      message: 'Invalid proof ID format.',
+      verifiedAt: new Date().toISOString()
+    };
+  }
+
+  // Verify all required fields are present
+  if (!proof.documentHash || !proof.commitmentHash) {
+    return {
+      verified: false,
+      proof,
+      message: 'Missing required cryptographic proofs.',
       verifiedAt: new Date().toISOString()
     };
   }

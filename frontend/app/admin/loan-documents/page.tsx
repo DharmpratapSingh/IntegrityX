@@ -291,13 +291,13 @@ export default function AdminLoanDocumentsPage() {
   };
 
   // Export document
-  const handleExportDocument = async (document: LoanSearchResult) => {
+  const handleExportDocument = async (loanDocument: LoanSearchResult) => {
     try {
-      const blob = await downloadLoanDocument(document.artifact_id, 'json');
+      const blob = await downloadLoanDocument(loanDocument.artifact_id, 'json');
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `loan-document-${document.loan_id}.json`;
+      link.download = `loan-document-${loanDocument.loan_id}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

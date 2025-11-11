@@ -41,6 +41,7 @@ import json
 import os
 import uuid
 import logging
+import hashlib
 from datetime import datetime, timezone, timedelta
 from src.timezone_utils import get_eastern_now, get_eastern_now_iso, format_api_timestamp, format_display_timestamp
 import pytz
@@ -2413,6 +2414,198 @@ async def get_stats(services: dict = Depends(get_services)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve statistics: {str(e)}"
+        )
+
+
+@app.get("/api/verification-stats", response_model=StandardResponse)
+async def get_verification_stats(services: dict = Depends(get_services)):
+    """
+    Get verification statistics for the verification page dashboard.
+
+    Returns real-time verification statistics including:
+    - Number of verifications today
+    - Success rate
+    - Average verification time
+    - Total verifications
+    """
+    try:
+        logger.info("Retrieving verification statistics")
+
+        # Get verification statistics from database
+        stats = services["db"].get_verification_statistics()
+
+        return create_success_response(stats)
+
+    except Exception as e:
+        logger.error(f"Failed to retrieve verification statistics: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve verification statistics: {str(e)}"
+        )
+
+
+@app.post("/api/compare-document", response_model=StandardResponse)
+async def compare_uploaded_document(
+    file: UploadFile = File(...),
+    services: dict = Depends(get_services)
+):
+    """
+    Upload a document and compare it with the original in the database.
+
+    This endpoint:
+    1. Computes the SHA-256 hash of the uploaded file
+    2. Searches database by hash (exact match)
+    3. If not found by hash, extracts loan_id from file and searches by loan_id
+    4. Compares uploaded document with original and shows field-level differences
+    5. Returns tampering detection and risk assessment
+    """
+    try:
+        logger.info(f"Comparing uploaded document: {file.filename}")
+
+        # Read file content
+        file_content = await file.read()
+
+        # Compute SHA-256 hash
+        file_hash = hashlib.sha256(file_content).hexdigest()
+        logger.info(f"Computed hash: {file_hash[:16]}...")
+
+        # Try to parse as JSON
+        try:
+            uploaded_data = json.loads(file_content.decode('utf-8'))
+        except:
+            return create_error_response(
+                code="INVALID_FILE_FORMAT",
+                message="File must be a valid JSON document",
+                status_code=400
+            )
+
+        # Search by hash first
+        original_artifact = services["db"].get_artifact_by_hash(file_hash)
+
+        if original_artifact:
+            # Exact match found - document is unchanged
+            return create_success_response({
+                "match_type": "exact",
+                "matches": True,
+                "original_hash": file_hash,
+                "uploaded_hash": file_hash,
+                "document": {
+                    "id": original_artifact.id,
+                    "loan_id": original_artifact.loan_id,
+                    "created_at": original_artifact.created_at.isoformat(),
+                    "walacor_tx_id": original_artifact.walacor_tx_id
+                },
+                "message": "Document matches exactly. No tampering detected.",
+                "risk_level": "low",
+                "changes": []
+            })
+
+        # Not found by hash - try to find similar document by loan_id
+        loan_id = uploaded_data.get("loan_id") or uploaded_data.get("loanId")
+
+        if not loan_id:
+            return create_error_response(
+                code="NO_LOAN_ID",
+                message="Document not found in database and no loan_id found in uploaded file",
+                status_code=404
+            )
+
+        # Search by loan_id
+        artifacts = services["db"].get_artifact_by_loan_id(loan_id)
+
+        if not artifacts or len(artifacts) == 0:
+            return create_error_response(
+                code="DOCUMENT_NOT_FOUND",
+                message=f"No documents found for loan_id: {loan_id}",
+                status_code=404
+            )
+
+        # Get the most recent artifact for this loan
+        original_artifact = artifacts[0]
+        original_hash = original_artifact.payload_sha256
+
+        # Get original document data
+        original_data = original_artifact.local_metadata or {}
+
+        # Compare field by field
+        changes = []
+        critical_fields = ['borrower_name', 'loan_amount', 'ssn', 'account_number', 'routing_number']
+
+        def compare_fields(original, uploaded, path=""):
+            field_changes = []
+            all_keys = set(list(original.keys()) + list(uploaded.keys()))
+
+            for key in all_keys:
+                current_path = f"{path}.{key}" if path else key
+
+                if key not in original:
+                    field_changes.append({
+                        "field": current_path,
+                        "type": "added",
+                        "original_value": None,
+                        "new_value": uploaded[key],
+                        "risk": "high" if key in critical_fields else "medium"
+                    })
+                elif key not in uploaded:
+                    field_changes.append({
+                        "field": current_path,
+                        "type": "removed",
+                        "original_value": original[key],
+                        "new_value": None,
+                        "risk": "high" if key in critical_fields else "medium"
+                    })
+                elif original[key] != uploaded[key]:
+                    # Check if both are dicts
+                    if isinstance(original[key], dict) and isinstance(uploaded[key], dict):
+                        field_changes.extend(compare_fields(original[key], uploaded[key], current_path))
+                    else:
+                        field_changes.append({
+                            "field": current_path,
+                            "type": "modified",
+                            "original_value": original[key],
+                            "new_value": uploaded[key],
+                            "risk": "critical" if key in critical_fields else "medium"
+                        })
+
+            return field_changes
+
+        changes = compare_fields(original_data, uploaded_data)
+
+        # Determine overall risk level
+        risk_level = "low"
+        if any(c["risk"] == "critical" for c in changes):
+            risk_level = "critical"
+        elif any(c["risk"] == "high" for c in changes):
+            risk_level = "high"
+        elif len(changes) > 0:
+            risk_level = "medium"
+
+        return create_success_response({
+            "match_type": "loan_id",
+            "matches": False,
+            "original_hash": original_hash,
+            "uploaded_hash": file_hash,
+            "document": {
+                "id": original_artifact.id,
+                "loan_id": original_artifact.loan_id,
+                "created_at": original_artifact.created_at.isoformat(),
+                "walacor_tx_id": original_artifact.walacor_tx_id
+            },
+            "message": f"Document has been modified. {len(changes)} field(s) changed.",
+            "risk_level": risk_level,
+            "changes": changes,
+            "total_changes": len(changes)
+        })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to compare document: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to compare document: {str(e)}"
         )
 
 

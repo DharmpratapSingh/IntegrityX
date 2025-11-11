@@ -132,12 +132,12 @@ export default function AuditLogPage() {
 
   // Initialize filters from URL
   useEffect(() => {
-    const etid = searchParams.get('etid') || '';
-    const eventTypes = searchParams.get('eventTypes')?.split(',').filter(Boolean) || [];
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    const result = searchParams.get('result') || '';
-    const searchTerm = searchParams.get('search') || '';
+    const etid = searchParams?.get('etid') || '';
+    const eventTypes = searchParams?.get('eventTypes')?.split(',').filter(Boolean) || [];
+    const startDate = searchParams?.get('startDate');
+    const endDate = searchParams?.get('endDate');
+    const result = searchParams?.get('result') || '';
+    const searchTerm = searchParams?.get('search') || '';
     
     let dateRange: DateRange | undefined = undefined;
     if (startDate && endDate) {
@@ -560,11 +560,14 @@ export default function AuditLogPage() {
             </div>
           ) : events.length === 0 && !loading ? (
             <NoResultsEmptyState
-              action={hasActiveFilters ? {
-                label: "Clear Filters",
-                onClick: handleReset,
-                variant: "outline"
-              } : undefined}
+              icon={Search}
+              title="No events found"
+              description={hasActiveFilters ? "Try adjusting your filters to find what you're looking for" : "No audit events to display"}
+              action={hasActiveFilters ? (
+                <Button onClick={handleReset} variant="outline">
+                  Clear Filters
+                </Button>
+              ) : undefined}
             />
           ) : (
             <div className="space-y-4">

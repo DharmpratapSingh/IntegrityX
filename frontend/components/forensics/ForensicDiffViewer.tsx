@@ -137,90 +137,150 @@ export const ForensicDiffViewer: React.FC<ForensicDiffViewerProps> = ({
         </CardContent>
       </Card>
 
-      {/* View mode selector */}
+      {/* View mode selector with content */}
       <Card>
         <CardContent className="pt-6">
           <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger value="side-by-side">Side-by-Side</TabsTrigger>
               <TabsTrigger value="overlay">Overlay</TabsTrigger>
               <TabsTrigger value="unified">Unified</TabsTrigger>
             </TabsList>
-          </Tabs>
-        </CardContent>
-      </Card>
 
-      {/* Changes list */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Changes Detected</CardTitle>
-          <CardDescription>
-            {highlightRiskyChanges 
-              ? 'Showing high-risk changes only' 
-              : `Showing all ${diffResult.changes.length} changes`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {diffResult.changes
-              .filter(change => !highlightRiskyChanges || change.risk_level === 'critical' || change.risk_level === 'high')
-              .map((change, index) => (
-                <div
-                  key={index}
-                  className={`p-4 rounded-lg border-l-4 cursor-pointer transition-colors hover:shadow-md ${
-                    selectedChange === change ? 'ring-2 ring-blue-500' : ''
-                  } ${getRiskColor(change.risk_level)}`}
-                  onClick={() => setSelectedChange(change)}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <p className="font-semibold text-sm break-words">{change.field_path}</p>
-                        <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                      </div>
-                      <p className="text-xs text-gray-600 mb-3">{change.reason}</p>
-                      <div className="space-y-1 text-sm">
-                        {change.old_value !== null && (
-                          <div className="flex items-start gap-2">
-                            <XCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-                            <div>
-                              <span className="font-semibold text-red-800">Old:</span>{' '}
-                              <span className="text-red-700 font-mono text-xs break-all">
-                                {typeof change.old_value === 'string' 
-                                  ? change.old_value 
-                                  : JSON.stringify(change.old_value)}
-                              </span>
-                            </div>
+            {/* Side-by-Side View */}
+            <TabsContent value="side-by-side" className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-sm text-gray-700">Document 1</h3>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    {diffResult.changes
+                      .filter(change => !highlightRiskyChanges || change.risk_level === 'critical' || change.risk_level === 'high')
+                      .map((change, index) => (
+                        change.old_value !== null && (
+                          <div key={`old-${index}`} className="mb-3 p-2 bg-white rounded border border-red-300">
+                            <p className="text-xs font-semibold text-red-800 mb-1">{change.field_path}</p>
+                            <p className="text-xs font-mono text-red-900 break-all">
+                              {typeof change.old_value === 'string' ? change.old_value : JSON.stringify(change.old_value)}
+                            </p>
                           </div>
-                        )}
-                        {change.new_value !== null && (
-                          <div className="flex items-start gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                            <div>
-                              <span className="font-semibold text-green-800">New:</span>{' '}
-                              <span className="text-green-700 font-mono text-xs break-all">
-                                {typeof change.new_value === 'string' 
-                                  ? change.new_value 
-                                  : JSON.stringify(change.new_value)}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0">
-                      <RiskBadge level={change.risk_level} score={change.risk_score} />
-                    </div>
+                        )
+                      ))}
                   </div>
                 </div>
-              ))}
-            {diffResult.changes.filter(change => !highlightRiskyChanges || change.risk_level === 'critical' || change.risk_level === 'high').length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>No high-risk changes detected</p>
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-sm text-gray-700">Document 2</h3>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    {diffResult.changes
+                      .filter(change => !highlightRiskyChanges || change.risk_level === 'critical' || change.risk_level === 'high')
+                      .map((change, index) => (
+                        change.new_value !== null && (
+                          <div key={`new-${index}`} className="mb-3 p-2 bg-white rounded border border-green-300">
+                            <p className="text-xs font-semibold text-green-800 mb-1">{change.field_path}</p>
+                            <p className="text-xs font-mono text-green-900 break-all">
+                              {typeof change.new_value === 'string' ? change.new_value : JSON.stringify(change.new_value)}
+                            </p>
+                          </div>
+                        )
+                      ))}
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            </TabsContent>
+
+            {/* Overlay View */}
+            <TabsContent value="overlay" className="space-y-3">
+              <div className="max-h-96 overflow-y-auto space-y-2">
+                {diffResult.changes
+                  .filter(change => !highlightRiskyChanges || change.risk_level === 'critical' || change.risk_level === 'high')
+                  .map((change, index) => (
+                    <div key={index} className="relative p-4 bg-white border rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-semibold text-sm">{change.field_path}</p>
+                        <RiskBadge level={change.risk_level} score={change.risk_score} />
+                      </div>
+                      {change.old_value !== null && (
+                        <div className="mb-2 p-2 bg-red-50 border-l-4 border-red-500 rounded">
+                          <p className="text-xs text-red-700 font-mono line-through">
+                            {typeof change.old_value === 'string' ? change.old_value : JSON.stringify(change.old_value)}
+                          </p>
+                        </div>
+                      )}
+                      {change.new_value !== null && (
+                        <div className="p-2 bg-green-50 border-l-4 border-green-500 rounded">
+                          <p className="text-xs text-green-700 font-mono">
+                            {typeof change.new_value === 'string' ? change.new_value : JSON.stringify(change.new_value)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            </TabsContent>
+
+            {/* Unified View */}
+            <TabsContent value="unified" className="space-y-3">
+              <div className="max-h-96 overflow-y-auto space-y-3">
+                {diffResult.changes
+                  .filter(change => !highlightRiskyChanges || change.risk_level === 'critical' || change.risk_level === 'high')
+                  .map((change, index) => (
+                    <div
+                      key={index}
+                      className={`p-4 rounded-lg border-l-4 cursor-pointer transition-colors hover:shadow-md ${
+                        selectedChange === change ? 'ring-2 ring-blue-500' : ''
+                      } ${getRiskColor(change.risk_level)}`}
+                      onClick={() => setSelectedChange(change)}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="font-semibold text-sm break-words">{change.field_path}</p>
+                            <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                          </div>
+                          <p className="text-xs text-gray-600 mb-3">{change.reason}</p>
+                          <div className="space-y-1 text-sm">
+                            {change.old_value !== null && (
+                              <div className="flex items-start gap-2">
+                                <XCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <span className="font-semibold text-red-800">Old:</span>{' '}
+                                  <span className="text-red-700 font-mono text-xs break-all">
+                                    {typeof change.old_value === 'string'
+                                      ? change.old_value
+                                      : JSON.stringify(change.old_value)}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                            {change.new_value !== null && (
+                              <div className="flex items-start gap-2">
+                                <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <span className="font-semibold text-green-800">New:</span>{' '}
+                                  <span className="text-green-700 font-mono text-xs break-all">
+                                    {typeof change.new_value === 'string'
+                                      ? change.new_value
+                                      : JSON.stringify(change.new_value)}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <RiskBadge level={change.risk_level} score={change.risk_score} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                {diffResult.changes.filter(change => !highlightRiskyChanges || change.risk_level === 'critical' || change.risk_level === 'high').length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No high-risk changes detected</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 

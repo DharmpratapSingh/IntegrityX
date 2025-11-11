@@ -63,7 +63,7 @@ export default function VerifyPage() {
 
   // Auto-fill artifact ID from URL query parameter
   useEffect(() => {
-    const artifactParam = searchParams.get('artifact');
+    const artifactParam = searchParams?.get('artifact');
     if (artifactParam) {
       setArtifactId(artifactParam);
       // Show a toast to inform user
@@ -142,11 +142,11 @@ export default function VerifyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/20">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50/30 to-blue-50">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10"></div>
+      <div className="relative overflow-hidden bg-gradient-to-br from-elite-blue via-blue-600 to-indigo-600 text-white">
+        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/5"></div>
 
         <div className="relative max-w-7xl mx-auto px-6 py-16">
           {/* Breadcrumb Navigation */}
@@ -186,20 +186,26 @@ export default function VerifyPage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-4 mt-8">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <Lock className="h-6 w-6 mb-2" />
-              <h3 className="font-semibold mb-1">Privacy Preserving</h3>
-              <p className="text-sm text-blue-100">No borrower data, SSN, or loan amounts revealed</p>
+            <div className="bg-white/15 backdrop-blur-md rounded-2xl p-5 border border-white/30 shadow-xl hover:shadow-2xl hover:bg-white/20 transition-all duration-300">
+              <div className="p-3 bg-white/20 rounded-xl w-fit mb-3">
+                <Lock className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold mb-2 text-lg">Privacy Preserving</h3>
+              <p className="text-sm text-blue-50 leading-relaxed">No borrower data, SSN, or loan amounts revealed</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <CheckCircle2 className="h-6 w-6 mb-2" />
-              <h3 className="font-semibold mb-1">Cryptographically Secure</h3>
-              <p className="text-sm text-blue-100">One-way hashes and blockchain verification</p>
+            <div className="bg-white/15 backdrop-blur-md rounded-2xl p-5 border border-white/30 shadow-xl hover:shadow-2xl hover:bg-white/20 transition-all duration-300">
+              <div className="p-3 bg-white/20 rounded-xl w-fit mb-3">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold mb-2 text-lg">Cryptographically Secure</h3>
+              <p className="text-sm text-blue-50 leading-relaxed">One-way hashes and blockchain verification</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-              <FileKey className="h-6 w-6 mb-2" />
-              <h3 className="font-semibold mb-1">Third-Party Verifiable</h3>
-              <p className="text-sm text-blue-100">Auditors can verify without data access</p>
+            <div className="bg-white/15 backdrop-blur-md rounded-2xl p-5 border border-white/30 shadow-xl hover:shadow-2xl hover:bg-white/20 transition-all duration-300">
+              <div className="p-3 bg-white/20 rounded-xl w-fit mb-3">
+                <FileKey className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold mb-2 text-lg">Third-Party Verifiable</h3>
+              <p className="text-sm text-blue-50 leading-relaxed">Auditors can verify without data access</p>
             </div>
           </div>
         </div>
@@ -263,7 +269,7 @@ export default function VerifyPage() {
               <Button
                 onClick={handleGenerateProof}
                 disabled={isGenerating || !artifactId.trim()}
-                className="min-w-[150px]"
+                className="min-w-[150px] bg-gradient-to-r from-elite-blue to-blue-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 {isGenerating ? (
                   <>
@@ -369,7 +375,7 @@ export default function VerifyPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Commitment Hash</label>
-                  <code className="block p-3 bg-purple-50 border border-purple-200 rounded-lg text-xs break-all font-mono">
+                  <code className="block p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-xs break-all font-mono text-indigo-900">
                     {proof.commitmentHash}
                   </code>
                   <p className="text-xs text-gray-600">
@@ -380,7 +386,7 @@ export default function VerifyPage() {
                 {proof.blockchainProof && (
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Blockchain Transaction ID</label>
-                    <code className="block p-3 bg-green-50 border border-green-200 rounded-lg text-xs break-all font-mono">
+                    <code className="block p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs break-all font-mono text-blue-900">
                       {proof.blockchainProof}
                     </code>
                     <p className="text-xs text-gray-600">
@@ -515,23 +521,27 @@ export default function VerifyPage() {
             </Card>
 
             {/* Privacy Guarantee */}
-            <Card className="border-2 border-blue-300 bg-blue-50">
+            <Card className="border-2 border-blue-400 bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100 shadow-xl">
               <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <Lock className="h-6 w-6 text-blue-600 mt-1" />
-                  <div>
-                    <h3 className="font-semibold text-blue-900 mb-2">🔒 Privacy Guarantee</h3>
-                    <p className="text-sm text-blue-800 mb-3">
-                      This Zero Knowledge Proof contains <strong>NO private data</strong>:
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-gradient-to-br from-elite-blue to-blue-600 text-white rounded-2xl shadow-lg">
+                    <Lock className="h-7 w-7" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-xl text-gray-900 mb-3 flex items-center gap-2">
+                      🔒 Privacy Guarantee
+                    </h3>
+                    <p className="text-sm text-gray-800 mb-3 font-medium">
+                      This Zero Knowledge Proof contains <strong className="text-elite-blue">NO private data</strong>:
                     </p>
-                    <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                    <ul className="text-sm text-gray-700 space-y-2 list-disc list-inside ml-2 leading-relaxed">
                       <li>No borrower names, addresses, or contact information</li>
                       <li>No Social Security Numbers (SSN) or government IDs</li>
                       <li>No loan amounts, interest rates, or financial details</li>
                       <li>No dates of birth, employment information, or income data</li>
                     </ul>
-                    <p className="text-sm text-blue-800 mt-3">
-                      <strong>What IS included:</strong> Cryptographic hashes (irreversible), blockchain transaction IDs (public),
+                    <p className="text-sm text-gray-800 mt-4 p-3 bg-white/60 rounded-lg border border-blue-200">
+                      <strong className="text-elite-blue">What IS included:</strong> Cryptographic hashes (irreversible), blockchain transaction IDs (public),
                       and existence proofs (yes/no verification only).
                     </p>
                   </div>
@@ -552,32 +562,32 @@ export default function VerifyPage() {
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <div className="p-3 bg-blue-100 rounded-lg w-fit">
-                    <Shield className="h-6 w-6 text-blue-600" />
+                <div className="space-y-3 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 hover:shadow-lg transition-all duration-300">
+                  <div className="p-3 bg-gradient-to-br from-elite-blue to-blue-600 text-white rounded-xl w-fit shadow-lg">
+                    <Shield className="h-6 w-6" />
                   </div>
-                  <h3 className="font-semibold">Auditors & Regulators</h3>
-                  <p className="text-sm text-gray-600">
+                  <h3 className="font-bold text-lg text-gray-900">Auditors & Regulators</h3>
+                  <p className="text-sm text-gray-700 leading-relaxed">
                     Verify loan documents exist and are sealed on blockchain without accessing borrower private data.
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="p-3 bg-green-100 rounded-lg w-fit">
-                    <CheckCircle2 className="h-6 w-6 text-green-600" />
+                <div className="space-y-3 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 hover:shadow-lg transition-all duration-300">
+                  <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl w-fit shadow-lg">
+                    <CheckCircle2 className="h-6 w-6" />
                   </div>
-                  <h3 className="font-semibold">Credit Bureaus</h3>
-                  <p className="text-sm text-gray-600">
+                  <h3 className="font-bold text-lg text-gray-900">Credit Bureaus</h3>
+                  <p className="text-sm text-gray-700 leading-relaxed">
                     Confirm document authenticity for credit checks while maintaining borrower privacy.
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="p-3 bg-purple-100 rounded-lg w-fit">
-                    <FileKey className="h-6 w-6 text-purple-600" />
+                <div className="space-y-3 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 hover:shadow-lg transition-all duration-300">
+                  <div className="p-3 bg-gradient-to-br from-indigo-600 to-blue-700 text-white rounded-xl w-fit shadow-lg">
+                    <FileKey className="h-6 w-6" />
                   </div>
-                  <h3 className="font-semibold">Third-Party Verifiers</h3>
-                  <p className="text-sm text-gray-600">
+                  <h3 className="font-bold text-lg text-gray-900">Third-Party Verifiers</h3>
+                  <p className="text-sm text-gray-700 leading-relaxed">
                     Independent verification of document integrity without data exposure risk.
                   </p>
                 </div>

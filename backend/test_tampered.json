@@ -1,0 +1,27 @@
+{
+  "loan_id": "LOAN_2025_1001",
+  "document_type": "loan_application",
+  "loan_amount": 700000.0,
+  "additional_notes": "TAMPERED - Amount doubled",
+  "borrower": {
+    "full_name": "Priya Sharma TAMPERED",
+    "date_of_birth": "1992-04-18",
+    "email": "tampered@hacker.com",
+    "phone": "555-FAKE-NUM",
+    "address": {
+      "street": "456 Hacker Ave",
+      "city": "Springfield",
+      "state": "IL",
+      "zip_code": "62704",
+      "country": "US"
+    },
+    "ssn_last4": "9999",
+    "id_type": "drivers_license",
+    "id_last4": "9999",
+    "employment_status": "employed",
+    "annual_income": 999000.0,
+    "co_borrower_name": "Fake Person"
+  },
+  "created_by": "hacker@example.com",
+  "security_level": "quantum_safe"
+}

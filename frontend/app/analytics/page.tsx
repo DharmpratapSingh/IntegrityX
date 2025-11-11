@@ -7,6 +7,7 @@ import { BarChart3, TrendingUp, Shield, FileText, Users, ArrowRight, AlertCircle
 import { Skeleton } from '@/components/ui/skeleton'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Button } from '@/components/ui/button'
+import { DashboardLayout } from '@/components/DashboardLayout'
 
 interface AnalyticsData {
   financial_documents: {
@@ -416,7 +417,80 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black">
+    <DashboardLayout
+      rightSidebar={
+        <div className="p-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-6">
+            Analytics Summary
+          </h2>
+
+          <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              This Period
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Documents Processed
+                </div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {analytics?.financial_documents.documents_sealed_this_month || 0}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  AI Confidence
+                </div>
+                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  {aiMetrics?.average_confidence || 0}%
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Compliance Rate
+                </div>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {analytics?.compliance_risk.overall_compliance_rate || 0}%
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              Time Saved
+            </h3>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500 dark:text-gray-400">Manual</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-white">{timeSavings.manual}m</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500 dark:text-gray-400">Automated</span>
+                <span className="text-sm font-medium text-blue-600 dark:text-blue-400">{timeSavings.automated}m</span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-800">
+                <span className="text-xs font-semibold text-gray-900 dark:text-white">Saved</span>
+                <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{timeSavings.saved}m</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-purple-50 p-4 dark:bg-purple-950">
+            <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-2">
+              Export Report
+            </h3>
+            <p className="text-xs text-purple-700 dark:text-purple-300 mb-3">
+              Download analytics data
+            </p>
+            <a href="#" className="text-xs text-purple-600 hover:text-purple-700 dark:text-purple-400">
+              📊 Download CSV
+            </a>
+          </div>
+        </div>
+      }
+    >
+      <div>
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white border-b border-gray-200 dark:border-gray-800">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
@@ -876,5 +950,6 @@ export default function AnalyticsPage() {
       </div>
       </div>
     </div>
+  </DashboardLayout>
   )
 }

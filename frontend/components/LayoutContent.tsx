@@ -20,8 +20,9 @@ export function LayoutContent({ children }: Readonly<{ children: React.ReactNode
   return (
     <>
       <SessionManager />
-      {!isPublicRoute && <MainNav />}
-      <main className={isPublicRoute ? "" : "min-h-screen bg-white dark:bg-black"}>
+      {/* Top navigation removed - using left sidebar navigation in DashboardLayout instead */}
+      {/* {!isPublicRoute && <MainNav />} */}
+      <main className={isPublicRoute ? "" : "min-h-screen bg-[#F8F7F4] dark:bg-black"}>
         {children}
       </main>
       <ToastContainer />

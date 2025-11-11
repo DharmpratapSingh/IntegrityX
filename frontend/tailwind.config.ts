@@ -47,16 +47,18 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Elite theme colors
-        'elite-blue': '#1e52f3',
-        'elite-dark': '#0f172a',
-        'elite-gray': '#64748b',
-        'elite-light': '#fafafa',
+        // Osmo-inspired warm colors
+        'elite-blue': '#6366F1',
+        'elite-purple': '#8B5CF6',
+        'elite-dark': '#2D2D33',
+        'elite-gray': '#6B7280',
+        'elite-light': '#F8F7F4',
         'elite-green': '#10b981',
+        'warm-bg': '#F8F7F4',
       },
       backgroundImage: {
-        // Keep only ONE subtle gradient for CTAs if needed
-        'gradient-primary': 'linear-gradient(135deg, #1e52f3 0%, #1d4ed8 100%)',
+        // Osmo-style purple gradient
+        'gradient-primary': 'linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)',
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -65,6 +67,7 @@ const config = {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        heading: ['var(--font-heading)', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'SF Mono', 'Courier New', 'monospace'],
       },
       keyframes: {

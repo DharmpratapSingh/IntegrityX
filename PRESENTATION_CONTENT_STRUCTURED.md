@@ -145,7 +145,8 @@ A **forensic investigation platform** that transforms document integrity verific
 - **Hybrid Storage Model**: Blockchain (security) + PostgreSQL (performance)
 - **AI Document Processing**: Classification, quality assessment, risk scoring
 - **Quantum-Safe Cryptography**: Future-proof encryption (SHA3, Dilithium)
-- **Real-Time Analytics**: Dashboard with fraud detection alerts
+- **Security Command Center**: New security page with live scorecards, fraud-blocking toggles, and ZK proof workflows
+- **Interactive Analytics Dashboards**: Multi-tab charts, AI confidence insights, and time-savings calculators
 - **Public Verification**: Anyone can verify document integrity (transparency)
 
 ### Tools, technologies, or methods used
@@ -1014,45 +1015,91 @@ Total: 7 patterns detected | 2 critical | 3 high | 2 medium
 
 **7. Real-Time Analytics Dashboard 📊**
 
-**What it shows:**
-- System health metrics
-- Document operations statistics
-- Fraud detection alerts
-- Performance monitoring
+**What's new:**
+- Multi-tab analytics (`Overview`, `AI Performance`, `Documents`, `Compliance & Risk`)
+- Interactive Recharts visuals (area trend, pie, bar) with date-range filters (7d / 30d / 90d / All)
+- AI automation metrics (confidence distribution, extraction sources, avg extraction time)
+- Time-savings calculator comparing manual vs. AI-assisted processing
+- Real-time activity feed with confidence badges and status chips
 
-**Dashboard Widgets:**
+**Highlights:**
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│                    IntegrityX Analytics                        │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│  Documents Processed Today: 1,247                              │
-│  ├─ Verified: 1,180 (94.6%)                                   │
-│  ├─ Tampered: 67 (5.4%) 🚨                                    │
-│  └─ Pending: 0                                                │
-│                                                                │
-│  Blockchain Operations:                                        │
-│  ├─ Seals Today: 1,247                                        │
-│  ├─ Success Rate: 99.9%                                       │
-│  └─ Avg Seal Time: 315ms                                      │
-│                                                                │
-│  Forensic Analysis:                                            │
-│  ├─ Diffs Performed: 89                                       │
-│  ├─ Patterns Detected: 7                                      │
-│  └─ Critical Alerts: 2 🚨                                     │
-│                                                                │
-│  System Performance:                                           │
-│  ├─ API Response Time (p95): 92ms ✅                          │
-│  ├─ Database Query Time: 8ms ✅                               │
-│  ├─ System Uptime: 99.9% ✅                                   │
-│  └─ Active Users: 47                                          │
-│                                                                │
-│  🚨 Active Alerts:                                            │
-│  ├─ Duplicate signature detected (23 documents)               │
-│  └─ Identity theft suspected (SSN reuse on 8 applications)    │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ ANALYTICS DASHBOARD (hero strip)                                              │
+│ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐            │
+│ │ Documents    │ │ AI Confidence│ │ Compliance   │ │ Time Saved   │            │
+│ │    1,247     │ │      88%     │ │      96%     │ │   +142m ⚡    │            │
+│ └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘            │
+├───────────────────────────────────────────────────────────────────────────────┤
+│ TABS: [ Overview ] [ AI Performance ] [ Documents ] [ Compliance & Risk ]     │
+├───────────────────────────────────────────────────────────────────────────────┤
+│ OVERVIEW TAB                                                                  │
+│ ┌─────────────────────────────┐  ┌─────────────────────┐ ┌──────────────────┐ │
+│ │ 7-DAY AREA CHART            │  │ RECENT ACTIVITY     │ │ AI AUTOMATION    │ │
+│ │ Documents vs. Sealed        │  │ • Uploaded Loan 42  │ │ IMPACT CARD      │ │
+│ │                             │  │ • Sealed Loan 41 ✔ │ │ Manual: 260m      │ │
+│ │                             │  │ • Extracted Loan 39 │ │ AI:     118m      │ │
+│ │                             │  │ confidence badges   │ │ Saved: 142m (+78%)│ │
+│ └─────────────────────────────┘  └─────────────────────┘ └──────────────────┘ │
+│ SIDE PANEL                                                                    │
+│ ┌───────────────────────────────────────────────────────────────────────────┐ │
+│ │ Documents This Period: 312 | Avg Confidence: 87% | Compliance: 94%        │ │
+│ │ Time Saved: Manual 260m → Automated 118m → Net 142m saved                 │ │
+│ └───────────────────────────────────────────────────────────────────────────┘ │
+├───────────────────────────────────────────────────────────────────────────────┤
+│ AI PERFORMANCE TAB                                                            │
+│ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐  ┌──────────────────────┐ │
+│ │ Total Extr.  │ │ Successful   │ │ Avg Time     │  │ Pie: Confidence tiers│ │
+│ │      164     │ │      152     │ │     1.3 s    │  │ Bar: Backend vs Fallback│
+│ └──────────────┘ └──────────────┘ └──────────────┘  └──────────────────────┘ │
+└───────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+**8. Security Command Center 🛡️**
+
+**What it delivers:**
+- Dedicated security hub inside the app (`/security`)
+- Instant security scorecard (98/100) with Live "Active Protections" indicators
+- Three action cards for Fraud Detection, Blockchain Sealing, and ZK Proof Verification
+- Quick stats row (uploads today, success rate, <2s processing, 94% fraud caught)
+- Guided "How It Works" steps from upload → blockchain seal → zero-knowledge verification
+- Right-rail audit summary with downloadable security report
+
+**Highlights:**
+
+```
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ SECURITY COMMAND CENTER                                                       │
+│ ┌───────────────────────────────────────────────────────────────────────────┐ │
+│ │ HERO: "Security Tools"  [Shield Icon]                                     │ │
+│ │ Subtitle: Fraud detection • blockchain verification • privacy-safe audits │ │
+│ └───────────────────────────────────────────────────────────────────────────┘ │
+│ RIGHT SIDEBAR                                                                │
+│ ┌───────────────┐  Active Protections: ● Encryption ● 2FA ● Blockchain       │
+│ │ Score 98/100  │  Download: 📊 Security Report                              │
+│ └───────────────┘                                                             │
+├───────────────────────────────────────────────────────────────────────────────┤
+│ MAIN GRID                                                                     │
+│ ┌────────────────────────┐ ┌────────────────────────┐ ┌────────────────────┐ │
+│ │ FRAUD DETECTION        │ │ BLOCKCHAIN SEALING     │ │ ZK PROOF VERIFY    │ │
+│ │ AlertCircle ▲ 94% rate │ │ Shield ▲ 1,247 sealed  │ │ Lock ▲ 100% privacy│ │
+│ │ • Income-to-loan ratio │ │ • Tamper-proof hashes  │ │ • Third-party proof│ │
+│ │ • Duplicate SSNs       │ │ • Audit trail          │ │ • Export JSON      │ │
+│ │ [ Upload & Analyze ➜ ] │ │ [ View Documents ➜ ]   │ │ [ Generate Proof ➜]│ │
+│ └────────────────────────┘ └────────────────────────┘ └────────────────────┘ │
+│ QUICK STATS                                                                   │
+│ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐                           │
+│ │ Uploads  │ │ Success  │ │ Avg Proc │ │ Fraud    │                           │
+│ │   24     │ │  99.8%   │ │   <2 s   │ │ Caught 94%│                           │
+│ └──────────┘ └──────────┘ └──────────┘ └──────────┘                           │
+│ HOW IT WORKS                                                                  │
+│ ① Upload & Detect → AI anomaly checks                                         │
+│ ② Blockchain Seal → Walacor hash + timestamp                                  │
+│ ③ Verify Anytime → Shareable zero-knowledge proof                             │
+└───────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -1121,7 +1168,10 @@ Total: 7 patterns detected | 2 critical | 3 high | 2 medium
   - `frontend/components/forensics/ForensicDiffViewer.tsx`
   - `frontend/components/forensics/ForensicTimeline.tsx`
   - `frontend/components/forensics/PatternAnalysisDashboard.tsx`
-- **Pages**: `frontend/app/(private)/forensics/page.tsx`
+- **Pages**:
+  - `frontend/app/(private)/forensics/page.tsx`
+  - `frontend/app/analytics/page.tsx` (interactive dashboards with Recharts)
+  - `frontend/app/security/page.tsx` (security command center & ZK proof workflow)
 
 **Documentation**:
 - `README.md` - Main documentation (825 lines)

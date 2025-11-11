@@ -45,10 +45,9 @@ import { EnhancedVerificationResult } from '@/components/verification/EnhancedVe
 import { json as fetchJson, fetchWithTimeout } from '@/utils/api';
 import {
   getBorrowerInfo,
-  getAuditTrail,
-  type BorrowerInfo,
-  type AuditEvent
+  getAuditTrail
 } from '@/lib/api/verification';
+import { type BorrowerInfo } from '@/lib/api/loanDocuments';
 import apiConfig from '@/lib/api-config';
 
 interface Document {
@@ -132,7 +131,7 @@ export default function VerifyPage() {
 
   // Enhanced verification state
   const [borrowerInfo, setBorrowerInfo] = useState<BorrowerInfo | null>(null);
-  const [auditTrail, setAuditTrail] = useState<AuditEvent[]>([]);
+  const [auditTrail, setAuditTrail] = useState<any[]>([]);
   const [cryptographicProof, setCryptographicProof] = useState<CryptographicProof | null>(null);
   const [verificationStatus, setVerificationStatus] = useState<DocumentVerificationStatus | null>(null);
   const [certificate, setCertificate] = useState<VerificationCertificate | null>(null);
@@ -178,8 +177,8 @@ export default function VerifyPage() {
 
   // Check for hash or artifact_id in URL params
   useEffect(() => {
-    const hashFromUrl = searchParams.get('hash');
-    const artifactIdFromUrl = searchParams.get('artifact_id');
+    const hashFromUrl = searchParams?.get('hash');
+    const artifactIdFromUrl = searchParams?.get('artifact_id');
     
     if (hashFromUrl) {
       setFileHash(hashFromUrl);
@@ -649,7 +648,7 @@ export default function VerifyPage() {
         <ProofViewer
           isOpen={isProofViewerOpen}
           onClose={() => setIsProofViewerOpen(false)}
-          proofData={proofData}
+          proofJson={proofData}
         />
       </div>
     </div>

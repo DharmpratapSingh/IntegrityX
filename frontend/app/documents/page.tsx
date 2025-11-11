@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { json as fetchJson, fetchWithTimeout } from '@/utils/api'
 import { formatEasternTimeWithTZ, formatForFilename, getCurrentEasternTime } from '@/utils/timezone'
 import Link from 'next/link'
+import { DashboardLayout } from '@/components/DashboardLayout'
 import { Search, FileText, Eye, Plus, Filter, Calendar, Hash, AlertCircle, RefreshCw, Download, CheckSquare, Square, Shield, Lock, Zap, CheckCircle, TrendingUp, MoreVertical, Trash2 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -234,7 +235,7 @@ export default function DocumentsPage() {
     switch (securityLevel) {
       case 'quantum_safe':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
             <Zap className="h-3 w-3 mr-1" />
             Quantum Safe
           </span>
@@ -771,11 +772,59 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white border-b border-gray-200 dark:border-gray-800">
+    <DashboardLayout
+      rightSidebar={
+        <div className="p-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-6">
+            Document Stats
+          </h2>
+
+          {/* Total Count */}
+          <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              Total Documents
+            </h3>
+            <div className="text-3xl font-bold text-gray-900 dark:text-white">
+              {totalCount.toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              In your library
+            </div>
+          </div>
+
+          {/* Quick Filters */}
+          <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              Quick Filters
+            </h3>
+            <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+              <div>• By Date Range</div>
+              <div>• By Borrower Name</div>
+              <div>• By Loan Amount</div>
+              <div>• By Security Level</div>
+            </div>
+          </div>
+
+          {/* Bulk Actions */}
+          <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Bulk Actions
+            </h3>
+            <p className="text-xs text-gray-700 dark:text-gray-300 mb-3">
+              Select multiple documents to export
+            </p>
+            <div className="text-xs text-gray-600 hover:text-gray-700 dark:text-gray-400">
+              📥 Export Selected
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <div>
+        {/* Hero Section */}
+        <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white rounded-xl mb-8 border border-gray-200 dark:border-gray-800">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
-        
+
         <div className="relative max-w-7xl mx-auto px-6 py-16">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -783,7 +832,7 @@ export default function DocumentsPage() {
                 <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
                   Document Library
                 </h1>
-                <p className="text-lg md:text-xl text-gray-300 max-w-3xl">
+                <p className="text-lg md:text-xl text-blue-100 max-w-3xl">
                   View and manage your verified documents
                 </p>
               </div>
@@ -800,19 +849,19 @@ export default function DocumentsPage() {
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-purple-100">Total Documents</p>
+                    <p className="text-sm font-medium text-blue-100">Total Documents</p>
                     <p className="text-3xl font-bold">{documents.length}</p>
                   </div>
-                  <div className="p-3 bg-purple-500/20 text-white rounded-xl">
+                  <div className="p-3 bg-blue-500/20 text-white rounded-xl">
                     <FileText className="h-6 w-6" />
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-purple-100">Sealed Today</p>
+                    <p className="text-sm font-medium text-blue-100">Sealed Today</p>
                     <p className="text-3xl font-bold">12</p>
                   </div>
                   <div className="p-3 bg-green-500/20 text-white rounded-xl">
@@ -820,11 +869,11 @@ export default function DocumentsPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-purple-100">Success Rate</p>
+                    <p className="text-sm font-medium text-blue-100">Success Rate</p>
                     <p className="text-3xl font-bold">99.2%</p>
                   </div>
                   <div className="p-3 bg-blue-500/20 text-white rounded-xl">
@@ -1129,9 +1178,9 @@ export default function DocumentsPage() {
                             </button>
                             <Link
                               href={`/forensics?document=${doc.id}`}
-                              className="flex items-center w-full px-3 py-2 text-sm text-purple-700 rounded-md hover:bg-purple-50 transition-colors"
+                              className="flex items-center w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                             >
-                              <Search className="h-4 w-4 mr-2 text-purple-500" />
+                              <Search className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
                               Forensic Analysis
                             </Link>
                             <div className="border-t border-gray-200 my-1"></div>
@@ -1284,6 +1333,7 @@ export default function DocumentsPage() {
         </div>
       )}
       </div>
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -1958,33 +1959,34 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         
         // Create final loan data object
         const loanData: LoanData = {
-          loanId: sanitizedLoanData.loanId,
-          documentType: sanitizedLoanData.documentType,
-          borrowerName: sanitizedLoanData.borrowerName,
-          propertyAddress: sanitizedLoanData.propertyAddress || '',
-          amount: sanitizedLoanData.loanAmount,
-          rate: sanitizedLoanData.interestRate || '',
-          term: sanitizedLoanData.loanTerm || '',
-          notes: sanitizedLoanData.additionalNotes
+          loan_id: sanitizedLoanData.loanId,
+          document_type: sanitizedLoanData.documentType,
+          borrower_name: sanitizedLoanData.borrowerName,
+          property_address: sanitizedLoanData.propertyAddress || '',
+          loan_amount: sanitizedLoanData.loanAmount,
+          interest_rate: sanitizedLoanData.interestRate ? parseFloat(sanitizedLoanData.interestRate) : undefined,
+          loan_term: sanitizedLoanData.loanTerm ? parseInt(sanitizedLoanData.loanTerm) : undefined,
+          additional_notes: sanitizedLoanData.additionalNotes
         };
 
         // Create final borrower data object
         const borrowerInfo: BorrowerInfo = {
-          fullLegalName: sanitizedBorrowerData.fullName,
-          dateOfBirth: sanitizedBorrowerData.dateOfBirth,
+          full_name: sanitizedBorrowerData.fullName,
+          date_of_birth: sanitizedBorrowerData.dateOfBirth,
           email: sanitizedBorrowerData.email,
-          phoneNumber: sanitizedBorrowerData.phone,
-          currentAddress: sanitizedBorrowerData.streetAddress,
+          phone: sanitizedBorrowerData.phone,
+          address_line1: sanitizedBorrowerData.streetAddress,
+          address_line2: '',
           city: sanitizedBorrowerData.city,
           state: sanitizedBorrowerData.state,
-          zipCode: sanitizedBorrowerData.zipCode,
+          zip_code: sanitizedBorrowerData.zipCode,
           country: sanitizedBorrowerData.country,
-          ssnLast4: sanitizedBorrowerData.ssnLast4,
-          governmentIdType: sanitizedBorrowerData.governmentIdType,
-          governmentIdNumber: sanitizedBorrowerData.idNumberLast4,
-          employmentStatus: sanitizedBorrowerData.employmentStatus,
-          annualIncome: sanitizedBorrowerData.annualIncome,
-          consentGiven: true
+          ssn_last4: sanitizedBorrowerData.ssnLast4,
+          id_type: sanitizedBorrowerData.governmentIdType,
+          id_last4: sanitizedBorrowerData.idNumberLast4,
+          employment_status: sanitizedBorrowerData.employmentStatus,
+          annual_income_range: sanitizedBorrowerData.annualIncome,
+          is_sealed: false
         };
 
         console.log('Loan data:', loanData);
@@ -2021,10 +2023,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
         // Create UploadResult for compatibility with existing UI
         const uploadResult: UploadResult = {
-          artifactId: sealResponse.artifactId || sealResponse.artifact_id || '',
-          walacorTxId: sealResponse.walacorTxId || sealResponse.walacor_tx_id || '',
-          sealedAt: sealResponse.sealedAt || sealResponse.sealed_at || '',
-          proofBundle: sealResponse.proofBundle || sealResponse.blockchain_proof || {}
+          artifactId: sealResponse.artifact_id,
+          walacorTxId: sealResponse.walacor_tx_id,
+          sealedAt: sealResponse.sealed_at,
+          proofBundle: sealResponse.blockchain_proof || {}
         };
 
         setUploadResult(uploadResult);
@@ -2122,33 +2124,34 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         const annualIncomeNumber = parseFloat(meta.borrowerAnnualIncome || '0');
 
         const loanData: LoanData = {
-          loanId: meta.loanId || `loan-${Date.now()}-${index}`,
-          documentType: meta.documentType || 'loan_application',
-          borrowerName: meta.borrowerName || '',
-          propertyAddress: meta.propertyAddress || '',
-          amount: String(Number.isNaN(loanAmountNumber) ? 0 : loanAmountNumber),
-          rate: meta.interestRate || '',
-          term: meta.loanTerm || '',
-          notes: meta.additionalNotes
+          loan_id: meta.loanId || `loan-${Date.now()}-${index}`,
+          document_type: (meta.documentType || 'loan_application') as LoanData['document_type'],
+          borrower_name: meta.borrowerName || '',
+          property_address: meta.propertyAddress || '',
+          loan_amount: Number.isNaN(loanAmountNumber) ? 0 : loanAmountNumber,
+          interest_rate: meta.interestRate ? parseFloat(meta.interestRate) : undefined,
+          loan_term: meta.loanTerm ? parseInt(meta.loanTerm) : undefined,
+          additional_notes: meta.additionalNotes
         };
 
         const borrowerFullName = meta.borrowerName || '';
         const borrowerInfo: BorrowerInfo = {
-          fullLegalName: borrowerFullName,
-          dateOfBirth: meta.borrowerDateOfBirth || '',
+          full_name: borrowerFullName,
+          date_of_birth: meta.borrowerDateOfBirth || '',
           email: meta.borrowerEmail || '',
-          phoneNumber: meta.borrowerPhone || '',
-          currentAddress: meta.borrowerStreetAddress || '',
+          phone: meta.borrowerPhone || '',
+          address_line1: meta.borrowerStreetAddress || '',
+          address_line2: '',
           city: meta.borrowerCity || '',
           state: meta.borrowerState || '',
-          zipCode: meta.borrowerZipCode || '',
+          zip_code: meta.borrowerZipCode || '',
           country: meta.borrowerCountry || 'US',
-          ssnLast4: meta.borrowerSSNLast4 || '',
-          governmentIdType: meta.borrowerGovernmentIdType || 'drivers_license',
-          governmentIdNumber: meta.borrowerIdNumberLast4 || '',
-          employmentStatus: meta.borrowerEmploymentStatus || 'employed',
-          annualIncome: String(Number.isNaN(annualIncomeNumber) ? 0 : annualIncomeNumber),
-          consentGiven: true
+          ssn_last4: meta.borrowerSSNLast4 || '',
+          id_type: (meta.borrowerGovernmentIdType || 'drivers_license') as BorrowerInfo['id_type'],
+          id_last4: meta.borrowerIdNumberLast4 || '',
+          employment_status: (meta.borrowerEmploymentStatus || 'employed') as BorrowerInfo['employment_status'],
+          annual_income_range: String(Number.isNaN(annualIncomeNumber) ? 0 : annualIncomeNumber),
+          is_sealed: false
         };
 
         const progressValue = Math.round((index / selectedFiles.length) * 100);
@@ -2167,10 +2170,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         results.push({
           fileName: fileItem.name,
           result: {
-            artifactId: sealResponse.artifactId || sealResponse.artifact_id || '',
-            walacorTxId: sealResponse.walacorTxId || sealResponse.walacor_tx_id || '',
-            sealedAt: sealResponse.sealedAt || sealResponse.sealed_at || '',
-            proofBundle: sealResponse.proofBundle || sealResponse.blockchain_proof || {}
+            artifactId: sealResponse.artifact_id,
+            walacorTxId: sealResponse.walacor_tx_id,
+            sealedAt: sealResponse.sealed_at,
+            proofBundle: sealResponse.blockchain_proof || {}
           }
         });
 
@@ -2589,7 +2592,59 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
   }, []);
 
   return (
-    <>
+    <DashboardLayout
+      rightSidebar={
+        <div className="p-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-6">
+            Upload Guide
+          </h2>
+
+          <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              Supported Files
+            </h3>
+            <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+              <div>• PDF Documents</div>
+              <div>• Images (JPG, PNG)</div>
+              <div>• JSON Metadata</div>
+            </div>
+          </div>
+
+          <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              Security Levels
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                Standard
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                Maximum
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                Quantum-Safe
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Need help?
+            </h3>
+            <p className="text-xs text-gray-700 dark:text-gray-300 mb-3">
+              View documentation
+            </p>
+            <a href="#" className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400">
+              📚 Documentation
+            </a>
+          </div>
+        </div>
+      }
+    >
+      <>
       {/* Bulk Metadata Editor */}
       <Dialog open={showMetadataEditor} onOpenChange={(open) => {
         setShowMetadataEditor(open);
@@ -3053,7 +3108,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         </div>
                         <div className="text-xs text-blue-700">
                           <p><strong>Multi-Hash Algorithms:</strong> {uploadResult.comprehensive_seal.multi_hash_algorithms?.join(', ')}</p>
-                          <p><strong>PKI Signature:</strong> {uploadResult.comprehensive_seal.pki_signature?.algorithm} ({uploadResult.comprehensive_seal.pki_signature?.key_size} bits)</p>
+                          <p><strong>PKI Signature:</strong> {typeof uploadResult.comprehensive_seal.pki_signature === 'string' ? uploadResult.comprehensive_seal.pki_signature : `${(uploadResult.comprehensive_seal.pki_signature as any)?.algorithm} (${(uploadResult.comprehensive_seal.pki_signature as any)?.key_size} bits)`}</p>
                           <p><strong>Verification Methods:</strong> {uploadResult.comprehensive_seal.verification_methods?.join(', ')}</p>
                         </div>
                       </div>
@@ -4528,6 +4583,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
   />
 </div>
 </>
+    </DashboardLayout>
 );
 }
 

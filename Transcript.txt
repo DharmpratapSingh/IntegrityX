@@ -1,0 +1,558 @@
+Transcript
+
+
+
+
+Rate transcript quality:
+
+
+
+
+
+S
+Speaker
+00:01 - 00:13
+Yeah. Okay, I heard that. Okay, good. So, perfect. All right, so you'll have this for your team and for your reference. So, real quickly, WalletCore is good for data security for the actual, like,
+
+S
+Speaker
+00:13 - 00:31
+The data itself hasn't been tampered with. So what you can do in your application is you can store a file with WalletCore and then that file can be referenced later to make sure it hasn't changed. And I'll show you kind of how this all works later. But that's the concept.
+
+S
+Speaker
+00:31 - 00:47
+So it's really good for like data integrity, data models. It's good for capturing a moment in time, like a time capsule. So let's say, for example, that you're in a financial crisis.
+
+S
+Speaker
+00:47 - 01:14
+industry and you made some decisions and by you, I could mean like maybe an employee at a financial brokerage or possibly, you know, let's say it's locking in like an interest rate for a home buyer. That what happens over time is that that moment, let's say on September 27th, you know, at 1110 a.m.,
+
+S
+Speaker
+01:14 - 01:42
+When you go back and look at that maybe in January or a year from now or five years from now, it's hard to capture what was happening in the market right now this morning. And so what you can do is take the data from right now and store it in Wallacore. And then a month later, six months later, six years later, you can always go back and capture or repoll or capture what you stored for this moment in time.
+
+S
+Speaker
+01:42 - 02:10
+So it becomes like a vault. It becomes like a time capsule. You're able to put things there. And the benefit of that is that as you work through your application, you're now able to go back and do a check on the data. So you can say, okay, I'm getting ready to trust this data to do something. I want to make sure it hasn't been tampered with. You then make a call back to WalletCore to what you stored at 11, 10 a.m. on the 27th. And you say, okay, does this match or not?
+
+S
+Speaker
+02:10 - 02:34
+And so if it matches, then you know that it hasn't changed. If it doesn't match, that takes you down a different set of options, right? You could then decide that you don't want to move forward making any decisions. You want your code to basically give an error message saying that we cannot continue because the data has been changed. Or you can...
+
+S
+Speaker
+02:35 - 02:53
+Well, I'll pause there. And so what it's good for is that kind of information. So it's good for things like you're using models, you're using like whether AI models, ML models, just data models, surveys, financial status. That's a moment in time. It's good for archiving that.
+
+S
+Speaker
+02:53 - 03:05
+It's not necessarily what you want to use if you're trying to track the price of a stock over the course of a day or over the course of even a week or a month.
+
+S
+Speaker
+03:05 - 03:33
+Because there's so many changes to that file and that data, the wallet core, I mean, it's hard to pinpoint an exact moment in time that you're going to want to use as your trust point, right? So if it's dynamic files and data, then wallet core could be used, you know, but it may not be the right use case. You'll just store a ton of data forever. You probably don't even need it.
+
+S
+Speaker
+03:33 - 03:54
+If every 24 hours you rolled that up and you wanted to capture that or at four o'clock when market closes, you want to capture the price of close, then you could, you know, you could use wallet core if it was something that was never going to change. That four o'clock on the 26th is that whatever that value is, it will always be that value, you know.
+
+S
+Speaker
+03:55 - 04:23
+So there's a second part of WalletCore that you can do if you don't want to store the file. So if you store the file with WalletCore, what WalletCore does is we wrap it and we encrypt it, we store it, and we track it on the blockchain so it becomes immutable, meaning that even if you sometimes tamper with it while it's stored within WalletCore, it will still fail because even with it itself, it has knowledge of whether it's been tampered with.
+
+S
+Speaker
+04:24 - 04:54
+So it makes it very reliable, I mean extremely reliable for a data source. And then, so in that scenario, if you don't want to store the file, what you can do instead is store a hash of the file. So you can use Wallacore, something called Object Validator. And let me go ahead and see if I can show that to you. Oops. Yeah, right here.
+
+S
+Speaker
+04:54 - 05:22
+So there's something called object validator and what this does is instead of storing the file or the object, it stores just a hash of the file. So in this scenario your application is running, you're storing everything locally with your application, but you want to make sure that the model hasn't changed. So you're going to bounce it off of wallet cord just the hash only. As long as the hash hasn't changed, then you know that the file that you have is valid.
+
+S
+Speaker
+05:24 - 05:52
+So that's probably pretty good. You can decide in your application if you want to store the file in WalletCore, if you want to store it somewhere else and use a hash of it with Object Validator. Those are options you have. And in the same application, you might do both. You might store just a hash for data that changes regularly. And then every day or every whatever week, you store like the actual file in WalletCore. Either way, when it's stored, whether it's a hash or it's a file, later on, you can verify against the
+
+S
+Speaker
+05:53 - 06:21
+So we'll get more specific as we go further, but just keep that in mind as we think about the use case. We have SDKs for a couple of different development environments where you can just add them to your IDE and then utilize them. We have API. So if you aren't going to go the SDK route, you can go the API route.
+
+S
+Speaker
+06:21 - 06:36
+and the API will allow you to store what we call envelopes, which are right here. And the envelope, I've mentioned in my description so far, kind of like will be equivalent of a file.
+
+S
+Speaker
+06:35 - 06:52
+you know, a data file, but an envelope can consist of almost anything, uh, some field data. So it could be just like, for example, um, just a social security number out of a form. It doesn't have to be like a file file. Um, it could be a, um,
+
+S
+Speaker
+06:53 - 07:18
+It could be just a reference to an environment. So it may not be the files themselves, but you're storing just the properties of a file. So it can get very granular. And we have ETIDs, which is the envelope type. And so all you need to do when you're writing the API or SDK is specify what type of envelope you're sending over because
+
+S
+Speaker
+07:17 - 07:44
+because you can even create users, you can create roles, you can change and modify, you can set hash, depends upon what envelope ID you're going to use, envelope type ID. So it's very powerful and I'll show you in a minute why we're able to do this. But one of the most common things you'll probably do at least for starting out will be files themselves.
+
+S
+Speaker
+07:45 - 08:03
+And so with a file, so let's say it's a Word document or let's say a PDF, right? You're storing. So what happens is you first verify it, which just looks to see if we already have that and if it already exists. If it does, then we won't restore it. We don't have a dedupe file.
+
+S
+Speaker
+08:03 - 08:31
+process that runs within WalletCore so you don't store the same file over and over again. So if you already have the file, you can just verify it and make sure it already exists and hasn't been changed. And then if it doesn't exist, if it's not already in WalletCore, you can store it, which is the equivalent of saving a file. So first you verify, then you store. And then of course, once it's stored in WalletCore, you can go ahead and download or you can list it just like a Dropbox or like a
+
+S
+Speaker
+08:31 - 09:06
+of OneCloud or something like that. Okay, so API SDK for moving files and then object validator if you just want to store the hash of a file or an object. Any questions so far? No, I think they are good. Okay, all right. Let me go into kind of how it works and that would be best represented probably right here.
+
+S
+Speaker
+09:08 - 09:13
+Yeah, right here. So within within
+
+S
+Speaker
+09:14 - 09:39
+Let me stop. Okay, so WalletCore is a containerized application, really a platform. And so as a container, that means that it can run in Docker, Kubernetes, or other types of platforms, you can run it. What we do for AWS and Azure is we run the WalletCore container within an actual like operating system, in this case, Ubuntu. So
+
+S
+Speaker
+09:39 - 10:07
+So when we launched this, instead of launching it native to like the Kubernetes engine on AWS, we're actually spinning up a server at EC2 instance. And then within there, it is running the WalletCore platform as a container. So what we need to do to get started is, and you don't have access to this part of it. I'll give you access to the server, but not this part here. So what we need to do is,
+
+S
+Speaker
+10:07 - 10:28
+go ahead and pick the region that we want to be in, which we'll choose Northern Virginia because we're, I assume we are, and it's also the hub of the whole internet for the whole world. Somewhere north of 80% of the world's internet traffic goes through Ashburn, Virginia. And so we're going to, whenever you see like East, you know, US East or Northern Virginia,
+
+S
+Speaker
+10:28 - 10:50
+You know it's going through all those data centers in Ashburn. And that's really the place you want to be within almost any of these architectures from Azure to AWS. If you're testing something or using something that's new, you put yourself right on the hub if you can, which is right in Ashburn in US East. And then what we're going to do is there's actually...
+
+S
+Speaker
+10:50 - 11:25
+So an AMI is a server image that's stored in AWS that other people come along and purchase. But in our case, we have already set up to use for us. And I think it's this one here. Let me just check real quick. Okay. Yeah, I think this will be perfect. So we'll go ahead and we'll launch a new instance of WalletCore.
+
+S
+Speaker
+11:26 - 11:51
+And then we'll choose EC2 because that's the server. We'll launch it from within the marketplace. We pick the version, the region, which I mentioned before, we want to go to US East. We only need one instance for you. We don't need a large. We can just go down to a medium. That VPC is fine. That subnet should be fine.
+
+S
+Speaker
+11:51 - 12:19
+That's fine. That's fine. So do you know at this point if you mainly would be using like OpenSSH or PuTTY if you're going to do SSH or if you have Mac or PCs that you're using? Any idea on how you're going to access a server? As of now, like we don't have a proper guidance on that, that how we can use it. But yeah, that's something...
+
+S
+Speaker
+12:20 - 12:40
+We have to find Do you know if people are using mostly Macs, Macs or PCs in the whoever be doing a code? Well, I have the Mac. Okay. I have PC. I have a Mac as well. Okay. And okay, so and will all of you be doing the working on the code?
+
+S
+Speaker
+12:41 - 13:07
+No, for the coding part, I think it would be between me and Pratyush, who is this US guy. I think we'll go with the Mac. Okay, I'll go with the Mac. So that will be PIM, which is OpenSSH, which you'll want to use. Okay. And then I'm going to go ahead. So I've got everything set up here. I'm going to go ahead and launch this.
+
+S
+Speaker
+13:09 - 13:47
+And then this is going to take a little bit of time. So I just want to make sure it gets started. And then while it's doing that, I will walk you through some other things. And if I go to the dashboard, I should see it running right here. And then what we'll do is here's the IP address that it's running off of. I don't think it's going to be up already, but it looks like it wants to be. So let's just see. We'll keep this going in the background.
+
+S
+Speaker
+13:52 - 14:24
+Yeah, it'll probably take a little bit of time. Okay, so if we go, have you at all worked with Postman before? Yes, I did. Okay, good. Okay, so within Postman, I'm going to show you kind of how ways that you can actually, you know, work with kind of figuring out if you're stuck. So what we can do is if we go to Postman, yep.
+
+S
+Speaker
+14:25 - 15:16
+I had it stored where I wanted to go. I don't want to download it. I was just doing the online. Why is it not coming? One second. I will find out where it is. It's over here, isn't it? Okay. I'm going to share a different screen with you because I think it'd be easier that way. All right. So now I'm going to share this one here. Okay. So you can see postman.co up here.
+
+S
+Speaker
+15:17 - 15:44
+So basically Postman, there is a WalletCore integration that you can pull into your Postman environment. And then what you would do is when we have your server defined, you'll be able to define as a variable for the server itself. And then you can run different parts of the API to verify or save or store data.
+
+S
+Speaker
+15:45 - 16:14
+to basically user management, whatever it is that needs to be done. There's some also documentation as well available. So Postman is a really good way if you're just working through things or trying to figure out how something would work or what the results should be expected. You can kind of bounce them off of the Wallacore Postman integration and then that will be able to help you see what you need to put into your code base.
+
+S
+Speaker
+16:15 - 16:50
+Let me go ahead and walk you through. I probably need to log back in, but let me just try and see if I can get there. Okay. Yeah, I need to sign in. What I'm signing into is when the instance starts running and we have the EC2 going and then we have the container, WalletCore container running, what you will see are really, if you go to the URL that you have or the IP address,
+
+S
+Speaker
+16:50 - 17:07
+with just HTTP, you don't use HTTPS because we're not going to waste time with like certificates right now. So just do HTTP. And then if you go into that actual IP address, you will come to a page like this. You log in like I just did.
+
+S
+Speaker
+17:07 - 17:36
+And then you can go to, let me take you back to the beginning just so you can see it from the beginning. Sorry. So once you log in, you'll be presented with something like this. You have two options. The rest of this is just information only. You go into five, which is file verification, which is the core part of what WalletCore is. Or you can go into the back end and set it up and work on the actual structure of the WalletCore engine itself. So I'll take you to five first.
+
+S
+Speaker
+17:37 - 18:08
+In 5, think of it like as a Dropbox in a way, a place to store files. But as I mentioned before, there's no deduplication. So if we already have a file that tries to get uploaded again, it will say that it already exists. And what you do with your logic and your code, you can still reference it, you can still point to it, but you just can't store it on Wallacore. At some point in time, this MSLogo PNG was stored.
+
+S
+Speaker
+18:09 - 18:36
+back in January. So basically what happens when the file is stored is it gets time stamped. It says that it's been stored. And remember there's verify and there's store. So you can verify files without storing them. So this is important to know that it was actually saved on the drive. And then you get like a signature for the file, which is a unique signature.
+
+S
+Speaker
+18:37 - 19:02
+And after that, you can share the file. So kind of like a Dropbox link or that you can send to somebody, it will give you that. And then, as I mentioned before, Wallacorp takes the information with a file and stores it on a private blockchain. It's also running in the same container. And so with each block that gets written, it makes that reference and that data immutable.
+
+S
+Speaker
+19:03 - 19:27
+so it can't be altered later without breaking the blockchain, which if that happens, then the whole thing's obviously, if you can break the blockchain, then you've got bigger problems to worry about. When you're looking for envelope, status 80 means that it was saved successfully. And clearly this was because it's referenceable and has all the information. And then if I go and look for this file,
+
+S
+Speaker
+19:28 - 19:57
+So this is a really simple practice application. This really doesn't have any reference to what you'll be doing. In fact, the files that you store and save won't even show up here. You'll see this is notary. And notary is just for this thing called Five. So when you work with a platform, you won't be working with a notary. So this is just kind of a way for you from a human experience to take a look and test things, but not really anything
+
+S
+Speaker
+19:57 - 20:24
+that you'll be seeing your work put into. If I go into platform, now we start getting to the back end of Wallach Horse envelopes and storage. And basically, this sets up schemas. So think of it as like a database. And if we go in and try to find like
+
+S
+Speaker
+20:25 - 20:52
+actual data itself. This is not the right place. Let me go to system and then binary files. So you'll see this ETID, I mentioned it earlier that this tells WalletCore what you're storing. So 17 is gonna be the most common. You need to specify ETID 17 when you're using your API or SDK, if your goal is to save a file.
+
+S
+Speaker
+20:53 - 21:26
+So for that file, that MS logo, well, it's probably on a different page or something, but you get the idea. These are actual files that have been stored, and then they also have the references for information about the file, the dates and UIDs, and when it was updated. And so basically, with all this data, and then stored on the blockchain, it becomes immutable.
+
+S
+Speaker
+21:27 - 21:47
+And you can go ahead and create your own types of, I don't think you would need to, but if you wanted to, you could create your own schema and you could define your own fields and your own data and what you, and your own really ETID if you wanted. So let's say for some reason you did want to store just one thing, like maybe, um,
+
+S
+Speaker
+21:48 - 22:19
+maybe like a social security number or something. You could create a schema around just that one field if you wanted and create an ETID for it and send that over to WalletCore to store it encrypted and everything. What I'm saying is that it's extremely powerful in what you can do with this and even down to the users are also set up like data. If I take a look at this user I'm logged in right now, which is system user,
+
+S
+Speaker
+22:20 - 22:51
+I can see that I can validate it to make sure that all of the different parts of the user haven't been tampered with or changed, and all of them get a checkbox, meaning that they're fine. And then I can look down here to see that the UID matches the actual user. And then I can go down to the last page, for example, and see the user
+
+S
+Speaker
+22:52 - 23:27
+like log in. So this is going to be GMT time, I guess, here. So yeah, you can see that I'm the user I logged in and what I'm doing is being tracked by the system. So the goal is high integrity to make sure that the data put in is what the data you can get out of it or you can verify against and that it can't be changed. All right, let's check and see how our instance is doing.
+
+S
+Speaker
+23:29 - 24:03
+I know you can't see it right now. I'm just checking to make sure it's there. I'll share that screen. Any questions so far? Hi, Mike. I had one question. Earlier you mentioned one step where it is applicable only for Mac users. What about the Windows users? Yeah. I'm on Windows right now.
+
+S
+Speaker
+24:04 - 24:32
+And it works perfectly fine for the application side of it and for the programming side of it. It's just when you SSH into a, like this is running on Ubuntu. So you shouldn't have to SSH into the system. Like there isn't much to do there. So to use it, it doesn't really matter what kind of computer you have. But if you did need to SSH in Ubuntu,
+
+S
+Speaker
+24:32 - 25:01
+then you need to have a security key. And so for Windows, people often use an application called PuTTY to remotely access. But since Macintosh or Macs are built on Linux, then from terminal within a Mac, you can just natively SSH into servers like Linux servers. And that's open SSH.
+
+S
+Speaker
+25:01 - 25:24
+So I don't think that there's really any reason for you to have to access the server itself. But I can give you a couple examples of why you might want to. So, but it wouldn't be very, like I can connect right now. And you can even, well, you won't be able to actually, let me go ahead and try to connect.
+
+S
+Speaker
+25:28 - 25:58
+If this works, then we're up and online, and I'll show you kind of things that would happen with that'd be different to a Mac or a Windows. Oh yeah, here we go. So in most cases, when you're working with WalletCore, you're going to work from that interface that I showed just a minute ago, where it's got a graphical interface and you can see files and you can use your mouse and click around. But if for some reason you had to get onto the server itself and you needed to
+
+S
+Speaker
+25:58 - 26:18
+check something on here and I don't even know what the use case would be because it should just work. Maybe you wanted to restart or maybe you ran a disk space. So you're going to want to check to see how much disk space is available. Right now we're under 20% for everything, you know, so there's really not much disk space used at all.
+
+S
+Speaker
+26:18 - 26:47
+So we're fine. But if you were having trouble writing and it wasn't working, you could come in here and just do a DF and you would see that maybe something was 100%. And so your application stopped working. And then we'd have to go in and add more. You can't really do anything. You'd have to let us know through disk order to me directly. And then we would add more disk space. So the only time it matters if you're on a Windows PC or a Mac will be if you have to get to this Linux interface directly.
+
+S
+Speaker
+26:47 - 27:09
+I don't think you'll need to. So it's good that at least somebody from your team has access to it, but the rest of you won't really work with it. Thank you, Mike. Yeah, and I can always create a PuTTY one too, I believe. And you can also get an OpenSSH client for Windows.
+
+S
+Speaker
+27:10 - 27:33
+it's just putty's popular so putty is putty uses a file type called ppk and open ssh uses pem and so that you can also if you want to get crazy you can convert a ppk into a pem but it gets all it's you're gonna spin your wheels wasting a lot of time so just come to me if you need access it doesn't work we can figure that out
+
+S
+Speaker
+27:34 - 28:03
+Okay, so now it's up and running, so that's good. So what we need to do is pull the public IP. You can see my screen, right? You can see my command prompt? - Yes, yes, it's this one. - Okay, perfect then. Let me close this out. I'll just exit, logged out. Okay, good. Let's go back to our instance. Okay, our instance IP address is this one right here. This might change. I haven't figured out how we're gonna manage that yet.
+
+S
+Speaker
+28:04 - 28:30
+but we'll we'll uh we'll cross each bridge we get there so what you'll see already is by just going to the ip address what you're beginning to see is the configuration for what i was just showing you if you remember i showed you like ms underscore logo dot png and i showed you the schema and all of that well that doesn't exist until you create this you go through a wizard so um
+
+S
+Speaker
+28:31 - 29:10
+The org name, we can change this. So I'm going to go ahead and see where you guys have as your team name. You guys are the Integrity X. Integrity X. I'm not going to. Integrity. Okay. So I'll start one more time.
+
+S
+Speaker
+29:11 - 29:40
+It's integrity x that I also posted on the chat. Let me know if this is correct. Is that right? Yeah, it's correct. That was easy. Then we're going to generate an org ID, which you can see is like a UID. It's a unique code for this. Then we're going to go into server type. We'll just do secret and we'll do master. There is an option to have multiple nodes or multiple servers. We don't need to worry about that for your use case.
+
+S
+Speaker
+29:40 - 30:03
+So we're not going to do that. And then your integrity X, integrity, integrity X. Okay. And so what we're going to do now is if you've done anything with like blockchain wallets before, then you know, there's like a seed key or seed phrase. And so we're going to generate that now. And we'll just do 24 words.
+
+S
+Speaker
+30:04 - 30:33
+So I'm going to just copy this. Normally you wouldn't copy and paste your CD, but we're not doing financial data, so it doesn't really matter. And it's going to be only for a test use case anyway. So remember I mentioned we build a blockchain within that container also. So we have the data storage and verification, and then we also have a blockchain sit on the same exact container and they work together, but they are kind of separate for verification purposes.
+
+S
+Speaker
+30:33 - 31:02
+The sender's fine, the chain name, we can just do the same. Six blocks to confirm is fine. We're not gonna do S3, there's no point, we're just gonna store locally. And because we're storing locally, we can't do multiple servers, but we want to anyway. So we're good with that. And then just leave the log syntax standard and then save and exit. Now it's gonna take literally 400 seconds
+
+S
+Speaker
+31:02 - 31:38
+So it's going to take a while before it loads up when it's done. It's going to look like the login that I showed you before. And then you guys can log in and start to see how it works and start using it. In the meantime, what I'm going to do is show you how to practically use it when it's up and running. And so let me change my share. Oh, thanks for sharing the name. I appreciate that. Yeah. Um,
+
+S
+Speaker
+31:42 - 32:04
+And I'm going to share it now. So as I mentioned before, I'm not a developer, but I spent a long time playing around and trying to trial and error to get some Python code that would work. And so this is some examples of it. And what you'll see is that I've got the base URL.
+
+S
+Speaker
+32:05 - 32:31
+So in our case, we don't have to do a DNS. We can just use the IP address of the server. Right now it's at 98 dot whatever it was, right? And then you got to identify where the login is for the API. The username will be admin. You can create as many users as you want with permissions. But just to keep it simple, you can use the default, which is admin. And then you've got a password.
+
+S
+Speaker
+32:30 - 33:00
+I mentioned before the ETID is very important because you tell the system what type of object you're storing. And in this case, for this application, I'm storing a file. So 17 is for any type of file that would be stored. And then basically, if you go through the logic, it tries to log in. When it logs in, it grabs a token. When it creates the token, the token is then used for the rest of the application.
+
+S
+Speaker
+33:01 - 33:23
+the rest of the commands. So this is a variable that's pulled from the login. You get your token and then you can do other types of, there's stuff in the API you can do depending upon your use case. And then in this case, what would happen if my server was up, which is not right now, but on this one, I would,
+
+S
+Speaker
+33:23 - 33:50
+upload a file, it would check to verify that the file doesn't already exist, and then it would save it. But I can also do like a file list. I can do basic uploads. I can just verify without actually saving. So this is the use case where you've already stored it previously, and now you're getting ready to execute your data model, and you want to make sure that the model that you're going to use hasn't been modified at all.
+
+S
+Speaker
+33:50 - 34:24
+And so you can do like a verify back to your previous file that you stored. And so there's just quite a few different types of scenarios that you can do within here. And so I do have working scripts and such, working Python code that could help for scenarios that you come up with or need. And the most basic ones that I mentioned are going to be
+
+S
+Speaker
+34:25 - 34:50
+The verify, the upload, which has a verify in it, and store. I have a use case for a drone to identify a drone. If you remember, like, over New Jersey, there were some drones flying around a couple of years ago, and people were trying to identify them. So we just did a use case where we would try to identify what the drone was and then what action could be taken, you know, from that.
+
+S
+Speaker
+34:51 - 35:12
+or what should be taken based upon the properties of the drone. It was all just testing purposes. It wasn't production. It was just for using the example use case, kind of what you're doing, just testing. And then, so whoever's working in the code base, whoever's writing like the,
+
+S
+Speaker
+35:13 - 35:41
+the code, like this is an example. Other people will just put the SDK, like they'll import the SDK into their Python and they'll use that instead of the API. So it's flexible in terms of how you might want to use it, right? So I do have these. My goal and purpose is not to have you reinvent the wheel or spend a lot of time guessing on how WalletCore works. I want you guys to build your use cases out.
+
+S
+Speaker
+35:42 - 36:09
+So if these are helpful to you, if you can utilize them, if they have any, I mean, I'm not gonna give you all of them just for, I don't wanna waste everyone's time, but if you do need something or you're struggling with something, feel free to reach out. Again, I'm not a programmer, so I'm not even sure these things are proper syntax or correct. I just know they work. They give a result that I expect. So they might be helpful.
+
+S
+Speaker
+36:11 - 36:34
+Let me see if our 400 seconds have gone away and if we're ready to load the system. I'll start sharing that screen. We're almost there. Here we go. We have about a minute left. Any questions?
+
+S
+Speaker
+36:36 - 36:59
+I just have a question that the, you know, the files we are taking as the from user in this, like, are we like the Volcker will provide the S3 bucket for that the storage or like we have to, you know, save it locally? Well, so you're talking about the actual data that you're going to use for the for like the actual underlying files?
+
+S
+Speaker
+37:00 - 37:30
+No, like we don't have the idea. And that was also something I was going to ask that, you know, like for the testing purposes, what type of, you know, data are we expecting? And, you know, like are there certain files that only should come up or like any file type would be good for it? So you're doing, sorry, you're doing financial integrity. So you're looking for like source files that are like representative of data
+
+S
+Speaker
+37:30 - 37:54
+a financial, let me go back and look and see, like, are you doing like mortgage? Are you doing, I gotta go back and look at the, I forgot what the. Yes, Mike, we are doing financial integrity. The one which you have showed us just now, like we are unable to find them. So he just wanted to know, like, where can we find those files? Okay. And
+
+S
+Speaker
+37:55 - 38:24
+Is it specific to mortgage or loans or stock market or it's related to loan and and more more things. Okay. Okay. So you just need some use case example files of what would be of what would be needed for that use case. Yeah. On the you know, on the presentation for the desired outcome, they wrote verification of mortgage credit artifacts.
+
+S
+Speaker
+38:25 - 38:35
+That's all information we have for the file, like what files we are expecting. Okay. All right. So I will go ahead and get back with...
+
+S
+Speaker
+38:35 - 39:01
+Steve and people from the team to see what they've got and what they can provide. In the meantime, you can go ahead and start getting, if you want, you can start getting the, you can upload a document called test.txt or something, right? You just verify that you're able to do basic functionality. And then we can go ahead and replace that with some representative data. Once I get that, track it down for you and provide it to you.
+
+S
+Speaker
+39:01 - 39:10
+So I'm sure we can get normalized nonspecific data for you to work with for that use case.
+
+S
+Speaker
+39:10 - 39:34
+Yeah, for the initial testing, we were going to use Kaggle, the loans dataset and all just for the random datasets, just to get to know how it works. Yeah, so you can definitely start on that. I mean, even if we end up using just dummy data that isn't even representative, it's not going to be...
+
+S
+Speaker
+39:34 - 40:07
+reflect badly against you. I'll get what I can, but like, don't worry about like if it's just representative, but not exact, but I'll get what I can. I'll get with the team and figure out what we can provide you for that. Yeah. Because you know, the initial thought on this was the, we'll use the, you know, CSV file or Excel sheets for the data. Yep. Okay. So, um, all right. So I owe you the information about the loan, the source files, let's call them right. The source. Yes.
+
+S
+Speaker
+40:07 - 40:53
+source data okay so let's refresh this and then um when we refresh it'll come up and we'll create a password in fact i can probably just go right back to here uh it's gonna be sure the ip address didn't change let me check back here um okay this is not yours this one is yours so you're ending in four four five zero b four four five zero b which is this one here and i need to name it
+
+S
+Speaker
+40:53 - 41:29
+Okay, so that's this IP address. Control C, HTTP. There we go. It looks like it's not loading for some reason. All right, so I might need to get that figured out. But in the meantime, what I'll do is get yours named correctly. So I know it's mainly for me. So I know that this is if you reach out to me and you're having a problem, I know which one is yours.
+
+S
+Speaker
+41:31 - 42:05
+Okay. And then, oops, let me change that. That should be good. Okay. All right. So there's yours and click on it. And we have the cypeters and we are cycling. Yeah, we're cycling. So I think that I need to go out here, restart this or kick it or something, or get a developer from Wallachorian to check and make sure that it's
+
+S
+Speaker
+42:06 - 42:26
+But in the end, like when I get it up and running for you, then I will send you information. And what you will see when you get to it will be this once you connect to it, once it's ready. And I'll give you the login. It's going to be admin and I'll give you the password.
+
+S
+Speaker
+42:26 - 42:58
+And then once you're logged in, you'll have this access for these two applications. Like I showed you before, five you can upload and verify through public files. You can just add a file, you can add a folder. And then on the schema side or on the back end, you can see files and you can see files that have been uploaded and the information about them.
+
+S
+Speaker
+42:58 - 43:20
+and then examine them further. So it'll look just like this. Once you're in there, you can have all this. And then the file may not exist anymore. But then once this is up and running and once you get to this, then you can start doing
+
+S
+Speaker
+43:21 - 43:52
+You can't see it anymore, but you can start doing some API calls in Postman or do API calls in Python or whatever. Once this is up and running, you can see this. It means that if you use the same admin user account and the password that I give you, that your API should start working as well. That should be good enough once I give this to you.
+
+S
+Speaker
+43:53 - 44:19
+and it's working, that should be good enough to get you guys at least started. And then I'll work on-- to at least do test data. Once you store something that's stored permanently-- and there are ways to delete it in the back end, but just keep that in mind. So don't go uploading large, huge files or a bunch of them, at least for testing purposes now.
+
+S
+Speaker
+44:19 - 44:48
+just do like a small like test text file or something or along those lines um because the concept is to kind of keep it permanently uh on the server to always be referenced so keep that in mind as you're going through your testing at least initially and maybe for the entire um yeah entire process so that's all i've got um i owe you
+
+S
+Speaker
+44:48 - 45:19
+Where the source doesn't come from, I owe you the login information once I get it working. And then, of course, I'm available through Discord or Direct, you know, as a reference, and I can pull in the developers as needed. Okay. And the last thing I want to ask that, like, for the UI part, is there any, like, no fixed guideline we should use or we are free to use, like, free to implement anything? Oh, you're free to use.
+
+S
+Speaker
+45:20 - 45:47
+Go ahead. Yeah, some design specifics or something. We should have this. It's super flexible. You should be able to use whatever structure you would like. It's both structured and unstructured data that can be stored. It can be stored in whatever format that you would like, whatever file type you would like, even objects. I would say for testing purposes-- OK, I didn't like it. For testing purposes--
+
+S
+Speaker
+45:48 - 46:08
+Just do basic like text file or something, you know, or just to make sure that it's doing the verify the store and then you can re-verify against that. And then as you built up the logic for your use case, then, you know, you will get further down the road at that point.
+
+S
+Speaker
+46:09 - 46:26
+as to what exactly you want, what objects you want to store for your specific use case and how you want to store them. And don't forget, like I mentioned, there is object validator in the Git repo. So you can...
+
+S
+Speaker
+46:26 - 46:56
+skip over the entire like storage of the file itself. Don't get hung up on this quite, you know, yet because I think it's important to understand the core concepts of storing the file and then validating later. But using object validator is a perfectly reasonable method for your when you guys get to the place where you're writing your code base. Okay. Anything else?
+
+S
+Speaker
+46:57 - 47:19
+No, I think that sounds about all the information we need for the university just to get started. If there's anything else, I'll just, you know, we'll get back to you. Yes. No questions from mine as well. Thank you so much for showing us everything. It's very helpful for us to move forward.
+
+S
+Speaker
+47:20 - 47:46
+Hopefully provide some context and what the goal is and what you're trying to do. You have the recording too so that also can help reference for the team member who didn't make it and also for you're going through it as well. So you'll be able to look back at the interfaces I went through and when you get your login and you're able to get in here, then that will be probably useful as well. But like I said before, the goal is not to have you try to figure out how WalletCore works.
+
+S
+Speaker
+47:46 - 48:08
+So if you get really stuck or if you have issues, you know that I've got some Python stuff, you know, got access to other developers. So we can get you past where you're stuck. I'm stuck right now. So I may need some of my developers help to get me unstuck from this to get this working. But once I do, then you will be off and running and you will be here to help you. So, yeah.
+
+
+
+
+S
+Speaker
+48:09 - 48:27
+All right. Thank you so much. We appreciate your time. If we ever get stuck, we'll make sure to reach out to you. Absolutely. Yeah. Congratulations on this. Look forward to working with you. And I'm sure we'll be talking soon. All right. Thank you. Bye. Thanks, Mike. You're welcome.
+
+15
+
+15
+00:00

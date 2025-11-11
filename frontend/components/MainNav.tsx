@@ -6,9 +6,11 @@ import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
 import { Menu, X, Home, Upload, FileText, BarChart3, Shield, Search } from 'lucide-react'
 import { DarkModeToggle } from '@/components/DarkModeToggle'
+import { Input } from '@/components/ui/input'
 
 export default function MainNav() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const pathname = usePathname()
 
   const navigation = [
@@ -28,31 +30,31 @@ export default function MainNav() {
   }
 
   return (
-    <nav className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+    <nav className="bg-white/95 dark:bg-black/95 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+        <div className="flex justify-between h-20">
           {/* Logo and Brand */}
           <div className="flex items-center">
-            <Link href="/integrated-dashboard" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-elite-blue rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">I</span>
+            <Link href="/integrated-dashboard" className="flex items-center space-x-3 transition-smooth hover:opacity-80">
+              <div className="w-10 h-10 bg-elite-blue rounded-xl flex items-center justify-center shadow-soft">
+                <span className="text-white font-bold text-lg">I</span>
               </div>
-              <span className="font-bold text-xl text-elite-dark dark:text-white">IntegrityX</span>
+              <span className="font-bold text-2xl text-elite-dark dark:text-white">IntegrityX</span>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden lg:flex items-center space-x-2">
             {navigation.map((item) => {
               const Icon = item.icon
               return (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-smooth ${
                     isActive(item.href)
-                      ? 'bg-elite-blue/10 text-elite-blue dark:bg-elite-blue/20'
-                      : 'text-gray-600 hover:text-elite-dark hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800'
+                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -62,8 +64,21 @@ export default function MainNav() {
             })}
           </div>
 
-          {/* User Button, Dark Mode Toggle, and Mobile Menu */}
-          <div className="flex items-center space-x-4">
+          {/* Search, User Controls */}
+          <div className="flex items-center space-x-3">
+            {/* Search Bar - Desktop only */}
+            <div className="hidden md:flex items-center relative">
+              <Search className="absolute left-3 h-4 w-4 text-gray-400" />
+              <Input
+                type="search"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-10 w-48 lg:w-64 rounded-lg border-gray-200 bg-gray-50 pl-9 pr-4 text-sm transition-smooth focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 focus-visible:w-72 dark:bg-gray-900 dark:border-gray-700"
+              />
+            </div>
+
+            {/* User Button, Dark Mode Toggle, and Mobile Menu */}
             {/* Dark Mode Toggle */}
             <DarkModeToggle />
 
@@ -72,7 +87,7 @@ export default function MainNav() {
 
             {/* Mobile menu button */}
             <button
-              className="md:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800 rounded-md"
+              className="lg:hidden p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800 rounded-lg transition-smooth"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               {isMobileMenuOpen ? (
@@ -86,18 +101,18 @@ export default function MainNav() {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 dark:border-gray-800 py-4">
-            <div className="space-y-1">
+          <div className="lg:hidden border-t border-gray-200 dark:border-gray-800 py-4">
+            <div className="space-y-2">
               {navigation.map((item) => {
                 const Icon = item.icon
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-base font-medium transition-smooth ${
                       isActive(item.href)
-                        ? 'bg-elite-blue/10 text-elite-blue dark:bg-elite-blue/20'
-                        : 'text-gray-600 hover:text-elite-dark hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800'
+                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800'
                     }`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >

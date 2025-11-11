@@ -4,23 +4,23 @@
 
 @layer base {
   :root {
-    /* IntegrityX Elite Theme - D.E. Shaw inspired */
-    --background: 0 0% 100%; /* Pure white #FFFFFF */
-    --foreground: 222.2 84% 4.9%; /* Near black */
+    /* IntegrityX - Osmo-inspired warm palette */
+    --background: 40 20% 97%; /* Warm off-white #F8F7F4 */
+    --foreground: 220 13% 18%; /* Warm dark gray */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 13% 18%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 220 13% 18%;
 
-    /* D.E. Shaw Blue #1e52f3 */
-    --primary: 216 100% 53%;
+    /* Purple accent (Osmo style) */
+    --primary: 250 95% 63%; /* #6366F1 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 13% 98%; /* Very light gray */
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 40 15% 95%; /* Warm light gray */
+    --secondary-foreground: 220 13% 18%;
 
-    --muted: 220 13% 96%; /* Light gray #FAFAFA */
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 40 15% 93%; /* Warm muted */
+    --muted-foreground: 220 9% 46%;
 
     /* Green for verified/sealed states */
     --accent: 142 76% 36%; /* #10b981 */
@@ -29,16 +29,16 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%; /* Light border */
-    --input: 220 13% 91%;
-    --ring: 216 100% 53%;
+    --border: 40 12% 88%; /* Warm border */
+    --input: 40 12% 88%;
+    --ring: 250 95% 63%;
     --radius: 0.5rem;
 
     /* Elite theme custom variables */
-    --elite-blue: 216 100% 53%; /* #1e52f3 */
-    --elite-dark: 222.2 84% 4.9%; /* #0f172a */
-    --elite-gray: 215.4 16.3% 46.9%; /* #64748b */
-    --elite-green: 142 76% 36%; /* #10b981 */
+    --elite-blue: 250 95% 63%; /* Purple-blue */
+    --elite-dark: 220 13% 18%;
+    --elite-gray: 220 9% 46%;
+    --elite-green: 142 76% 36%;
   }
 
   .dark {
@@ -78,8 +78,8 @@
   }
 
   body {
-    background-color: #FFFFFF; /* Pure white */
-    color: #0f172a; /* Near black */
+    background-color: #F8F7F4; /* Warm off-white (Osmo style) */
+    color: #2D2D33; /* Warm dark gray */
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
@@ -87,31 +87,49 @@
     background-color: #000000; /* OLED black */
     color: #fafafa; /* Near white */
   }
+
+  .font-heading {
+    font-family: var(--font-heading), 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: 0.01em;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
 }
 
-/* Minimal Animation Utilities */
+/* Osmo-inspired Animation Utilities */
 @layer utilities {
-  /* Simple fade in */
+  /* Smooth fade in */
   @keyframes fade-in {
     from {
       opacity: 0;
+      transform: translateY(10px);
     }
     to {
       opacity: 1;
+      transform: translateY(0);
     }
   }
 
   .animate-fade-in {
-    animation: fade-in 0.2s ease-out;
+    animation: fade-in 0.4s ease-out;
   }
 
-  /* Hover lift effect */
+  /* Smooth hover lift effect (Osmo style: 300-500ms) */
   .hover-lift {
-    transition: transform 0.2s ease-out;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
 
   .hover-lift:hover {
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+  }
+
+  /* Smooth transitions for all interactive elements */
+  .transition-smooth {
+    transition: all 0.3s ease;
   }
 
   /* Monospace for technical data */
@@ -153,6 +171,19 @@
     border-color: #1e52f3;
   }
 
+  /* Osmo-style soft shadows */
+  .shadow-soft {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  .shadow-soft-lg {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
+
+  .shadow-soft-xl {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
   /* Dark mode text colors */
   .dark .text-elite-dark {
     color: #fafafa;
@@ -160,5 +191,17 @@
 
   .dark .text-elite-gray {
     color: #94a3b8;
+  }
+
+  .dark .shadow-soft {
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.04), 0 1px 3px rgba(255, 255, 255, 0.06);
+  }
+
+  .dark .shadow-soft-lg {
+    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.06), 0 2px 6px rgba(255, 255, 255, 0.08);
+  }
+
+  .dark .shadow-soft-xl {
+    box-shadow: 0 8px 32px rgba(255, 255, 255, 0.08), 0 4px 12px rgba(255, 255, 255, 0.1);
   }
 }

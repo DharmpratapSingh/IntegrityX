@@ -1,11 +1,25 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { LayoutContent } from "@/components/LayoutContent";
 import { Toaster } from "react-hot-toast";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], display: "swap" });
+
+const bloxBrk = localFont({
+  src: [
+    {
+      path: "../public/fonts/Blox2.ttf",
+      weight: "400",
+      style: "normal",
+    },
+  ],
+  variable: "--font-heading",
+  preload: true,
+  display: "swap",
+});
 
 const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -43,7 +57,7 @@ export default function RootLayout({
       publishableKey={clerkPublishableKey}
     >
       <html lang="en">
-        <body className={inter.className}>
+        <body className={`${inter.className} ${bloxBrk.variable}`}>
           <LayoutContent>{children}</LayoutContent>
           <Toaster
             position="top-right"
