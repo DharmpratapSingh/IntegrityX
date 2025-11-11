@@ -1,0 +1,187 @@
+<mxfile host="app.diagrams.net" modified="2025-11-11T00:00:00.000Z" agent="Claude" version="21.0.0" type="device">
+  <diagram name="Walacor Primitives Flow" id="walacor-flow">
+    <mxGraphModel dx="1434" dy="844" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title Box -->
+        <mxCell id="title" value="WALACOR PRIMITIVES - END-TO-END DATA FLOW" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=16;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="50" y="40" width="1100" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Swimlane Headers -->
+        <mxCell id="user-header" value="User" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="120" width="180" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="frontend-header" value="Frontend" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="250" y="120" width="180" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="backend-header" value="Backend" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="450" y="120" width="200" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="walacor-header" value="Walacor BC" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="670" y="120" width="200" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="postgres-header" value="PostgreSQL" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="890" y="120" width="180" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Lifelines -->
+        <mxCell id="user-lifeline" value="" style="dashed=1;html=1;strokeColor=#000000;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="140" y="160" as="sourcePoint"/>
+            <mxPoint x="140" y="1000" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="frontend-lifeline" value="" style="dashed=1;html=1;strokeColor=#000000;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="340" y="160" as="sourcePoint"/>
+            <mxPoint x="340" y="1000" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="backend-lifeline" value="" style="dashed=1;html=1;strokeColor=#000000;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="550" y="160" as="sourcePoint"/>
+            <mxPoint x="550" y="1000" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="walacor-lifeline" value="" style="dashed=1;html=1;strokeColor=#000000;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="770" y="160" as="sourcePoint"/>
+            <mxPoint x="770" y="1000" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="postgres-lifeline" value="" style="dashed=1;html=1;strokeColor=#000000;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="980" y="160" as="sourcePoint"/>
+            <mxPoint x="980" y="1000" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 1: Upload Doc -->
+        <mxCell id="step1-arrow" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#000000;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="140" y="200" as="sourcePoint"/>
+            <mxPoint x="340" y="200" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="step1-label" value="1. Upload Doc" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=12;fontStyle=1;" vertex="1" connectable="0" parent="step1-arrow">
+          <mxGeometry x="-0.1" y="-2" relative="1" as="geometry">
+            <mxPoint x="5" y="-10" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 2: POST /ingest-json -->
+        <mxCell id="step2-arrow" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#000000;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="340" y="250" as="sourcePoint"/>
+            <mxPoint x="550" y="250" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="step2-label" value="POST&lt;br&gt;/ingest-json" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=11;fontStyle=0;" vertex="1" connectable="0" parent="step2-arrow">
+          <mxGeometry x="-0.1" y="-2" relative="1" as="geometry">
+            <mxPoint x="5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 3: Calculate SHA-256 Hash -->
+        <mxCell id="step3-box" value="🔐 Calculate&lt;br&gt;SHA-256 Hash" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="490" y="300" width="120" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Step 4: AI Process -->
+        <mxCell id="step4-box" value="🤖 AI Process" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="490" y="370" width="120" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Step 5: PRIMITIVE 1: HASH -->
+        <mxCell id="step5-arrow" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#000000;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="550" y="450" as="sourcePoint"/>
+            <mxPoint x="770" y="450" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="step5-label" value="⛓️ PRIMITIVE 1: HASH&lt;br&gt;store_hash()" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="step5-arrow">
+          <mxGeometry x="-0.1" y="-2" relative="1" as="geometry">
+            <mxPoint x="5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 6: Return walacor_tx_id -->
+        <mxCell id="step6-arrow" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#000000;dashed=1;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="770" y="510" as="sourcePoint"/>
+            <mxPoint x="550" y="510" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="step6-label" value="walacor_tx_id&lt;br&gt;seal_timestamp" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=11;fontStyle=0;" vertex="1" connectable="0" parent="step6-arrow">
+          <mxGeometry x="-0.1" y="-2" relative="1" as="geometry">
+            <mxPoint x="-5" y="-15" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 7: Store Complete Document -->
+        <mxCell id="step7-arrow" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#000000;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="550" y="580" as="sourcePoint"/>
+            <mxPoint x="980" y="580" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="step7-label" value="💾 Store Complete Document&lt;br&gt;INSERT INTO artifacts&lt;br&gt;(payload, walacor_tx_id)" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="step7-arrow">
+          <mxGeometry x="-0.1" y="-2" relative="1" as="geometry">
+            <mxPoint x="10" y="-25" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 8: PRIMITIVE 2: LOG -->
+        <mxCell id="step8-arrow" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#000000;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="550" y="670" as="sourcePoint"/>
+            <mxPoint x="980" y="670" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="step8-label" value="📝 PRIMITIVE 2: LOG (Audit)&lt;br&gt;INSERT INTO events&lt;br&gt;(type=&quot;uploaded&quot;)" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=11;fontStyle=1;" vertex="1" connectable="0" parent="step8-arrow">
+          <mxGeometry x="-0.1" y="-2" relative="1" as="geometry">
+            <mxPoint x="10" y="-25" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 9: Return to Frontend -->
+        <mxCell id="step9-arrow" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#000000;dashed=1;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="550" y="750" as="sourcePoint"/>
+            <mxPoint x="340" y="750" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="step9-label" value="{etid,&lt;br&gt;&amp;nbsp;tx_id,&lt;br&gt;&amp;nbsp;status}" style="edgeLabel;html=1;align=left;verticalAlign=bottom;resizable=0;points=[];fontSize=11;fontStyle=0;" vertex="1" connectable="0" parent="step9-arrow">
+          <mxGeometry x="-0.1" y="-2" relative="1" as="geometry">
+            <mxPoint x="-50" y="-30" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 10: Success to User -->
+        <mxCell id="step10-arrow" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#000000;dashed=1;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="340" y="830" as="sourcePoint"/>
+            <mxPoint x="140" y="830" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="step10-label" value="✅ Success" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];fontSize=12;fontStyle=1;fontColor=#00AA00;" vertex="1" connectable="0" parent="step10-arrow">
+          <mxGeometry x="-0.1" y="-2" relative="1" as="geometry">
+            <mxPoint x="5" y="-10" as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
