@@ -61,10 +61,26 @@ interface Document {
 
 // Types
 interface VerifyResult {
-  is_valid: boolean;
+  status: string;
   message: string;
+  document?: {
+    id: string;
+    loan_id: string;
+    borrower_name: string;
+    created_at: string;
+    walacor_tx_id: string;
+    payload_sha256: string;
+  };
+  verification_details?: {
+    hash_match: boolean;
+    blockchain_verified: boolean;
+    last_verified?: string;
+    tamper_detected: boolean;
+  };
+  // Legacy support for old response format
+  is_valid?: boolean;
   artifact_id?: string;
-  details: {
+  details?: {
     created_at: string;
     hash: string;
     etid: number;
@@ -321,26 +337,33 @@ export default function VerifyPage() {
 
       const result = resp.data as unknown as VerifyResult;
       setVerifyResult(result);
-      
-      // Set verification status
+
+      // Determine if document is valid based on new or legacy response format
+      const isValid = result.status === 'sealed' || result.is_valid === true;
+      const isTampered = result.verification_details?.tamper_detected || result.status === 'tampered';
+
+      // Set verification status with REAL walacor_tx_id from backend
       const status: DocumentVerificationStatus = {
-        hashMatches: result.is_valid,
-        noTampering: result.is_valid,
-        borrowerDataIntact: result.is_valid,
-        sealedDateTime: result.details.created_at,
-        walacorTxId: 'TX_' + Math.random().toString(16).substr(2, 16), // Mock TX ID
-        overallStatus: result.is_valid ? 'verified' : 'tampered'
+        hashMatches: result.verification_details?.hash_match ?? isValid,
+        noTampering: !isTampered,
+        borrowerDataIntact: isValid,
+        sealedDateTime: result.document?.created_at || result.details?.created_at || new Date().toISOString(),
+        walacorTxId: result.document?.walacor_tx_id || 'Not sealed yet', // Use REAL TX ID from backend
+        overallStatus: isValid ? 'verified' : 'tampered'
       };
       setVerificationStatus(status);
-      
-      if (result.is_valid) {
+
+      if (isValid) {
         toast.success('Document verification successful!');
-        
+
         // Load additional data for verified documents
-        if (result.artifact_id) {
-          loadBorrowerInfo(result.artifact_id);
-          loadAuditTrail(result.artifact_id);
+        const artifactId = result.document?.id || result.artifact_id;
+        if (artifactId) {
+          loadBorrowerInfo(artifactId);
+          loadAuditTrail(artifactId);
         }
+      } else if (result.status === 'not_found') {
+        toast.error('Document not found - it may not be sealed yet.');
       } else {
         toast.error('Document verification failed - tampering detected!');
       }

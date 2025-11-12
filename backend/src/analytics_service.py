@@ -194,53 +194,143 @@ class AnalyticsService:
             return 0
 
     async def _get_daily_stats(self) -> Dict[str, Any]:
-        """Get daily statistics."""
-        return {
-            "documents_processed": 23,
-            "attestations_created": 15,
-            "verifications_completed": 8,
-            "disclosure_packs_generated": 3,
-            "date": datetime.now(timezone.utc).date().isoformat()
-        }
+        """Get daily statistics from real database."""
+        try:
+            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
+            documents_today = 0
+            attestations_today = 0
+
+            if hasattr(self.db_service, 'session'):
+                # Count artifacts created today
+                doc_result = self.db_service.session.execute(
+                    "SELECT COUNT(*) FROM artifacts WHERE created_at >= :today",
+                    {"today": today_start}
+                )
+                documents_today = doc_result.scalar() or 0
+
+                # Count attestations created today
+                att_result = self.db_service.session.execute(
+                    "SELECT COUNT(*) FROM attestations WHERE created_at >= :today",
+                    {"today": today_start}
+                )
+                attestations_today = att_result.scalar() or 0
+
+            return {
+                "documents_processed": documents_today,
+                "attestations_created": attestations_today,
+                "verifications_completed": 0,  # No verification tracking table yet
+                "disclosure_packs_generated": 0,  # Feature not implemented
+                "date": datetime.now(timezone.utc).date().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error getting daily stats: {e}")
+            return {
+                "documents_processed": 0,
+                "attestations_created": 0,
+                "verifications_completed": 0,
+                "disclosure_packs_generated": 0,
+                "date": datetime.now(timezone.utc).date().isoformat()
+            }
 
     async def _get_weekly_stats(self) -> Dict[str, Any]:
-        """Get weekly statistics."""
-        return {
-            "documents_processed": 156,
-            "attestations_created": 98,
-            "verifications_completed": 45,
-            "disclosure_packs_generated": 18,
-            "week_start": (datetime.now(timezone.utc) - timedelta(days=7)).date().isoformat(),
-            "week_end": datetime.now(timezone.utc).date().isoformat()
-        }
+        """Get weekly statistics from real database."""
+        try:
+            week_start = datetime.now(timezone.utc) - timedelta(days=7)
+
+            documents_week = 0
+            attestations_week = 0
+
+            if hasattr(self.db_service, 'session'):
+                # Count artifacts created in the last 7 days
+                doc_result = self.db_service.session.execute(
+                    "SELECT COUNT(*) FROM artifacts WHERE created_at >= :week_start",
+                    {"week_start": week_start}
+                )
+                documents_week = doc_result.scalar() or 0
+
+                # Count attestations created in the last 7 days
+                att_result = self.db_service.session.execute(
+                    "SELECT COUNT(*) FROM attestations WHERE created_at >= :week_start",
+                    {"week_start": week_start}
+                )
+                attestations_week = att_result.scalar() or 0
+
+            return {
+                "documents_processed": documents_week,
+                "attestations_created": attestations_week,
+                "verifications_completed": 0,  # No verification tracking table yet
+                "disclosure_packs_generated": 0,  # Feature not implemented
+                "week_start": week_start.date().isoformat(),
+                "week_end": datetime.now(timezone.utc).date().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error getting weekly stats: {e}")
+            return {
+                "documents_processed": 0,
+                "attestations_created": 0,
+                "verifications_completed": 0,
+                "disclosure_packs_generated": 0,
+                "week_start": (datetime.now(timezone.utc) - timedelta(days=7)).date().isoformat(),
+                "week_end": datetime.now(timezone.utc).date().isoformat()
+            }
 
     async def _get_compliance_metrics(self) -> Dict[str, Any]:
-        """Get compliance metrics."""
-        return {
-            "compliance_score": 94.5,
-            "pending_reviews": 3,
-            "completed_reviews": 47,
-            "overdue_items": 1,
-            "regulatory_requirements_met": 12,
-            "total_requirements": 13
-        }
+        """Get compliance metrics calculated from real data."""
+        try:
+            total_docs = 0
+            sealed_docs = 0
+
+            if hasattr(self.db_service, 'session'):
+                # Count total artifacts
+                total_result = self.db_service.session.execute("SELECT COUNT(*) FROM artifacts")
+                total_docs = total_result.scalar() or 0
+
+                # Count sealed artifacts (those with walacor_tx_id)
+                sealed_result = self.db_service.session.execute(
+                    "SELECT COUNT(*) FROM artifacts WHERE walacor_tx_id IS NOT NULL"
+                )
+                sealed_docs = sealed_result.scalar() or 0
+
+            # Calculate compliance score based on sealing rate
+            compliance_score = round((sealed_docs / total_docs * 100), 1) if total_docs > 0 else 0.0
+            pending_reviews = total_docs - sealed_docs
+
+            return {
+                "compliance_score": compliance_score,
+                "pending_reviews": pending_reviews,
+                "completed_reviews": sealed_docs,
+                "overdue_items": 0,  # No review deadline tracking yet
+                "regulatory_requirements_met": sealed_docs,
+                "total_requirements": total_docs
+            }
+        except Exception as e:
+            logger.error(f"Error getting compliance metrics: {e}")
+            return {
+                "compliance_score": 0.0,
+                "pending_reviews": 0,
+                "completed_reviews": 0,
+                "overdue_items": 0,
+                "regulatory_requirements_met": 0,
+                "total_requirements": 0
+            }
 
     async def _get_performance_metrics(self) -> Dict[str, Any]:
-        """Get performance metrics."""
+        """Get performance metrics - placeholder for future implementation."""
         return {
-            "average_processing_time": "2.3s",
-            "throughput_per_hour": 45,
-            "error_rate": "0.1%",
-            "system_availability": "99.9%"
+            "average_processing_time": "N/A",
+            "throughput_per_hour": 0,
+            "error_rate": "0.0%",
+            "system_availability": "N/A"
         }
 
     async def _get_trends(self) -> Dict[str, Any]:
-        """Get trend data."""
+        """Get trend data - placeholder for future implementation."""
         return {
-            "document_processing_trend": "increasing",
-            "attestation_volume_trend": "stable",
-            "compliance_score_trend": "improving",
-            "performance_trend": "stable"
+            "document_processing_trend": "no_data",
+            "attestation_volume_trend": "no_data",
+            "compliance_score_trend": "no_data",
+            "performance_trend": "no_data"
         }
 
     async def _get_attestation_types(self) -> Dict[str, int]:

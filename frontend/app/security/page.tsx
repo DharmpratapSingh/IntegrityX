@@ -10,6 +10,8 @@ import { ForensicDiffViewer } from '@/components/forensics/ForensicDiffViewer';
 import { PatternAnalysisDashboard } from '@/components/forensics/PatternAnalysisDashboard';
 import { toast } from '@/components/ui/toast';
 import type { DiffResult, PatternDetectionResult } from '@/types/forensics';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { GLOSSARY } from '@/lib/glossary';
 
 export default function SecurityPage() {
   const [activeTab, setActiveTab] = useState<'comparison' | 'patterns' | 'tools'>('comparison');
@@ -156,17 +158,25 @@ export default function SecurityPage() {
             </div>
           </div>
 
-          {/* Need Help */}
+          {/* Quick Actions */}
           <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-4">
             <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
-              Security Audit
+              Other Tools
             </h3>
-            <p className="text-xs text-blue-700 dark:text-blue-300 mb-3">
-              Download security report
-            </p>
-            <a href="#" className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400">
-              📊 Download Report
-            </a>
+            <div className="space-y-2">
+              <Link
+                href="/upload"
+                className="block text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
+              >
+                📤 Upload Documents
+              </Link>
+              <Link
+                href="/verification"
+                className="block text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
+              >
+                ✅ Verify Documents
+              </Link>
+            </div>
           </div>
         </div>
       }
@@ -200,6 +210,13 @@ export default function SecurityPage() {
               <FileSearch className="h-5 w-5" />
               <span className="hidden sm:inline">Forensic Comparison</span>
               <span className="sm:hidden">Compare</span>
+              <InfoTooltip
+                term={GLOSSARY.FORENSIC_COMPARISON.term}
+                definition={GLOSSARY.FORENSIC_COMPARISON.definition}
+                example={GLOSSARY.FORENSIC_COMPARISON.example}
+                whenToUse={GLOSSARY.FORENSIC_COMPARISON.whenToUse}
+                className={activeTab === 'comparison' ? 'text-white' : ''}
+              />
             </button>
             <button
               onClick={() => setActiveTab('patterns')}
@@ -212,6 +229,13 @@ export default function SecurityPage() {
               <AlertTriangle className="h-5 w-5" />
               <span className="hidden sm:inline">Pattern Detection</span>
               <span className="sm:hidden">Patterns</span>
+              <InfoTooltip
+                term={GLOSSARY.PATTERN_DETECTION.term}
+                definition={GLOSSARY.PATTERN_DETECTION.definition}
+                example={GLOSSARY.PATTERN_DETECTION.example}
+                whenToUse={GLOSSARY.PATTERN_DETECTION.whenToUse}
+                className={activeTab === 'patterns' ? 'text-white' : ''}
+              />
             </button>
             <button
               onClick={() => setActiveTab('tools')}
@@ -234,7 +258,14 @@ export default function SecurityPage() {
             {/* Document Selection */}
             <Card>
               <CardHeader>
-                <CardTitle>Compare Two Documents</CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle>Compare Two Documents</CardTitle>
+                  <InfoTooltip
+                    term={GLOSSARY.FORENSIC_COMPARISON.term}
+                    definition={GLOSSARY.FORENSIC_COMPARISON.definition}
+                    example={GLOSSARY.FORENSIC_COMPARISON.example}
+                  />
+                </div>
                 <CardDescription>
                   Select two documents to perform detailed forensic comparison and detect tampering
                 </CardDescription>

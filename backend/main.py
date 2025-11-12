@@ -98,6 +98,7 @@ from src.quantum_safe_security import HybridSecurityService, quantum_safe_hashin
 from src.ai_anomaly_detector import AIAnomalyDetector
 from src.smart_contracts import SmartContractsService
 from src.predictive_analytics import PredictiveAnalyticsService
+from src.container_service import ContainerService
 from src.document_intelligence import DocumentIntelligenceService
 from src.encryption_service import get_encryption_service
 from src.secure_config import validate_production_security, get_secure_config
@@ -118,7 +119,7 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize services at startup and cleanup at shutdown."""
-    global db, doc_handler, wal_service, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service, ai_anomaly_detector, smart_contracts, predictive_analytics, document_intelligence, advanced_security, hybrid_security
+    global db, doc_handler, wal_service, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service, ai_anomaly_detector, smart_contracts, predictive_analytics, document_intelligence, advanced_security, hybrid_security, container_service
     
     try:
         mode_text = "DEMO" if DEMO_MODE else "FULL"
@@ -173,6 +174,10 @@ async def lifespan(app: FastAPI):
         analytics_service = AnalyticsService(db_service=db)
         _bulk_operations_analytics = BulkOperationsAnalytics(db_service=db)
         logger.info("✅ Analytics service initialized")
+
+        # Initialize container service for directory uploads
+        container_service = ContainerService(db_service=db)
+        logger.info("✅ Container service initialized")
 
         # Initialize optional services only in FULL mode
         if not DEMO_MODE:
@@ -353,6 +358,7 @@ ai_anomaly_detector = None
 smart_contracts = None
 predictive_analytics = None
 document_intelligence = None
+container_service = None
 
 # Add request tracking middleware
 @app.middleware("http")
@@ -495,6 +501,26 @@ class IngestPacketRequest(BaseModel):
     """Packet ingestion request model."""
     loan_id: str = Field(..., description="Loan ID")
     created_by: str = Field(..., description="Creator identifier")
+    document_type: Optional[str] = Field(None, description="Document type for the packet")
+    loan_amount: Optional[float] = Field(None, description="Loan amount represented by this packet")
+    property_address: Optional[str] = Field(None, description="Property address associated with this packet")
+    additional_notes: Optional[str] = Field(None, description="Additional notes from the uploader")
+
+    borrower_full_name: Optional[str] = Field(None, description="Borrower full name")
+    borrower_email: Optional[str] = Field(None, description="Borrower email")
+    borrower_phone: Optional[str] = Field(None, description="Borrower phone")
+    borrower_date_of_birth: Optional[str] = Field(None, description="Borrower date of birth (YYYY-MM-DD)")
+    borrower_address_line1: Optional[str] = Field(None, description="Borrower address line 1")
+    borrower_address_line2: Optional[str] = Field(None, description="Borrower address line 2")
+    borrower_city: Optional[str] = Field(None, description="Borrower city")
+    borrower_state: Optional[str] = Field(None, description="Borrower state")
+    borrower_zip_code: Optional[str] = Field(None, description="Borrower ZIP/postal code")
+    borrower_country: Optional[str] = Field(None, description="Borrower country")
+    borrower_ssn_last4: Optional[str] = Field(None, description="Borrower SSN last 4 digits")
+    borrower_id_type: Optional[str] = Field(None, description="Borrower government ID type")
+    borrower_id_last4: Optional[str] = Field(None, description="Borrower government ID last 4 digits")
+    borrower_employment_status: Optional[str] = Field(None, description="Borrower employment status")
+    borrower_annual_income: Optional[float] = Field(None, description="Borrower annual income")
 
 
 # New request/response models for additional endpoints
@@ -668,13 +694,13 @@ class VerificationResponse(BaseModel):
 def get_services():
     """Get initialized services."""
     # Check core services (always required)
-    core_services = [db, doc_handler, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service]
+    core_services = [db, doc_handler, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service, container_service]
     if not all(core_services):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Core services not initialized"
         )
-    
+
     # Return services dictionary (optional services may be None in demo mode)
     return {
         "db": db,
@@ -692,7 +718,8 @@ def get_services():
         "predictive_analytics": predictive_analytics,
         "document_intelligence": document_intelligence,
         "advanced_security": advanced_security,
-        "hybrid_security": hybrid_security
+        "hybrid_security": hybrid_security,
+        "container_service": container_service
     }
 
 
@@ -1839,6 +1866,51 @@ async def ingest_packet(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No files provided"
             )
+
+        # Validate borrower metadata - all fields from upload UI are required
+        required_fields = {
+            "borrower_full_name": request.borrower_full_name,
+            "borrower_email": request.borrower_email,
+            "borrower_phone": request.borrower_phone,
+            "borrower_date_of_birth": request.borrower_date_of_birth,
+            "borrower_address_line1": request.borrower_address_line1,
+            "borrower_city": request.borrower_city,
+            "borrower_state": request.borrower_state,
+            "borrower_zip_code": request.borrower_zip_code,
+            "borrower_country": request.borrower_country,
+            "borrower_ssn_last4": request.borrower_ssn_last4,
+            "borrower_id_type": request.borrower_id_type,
+            "borrower_id_last4": request.borrower_id_last4,
+            "borrower_employment_status": request.borrower_employment_status,
+            "borrower_annual_income": request.borrower_annual_income,
+        }
+
+        missing_fields = [field for field, value in required_fields.items() if not value]
+        if missing_fields:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Missing borrower metadata: {', '.join(missing_fields)}"
+            )
+
+        if request.borrower_ssn_last4:
+            if len(request.borrower_ssn_last4) != 4 or not request.borrower_ssn_last4.isdigit():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="borrower_ssn_last4 must be exactly 4 digits"
+                )
+
+        if request.borrower_id_last4:
+            if len(request.borrower_id_last4) != 4:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="borrower_id_last4 must be exactly 4 characters"
+                )
+
+        if request.loan_amount is None or request.loan_amount <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Valid loan_amount is required for packet ingestion"
+            )
         
         # Process each file
         file_infos = []
@@ -1879,6 +1951,26 @@ async def ingest_packet(
         
         # HYBRID APPROACH: Store blockchain seal and local metadata for packet
         total_size = sum(file_info["size"] for file_info in file_infos)
+        borrower_info = {
+            "full_name": request.borrower_full_name,
+            "email": request.borrower_email,
+            "phone": request.borrower_phone,
+            "date_of_birth": request.borrower_date_of_birth,
+            "address": {
+                "line1": request.borrower_address_line1,
+                "line2": request.borrower_address_line2,
+                "city": request.borrower_city,
+                "state": request.borrower_state,
+                "zip_code": request.borrower_zip_code,
+                "country": request.borrower_country,
+            },
+            "ssn_last4": request.borrower_ssn_last4,
+            "id_type": request.borrower_id_type,
+            "id_last4": request.borrower_id_last4,
+            "employment_status": request.borrower_employment_status,
+            "annual_income": float(request.borrower_annual_income) if request.borrower_annual_income is not None else None,
+        }
+
         if services["wal_service"] is None:
             # Fallback if Walacor service is not available
             walacor_result = {
@@ -1890,7 +1982,11 @@ async def ingest_packet(
                     "file_size": total_size,
                     "file_path": f"data/documents/packet_{request.loan_id}",
                     "uploaded_by": request.created_by,
-                    "upload_timestamp": datetime.now().isoformat()
+                    "upload_timestamp": datetime.now().isoformat(),
+                    "borrower_info": borrower_info,
+                    "additional_notes": request.additional_notes,
+                    "loan_amount": request.loan_amount,
+                    "property_address": request.property_address
                 }
             }
         else:
@@ -1902,6 +1998,19 @@ async def ingest_packet(
                 file_path=f"data/documents/packet_{request.loan_id}",
                 uploaded_by=request.created_by
             )
+            walacor_result.setdefault("local_metadata", {})
+            walacor_result["local_metadata"].update({
+                "loan_id": request.loan_id,
+                "document_type": "loan_packet",
+                "file_size": total_size,
+                "file_path": f"data/documents/packet_{request.loan_id}",
+                "uploaded_by": request.created_by,
+                "upload_timestamp": datetime.now().isoformat(),
+                "borrower_info": borrower_info,
+                "additional_notes": request.additional_notes,
+                "loan_amount": request.loan_amount,
+                "property_address": request.property_address
+            })
         
         # Store in database with hybrid data
         artifact_id = services["db"].insert_artifact(
@@ -1913,7 +2022,8 @@ async def ingest_packet(
             created_by=request.created_by,
             manifest_sha256=manifest_result['hash'],
             blockchain_seal=walacor_result.get("seal_info", {}).get("integrity_seal"),
-            local_metadata=walacor_result.get("local_metadata", {})
+            local_metadata=walacor_result.get("local_metadata", {}),
+            borrower_info=borrower_info
         )
         
         # Store file information
@@ -2087,22 +2197,32 @@ async def get_artifacts(
         
         # Get all artifacts from database
         artifacts = services["db"].get_all_artifacts()
+        parent_cache: Dict[str, Any] = {}
         
         # Filter artifacts based on search criteria
         filtered_artifacts = []
         
         for artifact in artifacts:
+            parent_artifact = None
+            if artifact.parent_id:
+                parent_artifact = parent_cache.get(artifact.parent_id)
+                if parent_artifact is None:
+                    parent_artifact = services["db"].get_artifact_by_id(artifact.parent_id)
+                    parent_cache[artifact.parent_id] = parent_artifact
+
             # Check if artifact has borrower information (either in borrower_info field or in local_metadata)
-            borrower = None
+            borrower: Dict[str, Any] = {}
             if artifact.borrower_info:
-                borrower = artifact.borrower_info
+                borrower = artifact.borrower_info or {}
             elif (artifact.local_metadata and 
                   artifact.local_metadata.get('comprehensive_document') and 
                   artifact.local_metadata['comprehensive_document'].get('borrower')):
-                borrower = artifact.local_metadata['comprehensive_document']['borrower']
+                borrower = artifact.local_metadata['comprehensive_document']['borrower'] or {}
+            elif parent_artifact and parent_artifact.borrower_info:
+                borrower = parent_artifact.borrower_info or {}
             
-            if not borrower:
-                # Skip artifacts without borrower information
+            if not borrower and artifact.artifact_container_type not in ('directory_container', 'batch_container'):
+                # Skip artifacts without borrower information unless it's a container we still want to surface
                 continue
             
             # Apply filters
@@ -2145,43 +2265,29 @@ async def get_artifacts(
                 security_level = "standard"  # Default to standard
                 if artifact.local_metadata:
                     security_level = artifact.local_metadata.get('security_level', 'standard')
+                if parent_artifact and parent_artifact.local_metadata:
+                    security_level = parent_artifact.local_metadata.get('security_level', security_level)
+
+                walacor_tx_id = artifact.walacor_tx_id
+                sealed_status = "Sealed" if walacor_tx_id else "Not Sealed"
+                if parent_artifact:
+                    if parent_artifact.walacor_tx_id:
+                        walacor_tx_id = parent_artifact.walacor_tx_id
+                        sealed_status = "Sealed (Inherited)"
+                    elif not walacor_tx_id:
+                        sealed_status = "Pending (Parent Unsealed)"
                 
                 # Clean borrower name - remove encoded base64 strings but KEEP the actual name
                 def clean_borrower_name(name: str) -> str:
-                    """Remove encoded base64/hex strings from borrower name, keeping only the readable name."""
+                    """Remove encoded base64/hex strings from borrower name, preserving readable text (including digits)."""
                     if not name:
                         return ''
                     import re
-                    # Remove newlines and normalize whitespace
                     cleaned = re.sub(r'[\n\r]+', ' ', name).strip()
-                    # Find position of first Base64-like string (8+ alphanumeric chars, possibly with + / =)
-                    # Base64 strings typically start with patterns like Z0FBQUFBQnBB...
-                    match = re.search(r'[a-zA-Z0-9+/=]{10,}', cleaned)
-                    if match:
-                        # Keep only the text BEFORE the Base64 string
-                        before_base64 = cleaned[:match.start()].strip()
-                        # Extract only readable name parts (letters, spaces, apostrophes, hyphens)
-                        name_parts = []
-                        for part in before_base64.split():
-                            # Keep only parts that are actual names (pure letters, 2-25 chars)
-                            if re.match(r'^[a-zA-Z\'-]+$', part) and 2 <= len(part) <= 25:
-                                if sum(1 for c in part if c.isalpha()) >= 2:  # At least 2 letters
-                                    name_parts.append(part)
-                        if name_parts:
-                            return ' '.join(name_parts)
-                    # If no Base64 found or already cleaned, try to extract name parts
-                    parts = cleaned.split()
-                    name_parts = []
-                    for part in parts:
-                        if re.match(r'^[a-zA-Z\'-]+$', part) and 2 <= len(part) <= 25:
-                            if sum(1 for c in part if c.isalpha()) >= 2:
-                                name_parts.append(part)
-                                if len(name_parts) >= 3:  # First, middle, last name max
-                                    break
-                        elif len(part) >= 10 and re.match(r'^[a-zA-Z0-9+/=]+$', part):
-                            # This looks like Base64, stop here
-                            break
-                    return ' '.join(name_parts) if name_parts else (cleaned[:50] if len(cleaned) <= 50 else 'Unknown')
+                    match = re.search(r'[a-zA-Z0-9+/=]{16,}', cleaned)
+                    if match and match.start() > 0:
+                        cleaned = cleaned[:match.start()].strip()
+                    return cleaned
                 
                 cleaned_name = clean_borrower_name(borrower.get('full_name', ''))
                 
@@ -2213,20 +2319,31 @@ async def get_artifacts(
                         else:
                             cleaned_email = raw_email
                 
+                loan_amount_value = borrower.get('annual_income', 0)
+                if artifact.local_metadata and artifact.local_metadata.get('loan_amount') is not None:
+                    loan_amount_value = artifact.local_metadata.get('loan_amount')
+                if parent_artifact and parent_artifact.local_metadata and parent_artifact.local_metadata.get('loan_amount') is not None:
+                    loan_amount_value = parent_artifact.local_metadata.get('loan_amount')
+
                 # Create response object with borrower information
                 artifact_data = {
                     "id": artifact.id,
                     "loan_id": artifact.loan_id,
                     "borrower_name": cleaned_name,
                     "borrower_email": cleaned_email,
-                    "loan_amount": borrower.get('annual_income', 0),  # Use annual income as loan amount proxy
+                    "loan_amount": loan_amount_value,
                     "document_type": artifact.artifact_type,
                     "upload_date": artifact.created_at.isoformat(),
-                    "walacor_tx_id": artifact.walacor_tx_id,
+                    "walacor_tx_id": walacor_tx_id,
                     "artifact_type": artifact.artifact_type,
                     "created_by": artifact.created_by,
-                    "sealed_status": "Sealed" if artifact.walacor_tx_id else "Not Sealed",
-                    "security_level": security_level
+                    "sealed_status": sealed_status,
+                    "security_level": security_level,
+                    "parent_id": artifact.parent_id,
+                    "artifact_container_type": artifact.artifact_container_type or 'file',
+                    "directory_name": artifact.directory_name,
+                    "directory_hash": artifact.directory_hash,
+                    "file_count": artifact.file_count
                 }
                 filtered_artifacts.append(artifact_data)
         
@@ -3902,7 +4019,7 @@ async def verify_with_token(
             verifier_email=verifierEmail
         )
         
-        if not verification_result["is_valid"]:
+        if not verification_result.get("success") or not verification_result.get("verified"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=create_error_response(
@@ -3912,7 +4029,17 @@ async def verify_with_token(
             )
         
         # Get artifact details for verification response
-        artifact = services["db"].get_artifact_by_id(verification_result["document_id"])
+        artifact_id = verification_result.get("document_id")
+        if not artifact_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=create_error_response(
+                    code="INVALID_VERIFICATION_TOKEN",
+                    message="Verification token did not include document context"
+                ).dict()
+            )
+
+        artifact = services["db"].get_artifact_by_id(artifact_id)
         if not artifact:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -3925,11 +4052,16 @@ async def verify_with_token(
         # Get attestations if permission granted
         attestations_data = []
         if "attestations" in verification_result["permissions"]:
-            attestations = services["attestation_repo"].get_by_artifact_id(
-                session=services["db"].session,
-                artifact_id=artifact.id
-            )
-            attestations_data = [att.to_dict() for att in attestations]
+            try:
+                attestations = services["attestation_repo"].list_for_artifact(
+                    session=services["db"].session,
+                    artifact_id=artifact.id,
+                    limit=50,
+                    offset=0
+                )
+                attestations_data = [att.to_dict() for att in attestations]
+            except Exception as att_err:
+                logger.warning(f"Unable to fetch attestations for artifact {artifact.id}: {att_err}")
         
         # Log audit event
         services["db"].insert_event(
@@ -5386,6 +5518,30 @@ class LoanDocumentSealResponse(BaseModel):
     sealed_at: str = Field(..., description="Sealing timestamp")
 
 
+class DirectoryFileInfo(BaseModel):
+    """File information within a directory."""
+    filename: str = Field(..., description="Name of the file")
+    file_hash: str = Field(..., description="SHA-256 hash of the file")
+    file_size: Optional[int] = Field(None, description="File size in bytes")
+
+
+class DirectorySealRequest(BaseModel):
+    """Request model for sealing a directory of loan documents."""
+    directory_name: str = Field(..., description="Name of the directory")
+    directory_hash: str = Field(..., description="ObjectValidator hash of the entire directory")
+    files: List[DirectoryFileInfo] = Field(..., description="List of files in the directory")
+    loan_data: LoanDocumentSealRequest = Field(..., description="Loan and borrower information")
+
+
+class DirectorySealResponse(BaseModel):
+    """Response model for directory sealing."""
+    message: str = Field(..., description=DESC_RESPONSE_MSG)
+    container_id: str = Field(..., description="Container artifact ID")
+    walacor_tx_id: str = Field(..., description=DESC_WALACOR_TX)
+    child_ids: List[str] = Field(..., description="List of child artifact IDs")
+    sealed_at: str = Field(..., description="Sealing timestamp")
+
+
 class MaskedBorrowerInfo(BaseModel):
     """Masked borrower information for privacy."""
     full_name: str = Field(..., description="Full legal name")
@@ -5833,6 +5989,154 @@ async def seal_loan_document(
         )
 
 
+@app.post("/api/seal/directory", response_model=StandardResponse)
+async def seal_directory(
+    request: DirectorySealRequest,
+    services: dict = Depends(get_services)
+):
+    """
+    Seal a directory of loan documents using parent/child container pattern.
+
+    This endpoint creates a parent container artifact for the directory and
+    child artifacts for each file, maintaining audit trail integrity with
+    ObjectValidator directory hashing.
+
+    Architecture:
+    - Parent container stores directory hash and single Walacor TX ID
+    - Child artifacts link to parent via parent_id
+    - Children inherit blockchain seal from parent
+    """
+    try:
+        log_endpoint_start("seal_directory", request.dict())
+
+        # Extract loan data and borrower info
+        loan_data = request.loan_data
+        borrower_info = loan_data.borrower
+
+        # Encrypt sensitive borrower data
+        encryption_service = get_encryption_service()
+        encrypted_borrower_data = encryption_service.encrypt_borrower_data(borrower_info.dict())
+
+        logger.info(f"Sealing directory: {request.directory_name} with {len(request.files)} files")
+        logger.info(f"Directory hash: {request.directory_hash[:16]}...")
+
+        # Seal directory in Walacor blockchain
+        loan_metadata = {
+            "document_type": loan_data.document_type,
+            "loan_amount": loan_data.loan_amount,
+            "additional_notes": loan_data.additional_notes,
+            "created_by": loan_data.created_by
+        }
+
+        # Create comprehensive metadata for directory
+        directory_metadata = {
+            "directory_name": request.directory_name,
+            "file_count": len(request.files),
+            "files": [f.dict() for f in request.files],
+            "loan_data": loan_metadata,
+            "borrower_data": encrypted_borrower_data
+        }
+
+        # Calculate directory document hash
+        directory_json = json.dumps(directory_metadata, sort_keys=True, separators=(',', ':'))
+
+        # Seal in Walacor using directory hash
+        walacor_result = services["wal_service"].seal_loan_document(
+            loan_id=loan_data.loan_id,
+            loan_data=loan_metadata,
+            borrower_data=encrypted_borrower_data,
+            files=[{
+                "filename": f"{request.directory_name}/",
+                "file_type": "directory",
+                "file_size": len(directory_json.encode('utf-8')),
+                "upload_timestamp": get_eastern_now_iso(),
+                "content_hash": request.directory_hash
+            }]
+        )
+
+        walacor_tx_id = walacor_result.get("walacor_tx_id", f"TX_{int(time.time() * 1000)}_{request.directory_hash[:8]}")
+
+        # Create parent container using container service
+        container_id = services["container_service"].create_directory_container(
+            directory_name=request.directory_name,
+            directory_hash=request.directory_hash,
+            loan_id=loan_data.loan_id,
+            etid=100001,  # Use documented ETID for loan documents
+            walacor_tx_id=walacor_tx_id,
+            file_count=len(request.files),
+            created_by=loan_data.created_by,
+            metadata={
+                "directory_metadata": directory_metadata,
+                "sealed_at": walacor_result.get("sealed_timestamp", get_eastern_now_iso()),
+                "blockchain_proof": walacor_result.get("blockchain_proof", {})
+            }
+        )
+
+        logger.info(f"✅ Created directory container: {container_id}")
+
+        # Create child artifacts for each file
+        child_ids = []
+        for file_info in request.files:
+            child_id = services["container_service"].create_child_artifact(
+                parent_id=container_id,
+                filename=file_info.filename,
+                file_hash=file_info.file_hash,
+                loan_id=loan_data.loan_id,
+                etid=100001,
+                created_by=loan_data.created_by,
+                borrower_info=encrypted_borrower_data,
+                metadata={
+                    "file_size": file_info.file_size,
+                    "sealed_at": walacor_result.get("sealed_timestamp", get_eastern_now_iso())
+                }
+            )
+            child_ids.append(child_id)
+            logger.info(f"  ✅ Created child artifact: {child_id} ({file_info.filename})")
+
+        logger.info(f"✅ Directory sealed successfully: {container_id} with {len(child_ids)} children")
+
+        # Log audit events
+        try:
+            services["db"].log_document_upload(
+                artifact_id=container_id,
+                user_id=loan_data.created_by,
+                borrower_name=borrower_info.full_name,
+                loan_id=loan_data.loan_id,
+                ip_address=None,
+                user_agent=None
+            )
+
+            services["db"].log_blockchain_seal(
+                artifact_id=container_id,
+                walacor_tx_id=walacor_tx_id,
+                data_hash=request.directory_hash,
+                sealed_by=loan_data.created_by
+            )
+
+            logger.info(f"✅ Audit logs created for directory upload")
+        except Exception as e:
+            logger.warning(f"Failed to create audit logs: {e}")
+
+        return StandardResponse(
+            ok=True,
+            data=DirectorySealResponse(
+                message=f"Directory sealed successfully: {request.directory_name} ({len(request.files)} files)",
+                container_id=container_id,
+                walacor_tx_id=walacor_tx_id,
+                child_ids=child_ids,
+                sealed_at=walacor_result.get("sealed_timestamp", get_eastern_now_iso())
+            ).dict()
+        )
+
+    except Exception as e:
+        logger.error(f"Error sealing directory: {e}")
+        logger.error(traceback.format_exc())
+        return StandardResponse(
+            ok=False,
+            data={"error": str(e)}
+        )
+
+
 @app.post("/api/loan-documents/seal-maximum-security", response_model=StandardResponse)
 async def seal_loan_document_maximum_security(
     request: LoanDocumentSealRequest,
@@ -5850,7 +6154,10 @@ async def seal_loan_document_maximum_security(
     """
     try:
         log_endpoint_start("seal_loan_document_maximum_security", request.dict())
-        
+        if not services.get("advanced_security"):
+            logger.warning("Advanced security service unavailable; using standard sealing workflow instead.")
+            return await seal_loan_document(request, services)
+
         # Generate key pair for this document
         advanced_security = services["advanced_security"]
         private_key, public_key = advanced_security.generate_key_pair()
@@ -6252,6 +6559,9 @@ async def seal_loan_document_quantum_safe(
     """
     try:
         log_endpoint_start("seal_loan_document_quantum_safe", request.dict())
+        if not services.get("hybrid_security"):
+            logger.warning("Hybrid quantum-safe security service unavailable; using standard sealing workflow instead.")
+            return await seal_loan_document(request, services)
         
         # Get quantum-safe security service
         hybrid_security_service = services["hybrid_security"]
@@ -7048,9 +7358,63 @@ async def verify_by_hash(
             'borrower_name': borrower_info.get('full_name', 'N/A'),
             'created_at': artifact_obj.created_at.isoformat() if artifact_obj.created_at else None,
             'walacor_tx_id': artifact_obj.walacor_tx_id,
-            'payload_sha256': artifact_obj.payload_sha256
+            'payload_sha256': artifact_obj.payload_sha256,
+            'artifact_container_type': artifact_obj.artifact_container_type,
+            'directory_name': artifact_obj.directory_name,
+            'directory_hash': artifact_obj.directory_hash,
+            'file_count': artifact_obj.file_count
         }
-        
+
+        # Collect parent/container context
+        children_artifacts = []
+        inherited_from_parent = False
+        parent_container_info: Optional[Dict[str, Any]] = None
+
+        if artifact_obj.artifact_container_type == 'directory_container':
+            # Get all child artifacts
+            children = services["db"].get_children_artifacts(artifact_obj.id)
+            children_artifacts = [
+                {
+                    'id': child.id,
+                    'filename': child.local_metadata.get('filename', 'unknown') if child.local_metadata else 'unknown',
+                    'file_hash': child.payload_sha256,
+                    'created_at': child.created_at.isoformat() if child.created_at else None
+                }
+                for child in children
+            ]
+            logger.info(f"Directory container verified: {artifact_obj.directory_name} with {len(children_artifacts)} children")
+        elif not artifact_obj.walacor_tx_id and artifact_obj.parent_id:
+            parent_artifact_obj = services["db"].get_artifact_by_id(artifact_obj.parent_id)
+            if parent_artifact_obj and parent_artifact_obj.walacor_tx_id:
+                inherited_from_parent = True
+                artifact['walacor_tx_id'] = parent_artifact_obj.walacor_tx_id
+                artifact['directory_name'] = parent_artifact_obj.directory_name
+                artifact['directory_hash'] = parent_artifact_obj.directory_hash
+                artifact['file_count'] = parent_artifact_obj.file_count
+
+                parent_container_info = {
+                    'id': parent_artifact_obj.id,
+                    'directory_name': parent_artifact_obj.directory_name,
+                    'directory_hash': parent_artifact_obj.directory_hash,
+                    'file_count': parent_artifact_obj.file_count,
+                    'walacor_tx_id': parent_artifact_obj.walacor_tx_id
+                }
+
+                children = services["db"].get_children_artifacts(parent_artifact_obj.id)
+                children_artifacts = [
+                    {
+                        'id': child.id,
+                        'filename': child.local_metadata.get('filename', 'unknown') if child.local_metadata else 'unknown',
+                        'file_hash': child.payload_sha256,
+                        'created_at': child.created_at.isoformat() if child.created_at else None
+                    }
+                    for child in children
+                ]
+                logger.info(
+                    f"File artifact {artifact_obj.id} verified via parent directory container "
+                    f"{parent_artifact_obj.id} with {len(children_artifacts)} sibling files"
+                )
+
         # Check if document is properly sealed
         if not artifact.get('walacor_tx_id'):
             return create_success_response(
@@ -7068,18 +7432,35 @@ async def verify_by_hash(
             )
             
             if verification_result.get('is_valid', False):
+                document_data = {
+                    "id": artifact['id'],
+                    "loan_id": artifact.get('loan_id', 'N/A'),
+                    "borrower_name": artifact.get('borrower_name', 'N/A'),
+                    "created_at": artifact.get('created_at', 'N/A'),
+                    "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
+                    "payload_sha256": artifact.get('payload_sha256', request.hash),
+                    "artifact_container_type": artifact.get('artifact_container_type', 'file'),
+                    "directory_name": artifact.get('directory_name'),
+                    "file_count": artifact.get('file_count')
+                }
+
+                # Add children if this is a directory container
+                if children_artifacts:
+                    document_data["children"] = children_artifacts
+                if parent_container_info:
+                    document_data["parent_container"] = parent_container_info
+
+                message_suffix = ""
+                if children_artifacts:
+                    message_suffix += f" Directory contains {len(children_artifacts)} files."
+                if inherited_from_parent and parent_container_info:
+                    message_suffix += " Verified via parent directory container."
+
                 return create_success_response(
                     data=VerificationResult(
                         status="sealed",
-                        message="Document is properly sealed and verified on the blockchain.",
-                        document={
-                            "id": artifact['id'],
-                            "loan_id": artifact.get('loan_id', 'N/A'),
-                            "borrower_name": artifact.get('borrower_name', 'N/A'),
-                            "created_at": artifact.get('created_at', 'N/A'),
-                            "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
-                            "payload_sha256": artifact.get('payload_sha256', request.hash)
-                        },
+                        message="Document is properly sealed and verified on the blockchain." + message_suffix,
+                        document=document_data,
                         verification_details={
                             "hash_match": True,
                             "blockchain_verified": True,
@@ -7089,18 +7470,35 @@ async def verify_by_hash(
                     ).dict()
                 )
             else:
+                document_data = {
+                    "id": artifact['id'],
+                    "loan_id": artifact.get('loan_id', 'N/A'),
+                    "borrower_name": artifact.get('borrower_name', 'N/A'),
+                    "created_at": artifact.get('created_at', 'N/A'),
+                    "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
+                    "payload_sha256": artifact.get('payload_sha256', request.hash),
+                    "artifact_container_type": artifact.get('artifact_container_type', 'file'),
+                    "directory_name": artifact.get('directory_name'),
+                    "file_count": artifact.get('file_count')
+                }
+
+                # Add children if this is a directory container
+                if children_artifacts:
+                    document_data["children"] = children_artifacts
+                if parent_container_info:
+                    document_data["parent_container"] = parent_container_info
+
+                tampered_message_suffix = ""
+                if children_artifacts:
+                    tampered_message_suffix += f" Directory contains {len(children_artifacts)} files."
+                if inherited_from_parent and parent_container_info:
+                    tampered_message_suffix += " Parent directory container seal detected."
+
                 return create_success_response(
                     data=VerificationResult(
                         status="tampered",
-                        message="Document hash found but verification failed. Document may have been tampered with.",
-                        document={
-                            "id": artifact['id'],
-                            "loan_id": artifact.get('loan_id', 'N/A'),
-                            "borrower_name": artifact.get('borrower_name', 'N/A'),
-                            "created_at": artifact.get('created_at', 'N/A'),
-                            "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
-                            "payload_sha256": artifact.get('payload_sha256', request.hash)
-                        },
+                        message="Document hash found but verification failed. Document may have been tampered with." + tampered_message_suffix,
+                        document=document_data,
                         verification_details={
                             "hash_match": True,
                             "blockchain_verified": False,

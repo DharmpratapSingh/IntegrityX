@@ -30,7 +30,15 @@ from dotenv import load_dotenv
 script_dir = Path(__file__).parent
 project_root = script_dir.parent
 backend_src_dir = project_root / "backend" / "src"
-sys.path.insert(0, str(backend_src_dir))
+if backend_src_dir.exists():
+    sys.path.insert(0, str(backend_src_dir))
+else:
+    print(f"⚠️  Warning: backend/src directory not found at {backend_src_dir}")
+
+# Also support legacy top-level src directory if present
+legacy_src_dir = project_root / "src"
+if legacy_src_dir.exists():
+    sys.path.insert(0, str(legacy_src_dir))
 
 try:
     from walacor_sdk import WalacorService
@@ -49,11 +57,19 @@ def load_environment():
         tuple: (host, username, password) or (None, None, None) if failed
     """
     try:
-        # Load .env file from backend directory
-        env_path = project_root / "backend" / ".env"
-        if not env_path.exists():
-            print(f"❌ .env file not found at: {env_path}")
-            print(f"   💡 Create it from: backend/.env.example")
+        # Load .env file from project root
+        env_candidates = [
+            project_root / ".env",
+            project_root / "backend" / ".env",
+        ]
+
+        env_path = next((path for path in env_candidates if path.exists()), None)
+
+        if not env_path:
+            print("❌ .env file not found in project root or backend directory")
+            print("   Checked paths:")
+            for candidate in env_candidates:
+                print(f"   - {candidate}")
             return None, None, None
         
         load_dotenv(env_path)

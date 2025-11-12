@@ -14,9 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Hash, Shield, ArrowLeft, ChevronDown, ChevronUp, User, HelpCircle, AlertCircle, X, RefreshCw, Mail, Download, UserCheck, FileCheck, AlertTriangle, Info, Sparkles, TrendingUp, Lightbulb, Zap, BarChart3 } from 'lucide-react';
+import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Hash, Shield, ArrowLeft, ChevronDown, ChevronUp, User, HelpCircle, AlertCircle, X, RefreshCw, Mail, Download, UserCheck, FileCheck, AlertTriangle, Info, Sparkles, TrendingUp, Lightbulb, Zap, BarChart3, Layers } from 'lucide-react';
 import { simpleToast as toast } from '@/components/ui/simple-toast';
-import { sealLoanDocument, sealLoanDocumentMaximumSecurity, sealLoanDocumentQuantumSafe, type LoanData, type BorrowerInfo } from '@/lib/api/loanDocuments';
+import { sealLoanDocument, sealLoanDocumentMaximumSecurity, sealLoanDocumentQuantumSafe, sealDirectory, type LoanData, type BorrowerInfo, type DirectoryFileInfo, type DirectorySealResponse } from '@/lib/api/loanDocuments';
 import { DuplicateDetection } from '@/components/DuplicateDetection';
 import { DuplicateCheckResponse } from '@/lib/api/duplicateDetection';
 import { 
@@ -45,6 +45,8 @@ import { buildAutoPopulateMetadata, type AutoPopulateMetadata } from '@/utils/lo
 import { SuccessCelebration } from '@/components/SuccessCelebration'
 import { ProgressSteps, CompactProgressSteps } from '@/components/ui/progress-steps'
 import { HelpTooltip, SecurityLevelTooltips, KYCTooltips, BlockchainTooltips } from '@/components/ui/help-tooltip'
+import { InfoTooltip } from '@/components/ui/info-tooltip'
+import { GLOSSARY } from '@/lib/glossary'
 import {
   smartExtractDocumentData,
   buildEnhancedAutoPopulateMetadata,
@@ -1313,6 +1315,141 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     }
   };
 
+  // Handle Demo Mode Loading - Single File
+  const handleSingleFileDemo = () => {
+    console.log('🎬 Loading single file demo mode...');
+    setIsDemoMode(true);
+    setUploadMode('single');
+
+    try {
+      // Generate demo data
+      const demoDocuments = generateDemoDocumentSet();
+      const demoKYC = generateDemoKYCData();
+
+      console.log('📄 Generated demo documents:', demoDocuments);
+      console.log('👤 Generated demo KYC:', demoKYC);
+
+      // Convert first demo document to File and auto-upload
+      if (demoDocuments && demoDocuments.length > 0) {
+        const firstDoc = demoDocuments[0];
+        const jsonContent = JSON.stringify(firstDoc, null, 2);
+        const blob = new Blob([jsonContent], { type: 'application/json' });
+        const fileName = `demo_loan_${firstDoc.security_level || 'standard'}_1.json`;
+        const demoFile = new File([blob], fileName, { type: 'application/json' });
+
+        // Simulate file drop
+        setTimeout(() => {
+          console.log('🚀 Auto-uploading demo file...');
+          setFile(demoFile);
+          setCurrentStep(2);
+
+          // Trigger auto-fill
+          autoFillFromJSON(demoFile).then(() => {
+            toast.success('✨ Single file demo loaded! Review the auto-filled form.');
+          }).catch(error => {
+            console.error('Demo auto-fill error:', error);
+            toast.error('Demo loaded but auto-fill failed. Please review form.');
+          });
+        }, 500);
+      }
+
+      // Pre-fill KYC data
+      setTimeout(() => {
+        setKycData(prev => ({
+          ...prev,
+          ...demoKYC
+        }));
+      }, 800);
+
+    } catch (error) {
+      console.error('Error generating demo data:', error);
+      toast.error('Failed to load demo data');
+    }
+  };
+
+  // Handle Demo Mode Loading - Multiple Files
+  const handleMultipleFilesDemo = () => {
+    console.log('🎬 Loading multiple files demo mode...');
+    setIsDemoMode(true);
+    setUploadMode('bulk');
+
+    try {
+      // Generate multiple demo documents
+      const demoDocuments = generateDemoDocumentSet();
+
+      if (demoDocuments && demoDocuments.length > 0) {
+        // Create multiple demo files
+        const demoFiles: File[] = demoDocuments.slice(0, 3).map((doc, index) => {
+          const jsonContent = JSON.stringify(doc, null, 2);
+          const blob = new Blob([jsonContent], { type: 'application/json' });
+          const fileName = `demo_loan_${doc.security_level || 'standard'}_${index + 1}.json`;
+          return new File([blob], fileName, { type: 'application/json' });
+        });
+
+        setTimeout(() => {
+          console.log('🚀 Loading multiple demo files...');
+          setSelectedFiles(demoFiles);
+
+          // Pre-fill metadata for each file
+          const metadata: Record<string, any> = {};
+          demoFiles.forEach((file, index) => {
+            const doc = demoDocuments[index];
+            metadata[file.name] = {
+              documentType: doc.document_type || 'loan_application',
+              loanId: doc.loan_id,
+              borrowerName: doc.borrower?.full_name || '',
+              loanAmount: doc.loan_amount || 0,
+            };
+          });
+          setBulkFileMetadata(metadata);
+
+          toast.success(`✨ Multiple files demo loaded! ${demoFiles.length} files ready to upload.`);
+        }, 500);
+      }
+
+    } catch (error) {
+      console.error('Error generating multiple files demo:', error);
+      toast.error('Failed to load multiple files demo');
+    }
+  };
+
+  // Handle Demo Mode Loading - Directory
+  const handleDirectoryDemo = () => {
+    console.log('🎬 Loading directory demo mode...');
+    setIsDemoMode(true);
+    setUploadMode('directory');
+
+    try {
+      // Generate demo documents for directory structure
+      const demoDocuments = generateDemoDocumentSet();
+
+      if (demoDocuments && demoDocuments.length > 0) {
+        // Simulate directory structure with multiple files
+        const directoryFiles: File[] = demoDocuments.map((doc, index) => {
+          const jsonContent = JSON.stringify(doc, null, 2);
+          const blob = new Blob([jsonContent], { type: 'application/json' });
+          // Create file paths that simulate directory structure
+          const fileName = `loan_documents/demo_${doc.document_type}_${index + 1}.json`;
+          return new File([blob], fileName, { type: 'application/json' });
+        });
+
+        setTimeout(() => {
+          console.log('🚀 Loading directory demo...');
+          setSelectedFiles(directoryFiles);
+
+          toast.success(`✨ Directory demo loaded! ${directoryFiles.length} files in directory structure.`);
+        }, 500);
+      }
+
+    } catch (error) {
+      console.error('Error generating directory demo:', error);
+      toast.error('Failed to load directory demo');
+    }
+  };
+
+  // Wrapper function for backward compatibility
+  const handleDemoLoad = handleSingleFileDemo;
+
   useEffect(() => {
     if (uploadMode === 'single') {
       setSelectedFiles([]);
@@ -1863,7 +2000,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
   const handleUpload = async () => {
     console.log('Upload button clicked');
-    
+
     // Clear previous errors
     setUploadState(prev => ({ ...prev, error: null, validationErrors: [] }));
     
@@ -2115,8 +2252,108 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     setBulkUploadResults([]);
 
     try {
-      const results: BulkUploadResult[] = [];
-      for (let index = 0; index < selectedFiles.length; index += 1) {
+      // Directory mode: Seal all files as a single directory container
+      if (uploadMode === 'directory') {
+        setUploadProgress(10);
+        toast.loading('Calculating file hashes...');
+
+        // Calculate hashes for all files
+        const fileInfoPromises = selectedFiles.map(async (fileItem) => {
+          const hash = await calculateFileHash(fileItem);
+          return {
+            filename: fileItem.name,
+            file_hash: hash,
+            file_size: fileItem.size
+          } as DirectoryFileInfo;
+        });
+
+        const fileInfos = await Promise.all(fileInfoPromises);
+        setUploadProgress(30);
+
+        // Generate directory hash (combining all file hashes)
+        // Note: In production, ObjectValidator would generate this
+        const combinedHash = await calculateFileHash(
+          new Blob([fileInfos.map(f => f.file_hash).join('')])
+        );
+
+        setUploadProgress(40);
+        toast.loading('Sealing directory...');
+
+        // Use metadata from first file for loan/borrower info
+        const meta = sanitizedMetadataByFile[selectedFiles[0].name];
+        const loanAmountNumber = parseFloat(meta.loanAmount || '0');
+        const annualIncomeNumber = parseFloat(meta.borrowerAnnualIncome || '0');
+
+        const loanData: LoanData = {
+          loan_id: meta.loanId || `loan-${Date.now()}`,
+          document_type: (meta.documentType || 'loan_application') as LoanData['document_type'],
+          borrower_name: meta.borrowerName || '',
+          property_address: meta.propertyAddress || '',
+          loan_amount: Number.isNaN(loanAmountNumber) ? 0 : loanAmountNumber,
+          interest_rate: meta.interestRate ? parseFloat(meta.interestRate) : undefined,
+          loan_term: meta.loanTerm ? parseInt(meta.loanTerm) : undefined,
+          additional_notes: meta.additional_notes || ''
+        };
+
+        const borrowerInfo: BorrowerInfo = {
+          full_name: meta.borrowerName || '',
+          date_of_birth: meta.borrowerDateOfBirth || '',
+          email: meta.borrowerEmail || '',
+          phone: meta.borrowerPhone || '',
+          address_line1: meta.borrowerStreetAddress || '',
+          address_line2: '',
+          city: meta.borrowerCity || '',
+          state: meta.borrowerState || '',
+          zip_code: meta.borrowerZipCode || '',
+          country: meta.borrowerCountry || 'US',
+          ssn_last4: meta.borrowerSSNLast4 || '',
+          id_type: (meta.borrowerGovernmentIdType || 'drivers_license') as BorrowerInfo['id_type'],
+          id_last4: meta.borrowerIdNumberLast4 || '',
+          employment_status: (meta.borrowerEmploymentStatus || 'employed') as BorrowerInfo['employment_status'],
+          annual_income_range: String(Number.isNaN(annualIncomeNumber) ? 0 : annualIncomeNumber),
+          is_sealed: false
+        };
+
+        setUploadProgress(60);
+
+        // Seal directory with all files
+        const directoryName = `loan_docs_${loanData.loan_id}`;
+        const directorySealResponse = await sealDirectory(
+          directoryName,
+          combinedHash,
+          fileInfos,
+          loanData,
+          borrowerInfo
+        );
+
+        setUploadProgress(100);
+
+        // Create result for UI display
+        const uploadResult: UploadResult = {
+          artifactId: directorySealResponse.container_id,
+          walacorTxId: directorySealResponse.walacor_tx_id,
+          sealedAt: directorySealResponse.sealed_at,
+          proofBundle: {}
+        };
+
+        setUploadResult(uploadResult);
+        setBulkUploadResults([]);
+        setCurrentStep(4);
+
+        clearSavedData();
+        setSelectedFiles([]);
+        setValidationResults({ valid: [], invalid: [], reasons: {} });
+        setBulkFileMetadata({});
+        setAllSelectedFiles({});
+        setMetadata('');
+        setShowMetadataEditor(false);
+        setShowSuccessModal(true);
+        toast.success(`Directory sealed successfully with ${fileInfos.length} files!`);
+
+      } else {
+        // Bulk mode: Seal each file individually
+        const results: BulkUploadResult[] = [];
+        for (let index = 0; index < selectedFiles.length; index += 1) {
         const fileItem = selectedFiles[index];
         const meta = sanitizedMetadataByFile[fileItem.name];
 
@@ -2196,6 +2433,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       setShowMetadataEditor(false);
       setShowSuccessModal(true);
       toast.success(`Sealed ${results.length} document${results.length > 1 ? 's' : ''} successfully!`);
+      } // End of bulk mode else block
 
     } catch (error) {
       console.error('Bulk upload error:', error);
@@ -2599,6 +2837,36 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
             Upload Guide
           </h2>
 
+          {/* Quick Tips */}
+          <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+            <div className="flex items-center gap-2 mb-3">
+              <Lightbulb className="h-4 w-4 text-yellow-500" />
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                Quick Tips
+              </h3>
+            </div>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-gray-700 dark:text-gray-300">
+                  <strong>AI Auto-fill:</strong> Upload a document and watch as AI extracts loan and borrower data automatically.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Sparkles className="h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-gray-700 dark:text-gray-300">
+                  <strong>Demo Mode:</strong> Try the demo to see sample data and fraud detection in action.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Shield className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-gray-700 dark:text-gray-300">
+                  <strong>Blockchain:</strong> All documents are sealed on Walacor blockchain for immutable audit trails.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
               Supported Files
@@ -2635,11 +2903,39 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
               Need help?
             </h3>
             <p className="text-xs text-gray-700 dark:text-gray-300 mb-3">
-              View documentation
+              View documentation and guides
             </p>
-            <a href="#" className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400">
-              📚 Documentation
-            </a>
+            <div className="space-y-2">
+              <Link href="/docs/upload-guide" className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline block">
+                📚 Upload Guide
+              </Link>
+              <Link href="/docs/security-levels" className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline block">
+                🔒 Security Levels
+              </Link>
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Try Demo Mode:</p>
+              <div className="space-y-2">
+                <button
+                  onClick={handleSingleFileDemo}
+                  className="w-full text-xs text-left px-3 py-2 rounded bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 text-purple-700 dark:text-purple-300 transition-colors"
+                >
+                  📄 Single File Demo
+                </button>
+                <button
+                  onClick={handleMultipleFilesDemo}
+                  className="w-full text-xs text-left px-3 py-2 rounded bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 transition-colors"
+                >
+                  📚 Multiple Files Demo
+                </button>
+                <button
+                  onClick={handleDirectoryDemo}
+                  className="w-full text-xs text-left px-3 py-2 rounded bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-300 transition-colors"
+                >
+                  📁 Directory Demo
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       }
@@ -3037,11 +3333,27 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm font-medium text-green-800">Artifact ID</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm font-medium text-green-800">Artifact ID</p>
+                        <InfoTooltip
+                          term={GLOSSARY.ARTIFACT_ID.term}
+                          definition={GLOSSARY.ARTIFACT_ID.definition}
+                          example={GLOSSARY.ARTIFACT_ID.example}
+                          className="text-green-600"
+                        />
+                      </div>
                       <p className="text-sm text-green-600 font-mono">{uploadResult.artifactId}</p>
                     </div>
                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm font-medium text-green-800">Transaction ID</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm font-medium text-green-800">Transaction ID</p>
+                        <InfoTooltip
+                          term={GLOSSARY.WALACOR_TX_ID.term}
+                          definition={GLOSSARY.WALACOR_TX_ID.definition}
+                          example={GLOSSARY.WALACOR_TX_ID.example}
+                          className="text-green-600"
+                        />
+                      </div>
                       <p className="text-sm text-green-600 font-mono">{uploadResult.walacorTxId}</p>
                     </div>
                   </div>
@@ -3196,15 +3508,38 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 </div>
               </div>
               {!isDemoMode && (
-                <Link href="/upload?mode=demo">
-                  <Button
-                    variant="outline"
-                    className="bg-white/10 hover:bg-white/20 text-white border-white/30 gap-2"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Try Demo
-                  </Button>
-                </Link>
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs text-blue-200 text-right">Try Demo:</p>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSingleFileDemo}
+                      variant="outline"
+                      size="sm"
+                      className="bg-white/10 hover:bg-white/20 text-white border-white/30 gap-1"
+                    >
+                      <FileText className="h-3 w-3" />
+                      Single File
+                    </Button>
+                    <Button
+                      onClick={handleMultipleFilesDemo}
+                      variant="outline"
+                      size="sm"
+                      className="bg-white/10 hover:bg-white/20 text-white border-white/30 gap-1"
+                    >
+                      <Layers className="h-3 w-3" />
+                      Multiple Files
+                    </Button>
+                    <Button
+                      onClick={handleDirectoryDemo}
+                      variant="outline"
+                      size="sm"
+                      className="bg-white/10 hover:bg-white/20 text-white border-white/30 gap-1"
+                    >
+                      <Lightbulb className="h-3 w-3" />
+                      Directory
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -3293,9 +3628,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 pb-16">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-3 space-y-6">
+        {/* Main Content - Full width, sidebar already in DashboardLayout */}
+        <div className="space-y-6">
         {/* Upload Section */}
         <Card>
           <CardHeader>
@@ -4129,7 +4463,15 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                   </summary>
                   <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg">
                     <div className="space-y-2">
-                      <Label htmlFor="etid">Entity Type ID (ETID)</Label>
+                      <div className="flex items-center gap-1">
+                        <Label htmlFor="etid">Entity Type ID (ETID)</Label>
+                        <InfoTooltip
+                          term={GLOSSARY.ETID.term}
+                          definition={GLOSSARY.ETID.definition}
+                          example={GLOSSARY.ETID.example}
+                          whenToUse={GLOSSARY.ETID.whenToUse}
+                        />
+                      </div>
                       <Input
                         id="etid"
                         value={etid}
@@ -4171,22 +4513,54 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm font-medium">Artifact ID</Label>
+                      <div className="flex items-center gap-1">
+                        <Label className="text-sm font-medium">Artifact ID</Label>
+                        <InfoTooltip
+                          term={GLOSSARY.ARTIFACT_ID.term}
+                          definition={GLOSSARY.ARTIFACT_ID.definition}
+                          example={GLOSSARY.ARTIFACT_ID.example}
+                          whenToUse={GLOSSARY.ARTIFACT_ID.whenToUse}
+                        />
+                      </div>
                       <p className="text-sm font-mono bg-muted p-2 rounded">{uploadResult.artifactId}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium">Walacor Transaction ID</Label>
+                      <div className="flex items-center gap-1">
+                        <Label className="text-sm font-medium">Walacor Transaction ID</Label>
+                        <InfoTooltip
+                          term={GLOSSARY.WALACOR_TX_ID.term}
+                          definition={GLOSSARY.WALACOR_TX_ID.definition}
+                          example={GLOSSARY.WALACOR_TX_ID.example}
+                          whenToUse={GLOSSARY.WALACOR_TX_ID.whenToUse}
+                        />
+                      </div>
                       <p className="text-sm font-mono bg-muted p-2 rounded">{uploadResult.walacorTxId}</p>
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm font-medium">Document Hash</Label>
+                      <div className="flex items-center gap-1">
+                        <Label className="text-sm font-medium">Document Hash</Label>
+                        <InfoTooltip
+                          term={GLOSSARY.DOCUMENT_HASH.term}
+                          definition={GLOSSARY.DOCUMENT_HASH.definition}
+                          example={GLOSSARY.DOCUMENT_HASH.example}
+                          whenToUse={GLOSSARY.DOCUMENT_HASH.whenToUse}
+                        />
+                      </div>
                       <p className="text-sm font-mono bg-muted p-2 rounded break-all">{fileHash}</p>
                     </div>
                   <div>
-                    <Label className="text-sm font-medium">Sealed At</Label>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-sm font-medium">Sealed At</Label>
+                      <InfoTooltip
+                        term={GLOSSARY.BLOCKCHAIN_SEAL.term}
+                        definition={GLOSSARY.BLOCKCHAIN_SEAL.definition}
+                        example={GLOSSARY.BLOCKCHAIN_SEAL.example}
+                        whenToUse={GLOSSARY.BLOCKCHAIN_SEAL.whenToUse}
+                      />
+                    </div>
                     <p className="text-sm">{new Date(uploadResult.sealedAt).toLocaleString()}</p>
                     </div>
                   </div>
@@ -4440,120 +4814,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
           </CardContent>
         </Card>
-
-        {/* Sidebar - Sticky */}
-        <div className="lg:col-span-1 space-y-6 lg:sticky lg:top-24 lg:self-start">
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Zap className="h-4 w-4 text-blue-500" />
-                Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsKycExpanded(!isKycExpanded)}
-                className="w-full justify-start text-sm"
-              >
-                <UserCheck className="h-4 w-4 mr-2" />
-                {isKycExpanded ? 'Hide' : 'Show'} KYC Form
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowValidationSummary(!showValidationSummary)}
-                className="w-full justify-start text-sm"
-              >
-                <FileCheck className="h-4 w-4 mr-2" />
-                {showValidationSummary ? 'Hide' : 'Show'} Validation
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Upload Statistics */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-green-500" />
-                Upload Stats
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <FileText className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Today</p>
-                    <p className="text-lg font-bold">24</p>
-                  </div>
-                </div>
-                <TrendingUp className="h-4 w-4 text-green-500" />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Success Rate</p>
-                    <p className="text-lg font-bold">99.8%</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Upload className="h-4 w-4 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Avg Time</p>
-                    <p className="text-lg font-bold">&lt; 2s</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tips & Help */}
-          <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-yellow-500" />
-                Quick Tips
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex gap-2">
-                <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-gray-700">
-                  <strong>AI Auto-fill:</strong> Upload a document and watch as AI extracts loan and borrower data automatically.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Sparkles className="h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-gray-700">
-                  <strong>Demo Mode:</strong> Try the demo to see sample data and fraud detection in action.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Shield className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-gray-700">
-                  <strong>Blockchain:</strong> All documents are sealed on Walacor blockchain for immutable audit trails.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
-    </div>
-  </div>
 
   {/* Success Celebration Modal */}
   <SuccessCelebration

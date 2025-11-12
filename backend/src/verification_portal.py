@@ -212,7 +212,9 @@ class VerificationPortal:
                 "verified": False,
                 "verification_time": datetime.now().isoformat(),
                 "error": "Invalid verification token",
-                "privacy_notice": "No data was accessed due to invalid token"
+                "privacy_notice": "No data was accessed due to invalid token",
+                "document_id": None,
+                "is_valid": False
             }
         
         proof_bundle = self.verification_tokens[token]
@@ -225,7 +227,9 @@ class VerificationPortal:
                 "verified": False,
                 "verification_time": datetime.now().isoformat(),
                 "error": "Verification token has expired",
-                "privacy_notice": "No data was accessed due to expired token"
+                "privacy_notice": "No data was accessed due to expired token",
+                "document_id": proof_bundle["document_id"],
+                "is_valid": False
             }
         
         # Check if token has already been used
@@ -235,7 +239,9 @@ class VerificationPortal:
                 "verified": False,
                 "verification_time": datetime.now().isoformat(),
                 "error": "Verification token has already been used",
-                "privacy_notice": "No data was accessed due to used token"
+                "privacy_notice": "No data was accessed due to used token",
+                "document_id": proof_bundle["document_id"],
+                "is_valid": False
             }
         
         # Check if verifier is authorized
@@ -245,7 +251,9 @@ class VerificationPortal:
                 "verified": False,
                 "verification_time": datetime.now().isoformat(),
                 "error": "Unauthorized verifier",
-                "privacy_notice": "No data was accessed due to unauthorized party"
+                "privacy_notice": "No data was accessed due to unauthorized party",
+                "document_id": proof_bundle["document_id"],
+                "is_valid": False
             }
         
         # Mark token as used (one-time use only)
@@ -257,7 +265,10 @@ class VerificationPortal:
         response = {
             "success": True,
             "verified": True,
-            "verification_time": verification_time
+            "verification_time": verification_time,
+            "document_id": proof_bundle["document_id"],
+            "is_valid": True,
+            "permissions": proof_bundle["permissions"]
         }
         
         # Add permitted fields only

@@ -19,15 +19,6 @@ interface AnalyticsData {
     sealing_success_rate: number
     blockchain_confirmation_rate: number
   }
-  compliance_risk: {
-    documents_compliant: number
-    documents_pending_review: number
-    overall_compliance_rate: number
-    high_risk_documents: number
-    medium_risk_documents: number
-    low_risk_documents: number
-    audit_trail_completeness: number
-  }
 }
 
 interface AIExtractionMetrics {
@@ -94,17 +85,14 @@ export default function AnalyticsPage() {
       let totalValue = 0
       let countWithAmount = 0
       for (const a of filteredArtifacts) {
-        const amt = a.local_metadata?.comprehensive_document?.loan_amount
+        // API returns loan_amount in flat structure
+        const amt = a.loan_amount
         if (typeof amt === 'number' && !Number.isNaN(amt) && amt > 0) {
           totalValue += amt
           countWithAmount += 1
         }
       }
       const avgLoan = countWithAmount > 0 ? Math.round(totalValue / countWithAmount) : 0
-
-      const compliantDocs = sealedDocs
-      const pendingReview = totalDocs - compliantDocs
-      const overallCompliance = totalDocs > 0 ? Math.round((compliantDocs / totalDocs) * 100) : 0
 
       setAnalytics({
         financial_documents: {
@@ -115,15 +103,6 @@ export default function AnalyticsPage() {
           average_loan_amount: avgLoan,
           sealing_success_rate: sealingSuccessRate,
           blockchain_confirmation_rate: blockchainConfirmationRate
-        },
-        compliance_risk: {
-          documents_compliant: compliantDocs,
-          documents_pending_review: pendingReview,
-          overall_compliance_rate: overallCompliance,
-          high_risk_documents: 0,
-          medium_risk_documents: 0,
-          low_risk_documents: compliantDocs,
-          audit_trail_completeness: overallCompliance
         }
       })
 
@@ -182,23 +161,27 @@ export default function AnalyticsPage() {
     let frontendFallbackCount = 0
 
     artifacts.forEach(artifact => {
-      const metadata = artifact.local_metadata?.comprehensive_document
-      if (!metadata) return
+      // API returns flat structure: borrower_name, borrower_email, loan_amount
+      // Only process artifacts that have borrower data
+      if (!artifact.borrower_name && !artifact.loan_id) return
 
       totalExtractions++
 
-      // Check extraction source
-      const extractionSource = metadata.extraction_source || 'frontend_fallback'
+      // Check extraction source from artifact metadata
+      const extractionSource = artifact.local_metadata?.extraction_source || 'frontend_fallback'
       if (extractionSource === 'ai_backend') {
         aiBackendCount++
       } else {
         frontendFallbackCount++
       }
 
-      // Calculate confidence (check multiple fields)
+      // Calculate confidence using flat API structure
       const fields = [
-        metadata.loan_id, metadata.loan_amount, metadata.borrower_name,
-        metadata.borrower_email, metadata.borrower_phone
+        artifact.loan_id,
+        artifact.loan_amount,
+        artifact.borrower_name,
+        artifact.borrower_email,
+        artifact.borrower_phone
       ]
 
       const filledFields = fields.filter(f => f && f !== '').length
@@ -264,9 +247,7 @@ export default function AnalyticsPage() {
 
   const tabs = [
     { id: 'overview', name: 'Overview', icon: BarChart3 },
-    { id: 'ai-performance', name: 'AI Performance', icon: Brain },
-    { id: 'documents', name: 'Document Processing', icon: FileText },
-    { id: 'compliance', name: 'Compliance & Risk', icon: Shield }
+    { id: 'ai-performance', name: 'AI Performance', icon: Brain }
   ]
 
   // Generate trend data (last 7 days)
@@ -447,10 +428,10 @@ export default function AnalyticsPage() {
               </div>
               <div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  Compliance Rate
+                  Sealing Success
                 </div>
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {analytics?.compliance_risk.overall_compliance_rate || 0}%
+                  {analytics?.financial_documents.sealing_success_rate || 0}%
                 </div>
               </div>
             </div>
@@ -551,8 +532,8 @@ export default function AnalyticsPage() {
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-cyan-100">Compliance Rate</p>
-                    <p className="text-3xl font-bold">{analytics?.compliance_risk.overall_compliance_rate || 0}%</p>
+                    <p className="text-sm font-medium text-cyan-100">Sealing Success</p>
+                    <p className="text-3xl font-bold">{analytics?.financial_documents.sealing_success_rate || 0}%</p>
                   </div>
                   <div className="p-3 bg-blue-500/20 text-white rounded-xl">
                     <Shield className="h-6 w-6" />
@@ -844,84 +825,6 @@ export default function AnalyticsPage() {
                      aiMetrics.average_confidence >= 60 ? '✅ Good extraction quality' :
                      '⚠️ Review recommended for low-confidence extractions'}
                   </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'documents' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Document Processing</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Documents Sealed This Period</span>
-                    <span className="text-sm font-medium">{analytics?.financial_documents.documents_sealed_this_month || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Sealing Success Rate</span>
-                    <span className="text-sm font-medium">{analytics?.financial_documents.sealing_success_rate || 0}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total Documents Sealed</span>
-                    <span className="text-sm font-medium">{analytics?.financial_documents.total_documents_sealed || 0}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Blockchain Activity</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Blockchain Confirmation Rate</span>
-                    <span className="text-sm font-medium">{analytics?.financial_documents.blockchain_confirmation_rate || 0}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Avg Extraction Time</span>
-                    <span className="text-sm font-medium">{aiMetrics ? (aiMetrics.extraction_time_avg_ms / 1000).toFixed(2) : '0'}s</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total Documents Sealed</span>
-                    <span className="text-sm font-medium">{analytics?.financial_documents.total_documents_sealed || 0}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'compliance' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Compliance Status</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Overall Compliance Rate</span>
-                    <span className="text-sm font-medium">{analytics?.compliance_risk.overall_compliance_rate || 0}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Documents Compliant</span>
-                    <span className="text-sm font-medium">{analytics?.compliance_risk.documents_compliant || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Pending Review</span>
-                    <span className="text-sm font-medium">{analytics?.compliance_risk.documents_pending_review || 0}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Risk Assessment</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">High Risk Documents</span>
-                    <span className="text-sm font-medium text-red-600">{analytics?.compliance_risk.high_risk_documents || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Medium Risk Documents</span>
-                    <span className="text-sm font-medium text-yellow-600">{analytics?.compliance_risk.medium_risk_documents || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Low Risk Documents</span>
-                    <span className="text-sm font-medium text-green-600">{analytics?.compliance_risk.low_risk_documents || 0}</span>
-                  </div>
                 </div>
               </div>
             </div>

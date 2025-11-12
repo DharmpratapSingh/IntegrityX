@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { json as fetchJson, fetchWithTimeout } from '@/utils/api'
 import { formatEasternTimeWithTZ, formatForFilename, getCurrentEasternTime } from '@/utils/timezone'
 import Link from 'next/link'
 import { DashboardLayout } from '@/components/DashboardLayout'
-import { Search, FileText, Eye, Plus, Filter, Calendar, Hash, AlertCircle, RefreshCw, Download, CheckSquare, Square, Shield, Lock, Zap, CheckCircle, TrendingUp, MoreVertical, Trash2 } from 'lucide-react'
+import { Search, FileText, Eye, Plus, Filter, Calendar, Hash, AlertCircle, RefreshCw, Download, CheckSquare, Square, Shield, Lock, Zap, CheckCircle, TrendingUp, MoreVertical, Trash2, ChevronRight } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -21,11 +21,24 @@ interface Document {
   loan_amount: number
   document_type: string
   upload_date: string
-  walacor_tx_id: string
+  walacor_tx_id?: string
   artifact_type: string
   created_by: string
   sealed_status: string
   security_level: string
+  artifact_container_type: string
+  parent_id?: string | null
+  directory_name?: string | null
+  file_count?: number
+}
+
+type DisplayRowType = 'directory' | 'child' | 'document'
+
+interface DisplayRow {
+  type: DisplayRowType
+  doc: Document
+  depth: number
+  parent?: Document
 }
 
 export default function DocumentsPage() {
@@ -61,6 +74,9 @@ export default function DocumentsPage() {
   // Verification functionality
   const [verificationResult, setVerificationResult] = useState<any>(null)
   const [isVerifying, setIsVerifying] = useState(false)
+
+  // Directory tree state
+  const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     fetchDocuments()
@@ -98,14 +114,38 @@ export default function DocumentsPage() {
       if (response && response.ok && response.data) {
         const data = response.data
         const artifacts = data.data?.artifacts || []
-        // Ensure all borrower names and emails are cleaned (backend should do this, but double-check)
-        const cleanedArtifacts = artifacts.map((doc: any) => ({
-          ...doc,
-          borrower_name: cleanBorrowerName(doc.borrower_name || ''),
-          borrower_email: doc.borrower_email && /^[a-zA-Z0-9+/=]{20,}$/.test(doc.borrower_email) 
-            ? '' // Don't show Base64 strings
+
+        const cleanedArtifacts: Document[] = artifacts.map((doc: any) => {
+          const uploadDate = doc.upload_date || doc.created_at || doc.timestamp || new Date().toISOString()
+          const artifactContainerType = doc.artifact_container_type || 'file'
+          const sanitizedEmail = doc.borrower_email && /^[a-zA-Z0-9+/=]{20,}$/.test(doc.borrower_email)
+            ? ''
             : (doc.borrower_email || '')
-        }))
+
+          const baseDocumentType =
+            doc.document_type ||
+            (artifactContainerType === 'directory_container' ? 'Directory Container' : doc.artifact_type || 'document')
+
+          return {
+            id: doc.id,
+            loan_id: doc.loan_id || '',
+            borrower_name: doc.borrower_name || doc.directory_name || doc.loan_id || 'Unknown',
+            borrower_email: sanitizedEmail,
+            loan_amount: doc.loan_amount ?? 0,
+            document_type: baseDocumentType,
+            upload_date: uploadDate,
+            walacor_tx_id: doc.walacor_tx_id || '',
+            artifact_type: doc.artifact_type || baseDocumentType,
+            created_by: doc.created_by || '',
+            sealed_status: doc.walacor_tx_id ? 'Sealed' : 'Not Sealed',
+            security_level: doc.local_metadata?.security_level || doc.security_level || 'standard',
+            artifact_container_type: artifactContainerType,
+            parent_id: doc.parent_id || null,
+            directory_name: doc.directory_name || null,
+            file_count: doc.file_count ?? 0
+          }
+        })
+
         setDocuments(cleanedArtifacts)
         setTotalCount(data.data?.total_count || 0)
         setHasMore(!!data.data?.has_more)
@@ -259,51 +299,16 @@ export default function DocumentsPage() {
   }
 
   const cleanBorrowerName = (name: string) => {
-    if (!name) return ''
-    
-    // Remove any newlines/carriage returns first
+    if (!name) return 'Unknown'
+
     let cleaned = name.replace(/[\n\r]/g, ' ').trim()
-    
-    // Find the position of ANY alphanumeric string that's 8+ chars (encoded data usually starts early)
-    // This catches base64, hex, and other encoded strings
-    const encodedStartMatch = cleaned.match(/[a-zA-Z0-9+/=]{8,}/)
-    
-    // If we found any encoded-like data, only take everything before it
+    const encodedStartMatch = cleaned.match(/[a-zA-Z0-9+/=]{16,}/)
+
     if (encodedStartMatch && encodedStartMatch.index !== undefined && encodedStartMatch.index > 0) {
       cleaned = cleaned.substring(0, encodedStartMatch.index).trim()
     }
-    
-    // Split by whitespace
-    const parts = cleaned.split(/\s+/)
-    
-    // ONLY keep the first 1-2 parts that are PURE alphabetical names (no numbers, no special chars except apostrophe/hyphen)
-    const nameParts: string[] = []
-    for (const part of parts) {
-      // Strict: Only letters, apostrophes, hyphens, and 1-25 chars
-      if (/^[a-zA-Z'-]+$/.test(part) && part.length >= 2 && part.length <= 25) {
-        // Make sure it has at least 2 letters (not just special chars)
-        if (part.replace(/[^a-zA-Z]/g, '').length >= 2) {
-          nameParts.push(part)
-          // Stop after getting first name + last name (2 parts)
-          if (nameParts.length >= 2) {
-            break
-          }
-        }
-      } else {
-        // If we hit something that's not a pure name, stop
-        // This ensures we don't accidentally include encoded data
-        if (nameParts.length > 0) {
-          break
-        }
-      }
-    }
-    
-    if (nameParts.length > 0) {
-      return nameParts.join(' ')
-    }
-    
-    // If nothing found, return 'Unknown'
-    return 'Unknown'
+
+    return cleaned || 'Unknown'
   }
   
   const cleanLoanId = (loanId: string) => {
@@ -322,7 +327,88 @@ export default function DocumentsPage() {
     return loanId.substring(0, 30) + '...'
   }
 
+  const flattenedRows = useMemo<DisplayRow[]>(() => {
+    if (!documents || documents.length === 0) {
+      return []
+    }
+
+    const rows: DisplayRow[] = []
+    const childrenMap = new Map<string, Document[]>()
+
+    documents.forEach((doc) => {
+      if (doc.parent_id) {
+        const existing = childrenMap.get(doc.parent_id) || []
+        existing.push(doc)
+        childrenMap.set(doc.parent_id, existing)
+      }
+    })
+
+    const sortByDateDesc = (a: Document, b: Document) =>
+      new Date(b.upload_date).getTime() - new Date(a.upload_date).getTime()
+
+    const topLevelDocs = documents.filter((doc) => !doc.parent_id)
+    topLevelDocs.sort(sortByDateDesc)
+
+    topLevelDocs.forEach((doc) => {
+      if (doc.artifact_container_type === 'directory_container') {
+        rows.push({ type: 'directory', doc, depth: 0 })
+
+        if (expandedDirectories.has(doc.id)) {
+          const childDocs = [...(childrenMap.get(doc.id) || [])].sort((a, b) =>
+            a.loan_id.localeCompare(b.loan_id)
+          )
+
+          childDocs.forEach((child) => {
+            const childClone: Document = {
+              ...child,
+              borrower_name: child.borrower_name || doc.borrower_name,
+              sealed_status: doc.walacor_tx_id ? 'Sealed (Inherited)' : 'Pending (Parent Unsealed)',
+              security_level: doc.security_level || child.security_level,
+              walacor_tx_id: doc.walacor_tx_id || child.walacor_tx_id
+            }
+            rows.push({ type: 'child', doc: childClone, depth: 1, parent: doc })
+          })
+        }
+      } else {
+        rows.push({ type: 'document', doc, depth: 0 })
+      }
+    })
+
+    return rows
+  }, [documents, expandedDirectories])
+
+  useEffect(() => {
+    setSelectedDocuments((prev) => {
+      const validIds = new Set(flattenedRows.map((row) => row.doc.id))
+      const next = new Set<string>()
+      let changed = false
+
+      prev.forEach((id) => {
+        if (validIds.has(id)) {
+          next.add(id)
+        } else {
+          changed = true
+        }
+      })
+
+      if (!changed && next.size === prev.size) {
+        return prev
+      }
+
+      return next
+    })
+  }, [flattenedRows])
+
   // Export functionality
+  const handleSelectAll = () => {
+    const allIds = flattenedRows.map((row) => row.doc.id)
+    if (selectedDocuments.size === allIds.length && allIds.length > 0) {
+      setSelectedDocuments(new Set())
+    } else {
+      setSelectedDocuments(new Set(allIds))
+    }
+  }
+
   const handleSelectDocument = (documentId: string) => {
     const newSelected = new Set(selectedDocuments)
     if (newSelected.has(documentId)) {
@@ -333,12 +419,16 @@ export default function DocumentsPage() {
     setSelectedDocuments(newSelected)
   }
 
-  const handleSelectAll = () => {
-    if (selectedDocuments.size === documents.length) {
-      setSelectedDocuments(new Set())
-    } else {
-      setSelectedDocuments(new Set(documents.map(doc => doc.id)))
-    }
+  const toggleDirectory = (directoryId: string) => {
+    setExpandedDirectories((prev) => {
+      const next = new Set(prev)
+      if (next.has(directoryId)) {
+        next.delete(directoryId)
+      } else {
+        next.add(directoryId)
+      }
+      return next
+    })
   }
 
   const generatePDFReport = async (doc: Document) => {
@@ -850,7 +940,7 @@ export default function DocumentsPage() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-blue-100">Total Documents</p>
-                    <p className="text-3xl font-bold">{documents.length}</p>
+                    <p className="text-3xl font-bold">{totalCount.toLocaleString()}</p>
                   </div>
                   <div className="p-3 bg-blue-500/20 text-white rounded-xl">
                     <FileText className="h-6 w-6" />
@@ -1002,7 +1092,7 @@ export default function DocumentsPage() {
       {totalCount > 0 && (
         <div className="mb-4 flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            Showing {documents.length} of {totalCount} loan documents
+            Showing {flattenedRows.length} of {totalCount} loan documents
           </div>
           <div className="flex items-center space-x-3">
             {selectedDocuments.size > 0 && (
@@ -1050,7 +1140,7 @@ export default function DocumentsPage() {
 
       {/* Documents Table */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        {documents.length > 0 ? (
+        {flattenedRows.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full table-fixed">
               <thead className="bg-gray-50 border-b border-gray-200">
@@ -1060,7 +1150,7 @@ export default function DocumentsPage() {
                       onClick={handleSelectAll}
                       className="flex items-center justify-center w-4 h-4"
                     >
-                      {selectedDocuments.size === documents.length && documents.length > 0 ? (
+                      {selectedDocuments.size === flattenedRows.length && flattenedRows.length > 0 ? (
                         <CheckSquare className="h-4 w-4 text-blue-600" />
                       ) : (
                         <Square className="h-4 w-4 text-gray-400" />
@@ -1088,8 +1178,28 @@ export default function DocumentsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {documents.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-gray-50">
+                {flattenedRows.map((row) => {
+                  const doc = row.doc
+                  const isDirectory = row.type === 'directory'
+                  const isChild = row.type === 'child'
+                  const depth = row.depth
+                  const isExpanded = expandedDirectories.has(doc.id)
+                  const borrowerDisplay = cleanBorrowerName(doc.borrower_name || (row.parent?.borrower_name || ''))
+                  const borrowerText =
+                    borrowerDisplay === 'Unknown' && isDirectory ? 'Directory Container' : borrowerDisplay
+                  const sealedLabel = doc.sealed_status || (doc.walacor_tx_id ? 'Sealed' : 'Not Sealed')
+                  const isSealed = sealedLabel.toLowerCase().includes('sealed')
+                  const sealedBadgeClass = isSealed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                  const directorySecondary = isDirectory ? `${doc.file_count || 0} file${(doc.file_count || 0) === 1 ? '' : 's'}` : doc.document_type
+                  const loanDisplay = isDirectory
+                    ? doc.directory_name || doc.loan_id || doc.id
+                    : cleanLoanId(doc.loan_id || '')
+
+                  return (
+                    <tr
+                      key={`${row.type}-${doc.id}`}
+                      className={`${isChild ? 'bg-gray-50' : ''} hover:bg-gray-50`}
+                    >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         onClick={() => handleSelectDocument(doc.id)}
@@ -1103,20 +1213,37 @@ export default function DocumentsPage() {
                       </button>
                     </td>
                     <td className="px-6 py-4 w-32">
-                      <div className="text-sm font-medium text-gray-900 truncate" title={doc.loan_id}>
-                        {cleanLoanId(doc.loan_id)}
-                      </div>
-                      {doc.document_type && (
-                        <div className="text-xs text-gray-400 mt-0.5 truncate" title={doc.document_type}>
-                          {doc.document_type}
+                      <div className="flex items-center" style={{ marginLeft: depth * 16 }}>
+                        {isDirectory && (
+                          <button
+                            onClick={() => toggleDirectory(doc.id)}
+                            className="mr-2 inline-flex items-center justify-center w-6 h-6 rounded-md border border-gray-300 bg-white hover:bg-gray-100 transition-colors"
+                          >
+                            <ChevronRight
+                              className={`h-4 w-4 text-gray-600 transition-transform ${isExpanded ? 'transform rotate-90' : ''}`}
+                            />
+                          </button>
+                        )}
+                        {!isDirectory && depth > 0 && (
+                          <span className="inline-block w-3 h-3 mr-2 border-l border-gray-300"></span>
+                        )}
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 truncate" title={loanDisplay}>
+                            {loanDisplay}
+                          </div>
+                          {directorySecondary && (
+                            <div className="text-xs text-gray-400 mt-0.5 truncate" title={directorySecondary}>
+                              {directorySecondary}
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 w-48">
-                      <div className="text-sm font-medium text-gray-900 truncate" title={cleanBorrowerName(doc.borrower_name)}>
-                        {cleanBorrowerName(doc.borrower_name)}
+                      <div className="text-sm font-medium text-gray-900 truncate" title={borrowerText}>
+                        {borrowerText}
                       </div>
-                      {doc.borrower_email && (
+                      {doc.borrower_email && !isDirectory && (
                         <div className="text-xs text-gray-400 mt-0.5 truncate" title={doc.borrower_email}>
                           {doc.borrower_email.split(/\s+/)[0]} {/* Only show first part of email if it contains spaces */}
                         </div>
@@ -1129,12 +1256,8 @@ export default function DocumentsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 w-32">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        doc.sealed_status === 'Sealed' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {doc.sealed_status}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${sealedBadgeClass}`}>
+                        {sealedLabel}
                       </span>
                     </td>
                     <td className="px-6 py-4 w-32">
@@ -1237,7 +1360,8 @@ export default function DocumentsPage() {
                       </Popover>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -1263,7 +1387,7 @@ export default function DocumentsPage() {
       {totalCount > 20 && (
         <div className="mt-6 flex items-center justify-between">
           <div className="text-sm text-gray-700">
-            Showing {((currentPage - 1) * 20) + 1} to {Math.min(currentPage * 20, totalCount)} of {totalCount} results
+            Showing {flattenedRows.length} of {totalCount} results
           </div>
           <div className="flex items-center space-x-2">
             <button
