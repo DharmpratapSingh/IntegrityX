@@ -26,18 +26,18 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Add src directory to Python path for imports
+# Add backend/src directory to Python path for imports
 script_dir = Path(__file__).parent
 project_root = script_dir.parent
-src_dir = project_root / "src"
-sys.path.insert(0, str(src_dir))
+backend_src_dir = project_root / "backend" / "src"
+sys.path.insert(0, str(backend_src_dir))
 
 try:
     from walacor_sdk import WalacorService
     from schemas import LoanSchemas
 except ImportError as e:
     print(f"❌ Import Error: {e}")
-    print("Please ensure walacor-python-sdk is installed and src/schemas.py exists")
+    print("Please ensure walacor-python-sdk is installed and backend/src/schemas.py exists")
     sys.exit(1)
 
 
@@ -49,10 +49,11 @@ def load_environment():
         tuple: (host, username, password) or (None, None, None) if failed
     """
     try:
-        # Load .env file from project root
-        env_path = project_root / ".env"
+        # Load .env file from backend directory
+        env_path = project_root / "backend" / ".env"
         if not env_path.exists():
             print(f"❌ .env file not found at: {env_path}")
+            print(f"   💡 Create it from: backend/.env.example")
             return None, None, None
         
         load_dotenv(env_path)
