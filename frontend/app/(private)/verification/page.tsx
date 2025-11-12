@@ -9,6 +9,8 @@ import { toast } from '@/components/ui/toast'
 import { fetchWithTimeout } from '@/utils/api'
 import { ForensicTimeline as ForensicTimelineComponent } from '@/components/forensics/ForensicTimeline'
 import type { ForensicTimeline } from '@/types/forensics'
+import { InfoTooltip } from '@/components/ui/info-tooltip'
+import { GLOSSARY } from '@/lib/glossary'
 import {
   fetchAndGenerateProof,
   verifyZKProof,
@@ -949,6 +951,13 @@ export default function VerificationPage() {
           <Hash className="h-4 w-4" />
           <span className="hidden sm:inline">Verify by Hash</span>
           <span className="sm:hidden">Hash</span>
+          <InfoTooltip
+            term={GLOSSARY.HASH_VERIFICATION.term}
+            definition={GLOSSARY.HASH_VERIFICATION.definition}
+            example={GLOSSARY.HASH_VERIFICATION.example}
+            whenToUse={GLOSSARY.HASH_VERIFICATION.whenToUse}
+            className={verificationType === 'hash' ? 'text-white' : ''}
+          />
         </button>
         <button
           onClick={() => setVerificationType('document')}
@@ -973,6 +982,13 @@ export default function VerificationPage() {
           <Shield className="h-4 w-4" />
           <span className="hidden sm:inline">Zero Knowledge Proof</span>
           <span className="sm:hidden">ZKP</span>
+          <InfoTooltip
+            term={GLOSSARY.ZKP.term}
+            definition={GLOSSARY.ZKP.definition}
+            example={GLOSSARY.ZKP.example}
+            whenToUse={GLOSSARY.ZKP.whenToUse}
+            className={verificationType === 'zkp' ? 'text-white' : ''}
+          />
         </button>
       </div>
 
@@ -985,9 +1001,17 @@ export default function VerificationPage() {
         {verificationType === 'hash' ? (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Document Hash (SHA-256)
-              </label>
+              <div className="flex items-center gap-1 mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Document Hash (SHA-256)
+                </label>
+                <InfoTooltip
+                  term={GLOSSARY.DOCUMENT_HASH.term}
+                  definition={GLOSSARY.DOCUMENT_HASH.definition}
+                  example={GLOSSARY.DOCUMENT_HASH.example}
+                  whenToUse={GLOSSARY.DOCUMENT_HASH.whenToUse}
+                />
+              </div>
               <div className="flex space-x-2">
                 <input
                   type="text"
@@ -1094,9 +1118,17 @@ export default function VerificationPage() {
 
                 {/* Manual Input */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                    Artifact ID
-                  </label>
+                  <div className="flex items-center gap-1 mb-2">
+                    <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                      Artifact ID
+                    </label>
+                    <InfoTooltip
+                      term={GLOSSARY.ARTIFACT_ID.term}
+                      definition={GLOSSARY.ARTIFACT_ID.definition}
+                      example={GLOSSARY.ARTIFACT_ID.example}
+                      whenToUse={GLOSSARY.ARTIFACT_ID.whenToUse}
+                    />
+                  </div>
                   <div className="flex gap-2">
                     <input
                       type="text"

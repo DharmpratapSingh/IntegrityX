@@ -45,6 +45,8 @@ import { buildAutoPopulateMetadata, type AutoPopulateMetadata } from '@/utils/lo
 import { SuccessCelebration } from '@/components/SuccessCelebration'
 import { ProgressSteps, CompactProgressSteps } from '@/components/ui/progress-steps'
 import { HelpTooltip, SecurityLevelTooltips, KYCTooltips, BlockchainTooltips } from '@/components/ui/help-tooltip'
+import { InfoTooltip } from '@/components/ui/info-tooltip'
+import { GLOSSARY } from '@/lib/glossary'
 import {
   smartExtractDocumentData,
   buildEnhancedAutoPopulateMetadata,
@@ -3037,11 +3039,27 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm font-medium text-green-800">Artifact ID</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm font-medium text-green-800">Artifact ID</p>
+                        <InfoTooltip
+                          term={GLOSSARY.ARTIFACT_ID.term}
+                          definition={GLOSSARY.ARTIFACT_ID.definition}
+                          example={GLOSSARY.ARTIFACT_ID.example}
+                          className="text-green-600"
+                        />
+                      </div>
                       <p className="text-sm text-green-600 font-mono">{uploadResult.artifactId}</p>
                     </div>
                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm font-medium text-green-800">Transaction ID</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm font-medium text-green-800">Transaction ID</p>
+                        <InfoTooltip
+                          term={GLOSSARY.WALACOR_TX_ID.term}
+                          definition={GLOSSARY.WALACOR_TX_ID.definition}
+                          example={GLOSSARY.WALACOR_TX_ID.example}
+                          className="text-green-600"
+                        />
+                      </div>
                       <p className="text-sm text-green-600 font-mono">{uploadResult.walacorTxId}</p>
                     </div>
                   </div>
@@ -4129,7 +4147,15 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                   </summary>
                   <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg">
                     <div className="space-y-2">
-                      <Label htmlFor="etid">Entity Type ID (ETID)</Label>
+                      <div className="flex items-center gap-1">
+                        <Label htmlFor="etid">Entity Type ID (ETID)</Label>
+                        <InfoTooltip
+                          term={GLOSSARY.ETID.term}
+                          definition={GLOSSARY.ETID.definition}
+                          example={GLOSSARY.ETID.example}
+                          whenToUse={GLOSSARY.ETID.whenToUse}
+                        />
+                      </div>
                       <Input
                         id="etid"
                         value={etid}
@@ -4171,22 +4197,54 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm font-medium">Artifact ID</Label>
+                      <div className="flex items-center gap-1">
+                        <Label className="text-sm font-medium">Artifact ID</Label>
+                        <InfoTooltip
+                          term={GLOSSARY.ARTIFACT_ID.term}
+                          definition={GLOSSARY.ARTIFACT_ID.definition}
+                          example={GLOSSARY.ARTIFACT_ID.example}
+                          whenToUse={GLOSSARY.ARTIFACT_ID.whenToUse}
+                        />
+                      </div>
                       <p className="text-sm font-mono bg-muted p-2 rounded">{uploadResult.artifactId}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium">Walacor Transaction ID</Label>
+                      <div className="flex items-center gap-1">
+                        <Label className="text-sm font-medium">Walacor Transaction ID</Label>
+                        <InfoTooltip
+                          term={GLOSSARY.WALACOR_TX_ID.term}
+                          definition={GLOSSARY.WALACOR_TX_ID.definition}
+                          example={GLOSSARY.WALACOR_TX_ID.example}
+                          whenToUse={GLOSSARY.WALACOR_TX_ID.whenToUse}
+                        />
+                      </div>
                       <p className="text-sm font-mono bg-muted p-2 rounded">{uploadResult.walacorTxId}</p>
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm font-medium">Document Hash</Label>
+                      <div className="flex items-center gap-1">
+                        <Label className="text-sm font-medium">Document Hash</Label>
+                        <InfoTooltip
+                          term={GLOSSARY.DOCUMENT_HASH.term}
+                          definition={GLOSSARY.DOCUMENT_HASH.definition}
+                          example={GLOSSARY.DOCUMENT_HASH.example}
+                          whenToUse={GLOSSARY.DOCUMENT_HASH.whenToUse}
+                        />
+                      </div>
                       <p className="text-sm font-mono bg-muted p-2 rounded break-all">{fileHash}</p>
                     </div>
                   <div>
-                    <Label className="text-sm font-medium">Sealed At</Label>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-sm font-medium">Sealed At</Label>
+                      <InfoTooltip
+                        term={GLOSSARY.BLOCKCHAIN_SEAL.term}
+                        definition={GLOSSARY.BLOCKCHAIN_SEAL.definition}
+                        example={GLOSSARY.BLOCKCHAIN_SEAL.example}
+                        whenToUse={GLOSSARY.BLOCKCHAIN_SEAL.whenToUse}
+                      />
+                    </div>
                     <p className="text-sm">{new Date(uploadResult.sealedAt).toLocaleString()}</p>
                     </div>
                   </div>

@@ -25,6 +25,8 @@ import {
   XCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { GLOSSARY } from '@/lib/glossary';
 
 interface ForensicDiffViewerProps {
   diffResult: DiffResult;
@@ -142,9 +144,39 @@ export const ForensicDiffViewer: React.FC<ForensicDiffViewerProps> = ({
         <CardContent className="pt-6">
           <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
             <TabsList className="grid w-full grid-cols-3 mb-6">
-              <TabsTrigger value="side-by-side">Side-by-Side</TabsTrigger>
-              <TabsTrigger value="overlay">Overlay</TabsTrigger>
-              <TabsTrigger value="unified">Unified</TabsTrigger>
+              <TabsTrigger value="side-by-side">
+                <span className="flex items-center gap-1">
+                  Side-by-Side
+                  <InfoTooltip
+                    term={GLOSSARY.SIDE_BY_SIDE_VIEW.term}
+                    definition={GLOSSARY.SIDE_BY_SIDE_VIEW.definition}
+                    example={GLOSSARY.SIDE_BY_SIDE_VIEW.example}
+                    whenToUse={GLOSSARY.SIDE_BY_SIDE_VIEW.whenToUse}
+                  />
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="overlay">
+                <span className="flex items-center gap-1">
+                  Overlay
+                  <InfoTooltip
+                    term={GLOSSARY.OVERLAY_VIEW.term}
+                    definition={GLOSSARY.OVERLAY_VIEW.definition}
+                    example={GLOSSARY.OVERLAY_VIEW.example}
+                    whenToUse={GLOSSARY.OVERLAY_VIEW.whenToUse}
+                  />
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="unified">
+                <span className="flex items-center gap-1">
+                  Unified
+                  <InfoTooltip
+                    term={GLOSSARY.UNIFIED_VIEW.term}
+                    definition={GLOSSARY.UNIFIED_VIEW.definition}
+                    example={GLOSSARY.UNIFIED_VIEW.example}
+                    whenToUse={GLOSSARY.UNIFIED_VIEW.whenToUse}
+                  />
+                </span>
+              </TabsTrigger>
             </TabsList>
 
             {/* Side-by-Side View */}
