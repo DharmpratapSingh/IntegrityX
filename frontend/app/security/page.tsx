@@ -158,17 +158,25 @@ export default function SecurityPage() {
             </div>
           </div>
 
-          {/* Need Help */}
+          {/* Quick Actions */}
           <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-4">
             <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
-              Security Audit
+              Other Tools
             </h3>
-            <p className="text-xs text-blue-700 dark:text-blue-300 mb-3">
-              Download security report
-            </p>
-            <a href="#" className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400">
-              📊 Download Report
-            </a>
+            <div className="space-y-2">
+              <Link
+                href="/upload"
+                className="block text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
+              >
+                📤 Upload Documents
+              </Link>
+              <Link
+                href="/verification"
+                className="block text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
+              >
+                ✅ Verify Documents
+              </Link>
+            </div>
           </div>
         </div>
       }

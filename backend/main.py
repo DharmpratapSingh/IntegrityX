@@ -98,6 +98,7 @@ from src.quantum_safe_security import HybridSecurityService, quantum_safe_hashin
 from src.ai_anomaly_detector import AIAnomalyDetector
 from src.smart_contracts import SmartContractsService
 from src.predictive_analytics import PredictiveAnalyticsService
+from src.container_service import ContainerService
 from src.document_intelligence import DocumentIntelligenceService
 from src.encryption_service import get_encryption_service
 from src.secure_config import validate_production_security, get_secure_config
@@ -118,7 +119,7 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize services at startup and cleanup at shutdown."""
-    global db, doc_handler, wal_service, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service, ai_anomaly_detector, smart_contracts, predictive_analytics, document_intelligence, advanced_security, hybrid_security
+    global db, doc_handler, wal_service, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service, ai_anomaly_detector, smart_contracts, predictive_analytics, document_intelligence, advanced_security, hybrid_security, container_service
     
     try:
         mode_text = "DEMO" if DEMO_MODE else "FULL"
@@ -173,6 +174,10 @@ async def lifespan(app: FastAPI):
         analytics_service = AnalyticsService(db_service=db)
         _bulk_operations_analytics = BulkOperationsAnalytics(db_service=db)
         logger.info("✅ Analytics service initialized")
+
+        # Initialize container service for directory uploads
+        container_service = ContainerService(db_service=db)
+        logger.info("✅ Container service initialized")
 
         # Initialize optional services only in FULL mode
         if not DEMO_MODE:
@@ -353,6 +358,7 @@ ai_anomaly_detector = None
 smart_contracts = None
 predictive_analytics = None
 document_intelligence = None
+container_service = None
 
 # Add request tracking middleware
 @app.middleware("http")
@@ -668,13 +674,13 @@ class VerificationResponse(BaseModel):
 def get_services():
     """Get initialized services."""
     # Check core services (always required)
-    core_services = [db, doc_handler, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service]
+    core_services = [db, doc_handler, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service, container_service]
     if not all(core_services):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Core services not initialized"
         )
-    
+
     # Return services dictionary (optional services may be None in demo mode)
     return {
         "db": db,
@@ -692,7 +698,8 @@ def get_services():
         "predictive_analytics": predictive_analytics,
         "document_intelligence": document_intelligence,
         "advanced_security": advanced_security,
-        "hybrid_security": hybrid_security
+        "hybrid_security": hybrid_security,
+        "container_service": container_service
     }
 
 
@@ -2226,7 +2233,12 @@ async def get_artifacts(
                     "artifact_type": artifact.artifact_type,
                     "created_by": artifact.created_by,
                     "sealed_status": "Sealed" if artifact.walacor_tx_id else "Not Sealed",
-                    "security_level": security_level
+                    "security_level": security_level,
+                    "parent_id": artifact.parent_id,
+                    "artifact_container_type": artifact.artifact_container_type or 'file',
+                    "directory_name": artifact.directory_name,
+                    "directory_hash": artifact.directory_hash,
+                    "file_count": artifact.file_count
                 }
                 filtered_artifacts.append(artifact_data)
         
@@ -5386,6 +5398,30 @@ class LoanDocumentSealResponse(BaseModel):
     sealed_at: str = Field(..., description="Sealing timestamp")
 
 
+class DirectoryFileInfo(BaseModel):
+    """File information within a directory."""
+    filename: str = Field(..., description="Name of the file")
+    file_hash: str = Field(..., description="SHA-256 hash of the file")
+    file_size: Optional[int] = Field(None, description="File size in bytes")
+
+
+class DirectorySealRequest(BaseModel):
+    """Request model for sealing a directory of loan documents."""
+    directory_name: str = Field(..., description="Name of the directory")
+    directory_hash: str = Field(..., description="ObjectValidator hash of the entire directory")
+    files: List[DirectoryFileInfo] = Field(..., description="List of files in the directory")
+    loan_data: LoanDocumentSealRequest = Field(..., description="Loan and borrower information")
+
+
+class DirectorySealResponse(BaseModel):
+    """Response model for directory sealing."""
+    message: str = Field(..., description=DESC_RESPONSE_MSG)
+    container_id: str = Field(..., description="Container artifact ID")
+    walacor_tx_id: str = Field(..., description=DESC_WALACOR_TX)
+    child_ids: List[str] = Field(..., description="List of child artifact IDs")
+    sealed_at: str = Field(..., description="Sealing timestamp")
+
+
 class MaskedBorrowerInfo(BaseModel):
     """Masked borrower information for privacy."""
     full_name: str = Field(..., description="Full legal name")
@@ -5826,6 +5862,154 @@ async def seal_loan_document(
         
     except Exception as e:
         logger.error(f"Error sealing loan document: {e}")
+        logger.error(traceback.format_exc())
+        return StandardResponse(
+            ok=False,
+            data={"error": str(e)}
+        )
+
+
+@app.post("/api/seal/directory", response_model=StandardResponse)
+async def seal_directory(
+    request: DirectorySealRequest,
+    services: dict = Depends(get_services)
+):
+    """
+    Seal a directory of loan documents using parent/child container pattern.
+
+    This endpoint creates a parent container artifact for the directory and
+    child artifacts for each file, maintaining audit trail integrity with
+    ObjectValidator directory hashing.
+
+    Architecture:
+    - Parent container stores directory hash and single Walacor TX ID
+    - Child artifacts link to parent via parent_id
+    - Children inherit blockchain seal from parent
+    """
+    try:
+        log_endpoint_start("seal_directory", request.dict())
+
+        # Extract loan data and borrower info
+        loan_data = request.loan_data
+        borrower_info = loan_data.borrower
+
+        # Encrypt sensitive borrower data
+        encryption_service = get_encryption_service()
+        encrypted_borrower_data = encryption_service.encrypt_borrower_data(borrower_info.dict())
+
+        logger.info(f"Sealing directory: {request.directory_name} with {len(request.files)} files")
+        logger.info(f"Directory hash: {request.directory_hash[:16]}...")
+
+        # Seal directory in Walacor blockchain
+        loan_metadata = {
+            "document_type": loan_data.document_type,
+            "loan_amount": loan_data.loan_amount,
+            "additional_notes": loan_data.additional_notes,
+            "created_by": loan_data.created_by
+        }
+
+        # Create comprehensive metadata for directory
+        directory_metadata = {
+            "directory_name": request.directory_name,
+            "file_count": len(request.files),
+            "files": [f.dict() for f in request.files],
+            "loan_data": loan_metadata,
+            "borrower_data": encrypted_borrower_data
+        }
+
+        # Calculate directory document hash
+        directory_json = json.dumps(directory_metadata, sort_keys=True, separators=(',', ':'))
+
+        # Seal in Walacor using directory hash
+        walacor_result = services["wal_service"].seal_loan_document(
+            loan_id=loan_data.loan_id,
+            loan_data=loan_metadata,
+            borrower_data=encrypted_borrower_data,
+            files=[{
+                "filename": f"{request.directory_name}/",
+                "file_type": "directory",
+                "file_size": len(directory_json.encode('utf-8')),
+                "upload_timestamp": get_eastern_now_iso(),
+                "content_hash": request.directory_hash
+            }]
+        )
+
+        walacor_tx_id = walacor_result.get("walacor_tx_id", f"TX_{int(time.time() * 1000)}_{request.directory_hash[:8]}")
+
+        # Create parent container using container service
+        container_id = services["container_service"].create_directory_container(
+            directory_name=request.directory_name,
+            directory_hash=request.directory_hash,
+            loan_id=loan_data.loan_id,
+            etid=100001,  # Use documented ETID for loan documents
+            walacor_tx_id=walacor_tx_id,
+            file_count=len(request.files),
+            created_by=loan_data.created_by,
+            metadata={
+                "directory_metadata": directory_metadata,
+                "sealed_at": walacor_result.get("sealed_timestamp", get_eastern_now_iso()),
+                "blockchain_proof": walacor_result.get("blockchain_proof", {})
+            }
+        )
+
+        logger.info(f"✅ Created directory container: {container_id}")
+
+        # Create child artifacts for each file
+        child_ids = []
+        for file_info in request.files:
+            child_id = services["container_service"].create_child_artifact(
+                parent_id=container_id,
+                filename=file_info.filename,
+                file_hash=file_info.file_hash,
+                loan_id=loan_data.loan_id,
+                etid=100001,
+                created_by=loan_data.created_by,
+                borrower_info=encrypted_borrower_data,
+                metadata={
+                    "file_size": file_info.file_size,
+                    "sealed_at": walacor_result.get("sealed_timestamp", get_eastern_now_iso())
+                }
+            )
+            child_ids.append(child_id)
+            logger.info(f"  ✅ Created child artifact: {child_id} ({file_info.filename})")
+
+        logger.info(f"✅ Directory sealed successfully: {container_id} with {len(child_ids)} children")
+
+        # Log audit events
+        try:
+            services["db"].log_document_upload(
+                artifact_id=container_id,
+                user_id=loan_data.created_by,
+                borrower_name=borrower_info.full_name,
+                loan_id=loan_data.loan_id,
+                ip_address=None,
+                user_agent=None
+            )
+
+            services["db"].log_blockchain_seal(
+                artifact_id=container_id,
+                walacor_tx_id=walacor_tx_id,
+                data_hash=request.directory_hash,
+                sealed_by=loan_data.created_by
+            )
+
+            logger.info(f"✅ Audit logs created for directory upload")
+        except Exception as e:
+            logger.warning(f"Failed to create audit logs: {e}")
+
+        return StandardResponse(
+            ok=True,
+            data=DirectorySealResponse(
+                message=f"Directory sealed successfully: {request.directory_name} ({len(request.files)} files)",
+                container_id=container_id,
+                walacor_tx_id=walacor_tx_id,
+                child_ids=child_ids,
+                sealed_at=walacor_result.get("sealed_timestamp", get_eastern_now_iso())
+            ).dict()
+        )
+
+    except Exception as e:
+        logger.error(f"Error sealing directory: {e}")
         logger.error(traceback.format_exc())
         return StandardResponse(
             ok=False,
@@ -7048,9 +7232,29 @@ async def verify_by_hash(
             'borrower_name': borrower_info.get('full_name', 'N/A'),
             'created_at': artifact_obj.created_at.isoformat() if artifact_obj.created_at else None,
             'walacor_tx_id': artifact_obj.walacor_tx_id,
-            'payload_sha256': artifact_obj.payload_sha256
+            'payload_sha256': artifact_obj.payload_sha256,
+            'artifact_container_type': artifact_obj.artifact_container_type,
+            'directory_name': artifact_obj.directory_name,
+            'directory_hash': artifact_obj.directory_hash,
+            'file_count': artifact_obj.file_count
         }
-        
+
+        # Check if this is a directory container
+        children_artifacts = []
+        if artifact_obj.artifact_container_type == 'directory_container':
+            # Get all child artifacts
+            children = services["db"].get_children_artifacts(artifact_obj.id)
+            children_artifacts = [
+                {
+                    'id': child.id,
+                    'filename': child.local_metadata.get('filename', 'unknown') if child.local_metadata else 'unknown',
+                    'file_hash': child.payload_sha256,
+                    'created_at': child.created_at.isoformat() if child.created_at else None
+                }
+                for child in children
+            ]
+            logger.info(f"Directory container verified: {artifact_obj.directory_name} with {len(children_artifacts)} children")
+
         # Check if document is properly sealed
         if not artifact.get('walacor_tx_id'):
             return create_success_response(
@@ -7068,18 +7272,29 @@ async def verify_by_hash(
             )
             
             if verification_result.get('is_valid', False):
+                document_data = {
+                    "id": artifact['id'],
+                    "loan_id": artifact.get('loan_id', 'N/A'),
+                    "borrower_name": artifact.get('borrower_name', 'N/A'),
+                    "created_at": artifact.get('created_at', 'N/A'),
+                    "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
+                    "payload_sha256": artifact.get('payload_sha256', request.hash),
+                    "artifact_container_type": artifact.get('artifact_container_type', 'file'),
+                    "directory_name": artifact.get('directory_name'),
+                    "file_count": artifact.get('file_count')
+                }
+
+                # Add children if this is a directory container
+                if children_artifacts:
+                    document_data["children"] = children_artifacts
+
                 return create_success_response(
                     data=VerificationResult(
                         status="sealed",
-                        message="Document is properly sealed and verified on the blockchain.",
-                        document={
-                            "id": artifact['id'],
-                            "loan_id": artifact.get('loan_id', 'N/A'),
-                            "borrower_name": artifact.get('borrower_name', 'N/A'),
-                            "created_at": artifact.get('created_at', 'N/A'),
-                            "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
-                            "payload_sha256": artifact.get('payload_sha256', request.hash)
-                        },
+                        message="Document is properly sealed and verified on the blockchain." + (
+                            f" Directory contains {len(children_artifacts)} files." if children_artifacts else ""
+                        ),
+                        document=document_data,
                         verification_details={
                             "hash_match": True,
                             "blockchain_verified": True,
@@ -7089,18 +7304,27 @@ async def verify_by_hash(
                     ).dict()
                 )
             else:
+                document_data = {
+                    "id": artifact['id'],
+                    "loan_id": artifact.get('loan_id', 'N/A'),
+                    "borrower_name": artifact.get('borrower_name', 'N/A'),
+                    "created_at": artifact.get('created_at', 'N/A'),
+                    "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
+                    "payload_sha256": artifact.get('payload_sha256', request.hash),
+                    "artifact_container_type": artifact.get('artifact_container_type', 'file'),
+                    "directory_name": artifact.get('directory_name'),
+                    "file_count": artifact.get('file_count')
+                }
+
+                # Add children if this is a directory container
+                if children_artifacts:
+                    document_data["children"] = children_artifacts
+
                 return create_success_response(
                     data=VerificationResult(
                         status="tampered",
                         message="Document hash found but verification failed. Document may have been tampered with.",
-                        document={
-                            "id": artifact['id'],
-                            "loan_id": artifact.get('loan_id', 'N/A'),
-                            "borrower_name": artifact.get('borrower_name', 'N/A'),
-                            "created_at": artifact.get('created_at', 'N/A'),
-                            "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
-                            "payload_sha256": artifact.get('payload_sha256', request.hash)
-                        },
+                        document=document_data,
                         verification_details={
                             "hash_match": True,
                             "blockchain_verified": False,

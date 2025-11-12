@@ -185,6 +185,46 @@ class Database:
             self.session = self.session_factory()
         return self.session
     
+    def create_artifact(self, artifact_data: dict) -> str:
+        """
+        Create a new artifact with full field support (including container fields).
+
+        Args:
+            artifact_data: Dictionary containing all artifact fields
+
+        Returns:
+            str: The ID of the created artifact
+
+        Raises:
+            ValueError: If required fields are missing
+            SQLAlchemyError: If database operation fails
+        """
+        required_fields = ['loan_id', 'artifact_type', 'etid', 'payload_sha256', 'created_by']
+        for field in required_fields:
+            if field not in artifact_data:
+                raise ValueError(f"Required field '{field}' is missing from artifact_data")
+
+        try:
+            session = self._ensure_session()
+
+            # Set defaults for optional fields
+            artifact_id = artifact_data.get('id', str(uuid.uuid4()))
+            artifact_data['id'] = artifact_id
+
+            # Create artifact with all provided fields
+            artifact = Artifact(**artifact_data)
+
+            session.add(artifact)
+            session.commit()
+
+            logger.info(f"Artifact created: {artifact_id} (type: {artifact_data.get('artifact_container_type', 'file')})")
+            return artifact_id
+
+        except SQLAlchemyError as e:
+            logger.error(f"Database error creating artifact: {e}")
+            session.rollback()
+            raise
+
     def insert_artifact(
         self,
         loan_id: str,
@@ -759,7 +799,39 @@ class Database:
         except SQLAlchemyError as e:
             logger.error(f"Database error retrieving artifact by hash: {e}")
             raise
-    
+
+    def get_children_artifacts(self, parent_id: str) -> List[Artifact]:
+        """
+        Get all child artifacts for a given parent container.
+
+        Args:
+            parent_id: The ID of the parent container artifact
+
+        Returns:
+            List[Artifact]: List of child artifacts linked to the parent
+
+        Raises:
+            ValueError: If parent_id is empty
+            SQLAlchemyError: If database operation fails
+        """
+        if not parent_id:
+            raise ValueError("parent_id is required")
+
+        try:
+            session = self._ensure_session()
+
+            children = session.query(Artifact)\
+                .filter(Artifact.parent_id == parent_id)\
+                .order_by(Artifact.created_at.asc())\
+                .all()
+
+            logger.debug(f"Retrieved {len(children)} child artifacts for parent {parent_id}")
+            return children
+
+        except SQLAlchemyError as e:
+            logger.error(f"Database error retrieving children for parent {parent_id}: {e}")
+            raise
+
     def get_artifact_events(self, artifact_id: str) -> List[ArtifactEvent]:
         """
         Get all events for a specific artifact, ordered by creation date.

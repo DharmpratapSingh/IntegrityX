@@ -22,7 +22,6 @@ import {
 
 // Import our components
 import AIDocumentProcessingInterface from '@/components/AIDocumentProcessingInterface'
-import BulkOperationsInterface from '@/components/BulkOperationsInterface'
 import AnalyticsDashboard from '@/components/AnalyticsDashboard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,7 +33,6 @@ interface DashboardStats {
   totalDocuments: number
   sealedDocuments: number
   aiProcessingCount: number
-  bulkOperationsCount: number
   systemHealth: 'healthy' | 'warning' | 'critical'
   lastUpdated: string
   performanceMetrics: {
@@ -70,7 +68,6 @@ export default function IntegratedDashboard() {
     totalDocuments: 0,
     sealedDocuments: 0,
     aiProcessingCount: 0,
-    bulkOperationsCount: 0,
     systemHealth: 'healthy',
     lastUpdated: getCurrentEasternTime(),
     performanceMetrics: {
@@ -243,12 +240,10 @@ export default function IntegratedDashboard() {
         // Update stats with real data
         setStats({
           totalDocuments: totalDocs,
-          // Sealed/verified today
-          sealedDocuments: verifiedToday,
+          // Total sealed documents
+          sealedDocuments: sealedCount,
           // Unique borrowers across all artifacts (proxy for AI processing diversity)
           aiProcessingCount: uniqueBorrowers,
-          // Deleted today
-          bulkOperationsCount: deletedToday,
           systemHealth,
           lastUpdated: getCurrentEasternTime(),
           performanceMetrics: {
@@ -362,7 +357,7 @@ export default function IntegratedDashboard() {
             <p className="text-lg font-semibold text-gray-900 dark:text-white">{stats.totalDocuments}</p>
           </div>
           <div>
-            <p className="text-gray-500 dark:text-gray-400">Sealed today</p>
+            <p className="text-gray-500 dark:text-gray-400">Total Sealed</p>
             <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">{stats.sealedDocuments}</p>
           </div>
           <div>
@@ -373,26 +368,26 @@ export default function IntegratedDashboard() {
       </div>
 
       <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Need help?</h3>
-        <p className="text-xs text-gray-700 dark:text-gray-300 mb-3">
-          Join the Walacor community or contact support for guided onboarding.
-        </p>
-        <div className="flex items-center gap-2 text-xs">
-          <a
-            href="mailto:support@integrityx.ai"
-            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Quick Actions</h3>
+        <div className="space-y-2 mt-3">
+          <Link
+            href="/upload"
+            className="block text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
           >
-            📚 Documentation
-          </a>
-          <span className="text-gray-400">•</span>
-          <a
-            href="https://slack.com"
-            target="_blank"
-            rel="noreferrer"
-            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            📤 Upload Documents
+          </Link>
+          <Link
+            href="/verification"
+            className="block text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
           >
-            💬 Slack community
-          </a>
+            ✅ Verify Documents
+          </Link>
+          <Link
+            href="/security"
+            className="block text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
+          >
+            🔍 Forensic Analysis
+          </Link>
         </div>
       </div>
     </div>
@@ -589,17 +584,6 @@ export default function IntegratedDashboard() {
                 </div>
                 </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.25)] transition hover:-translate-y-1 hover:shadow-[0_30px_80px_-40px_rgba(15,23,42,0.3)] dark:bg-gray-900 dark:border-gray-800">
-            <div className="flex items-center justify-between mb-4">
-              <div className="rounded-lg bg-cyan-50 p-2.5 dark:bg-cyan-950">
-                <Layers className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Bulk Operations</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.bulkOperationsCount}</p>
-            </div>
-          </div>
         </section>
 
         <section className="mb-6 rounded-2xl border border-gray-200 bg-white p-8 shadow-[0_25px_70px_-45px_rgba(15,23,42,0.25)] dark:bg-gray-900 dark:border-gray-800">
@@ -676,13 +660,6 @@ export default function IntegratedDashboard() {
                 >
                     <Brain className="h-4 w-4" />
                     AI Processing
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="bulk" 
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg px-6 py-3 text-gray-600 font-medium transition-smooth hover:text-gray-900 data-[state=active]:bg-cyan-50 data-[state=active]:text-cyan-700 data-[state=active]:shadow-sm dark:text-gray-400 dark:hover:text-gray-200 dark:data-[state=active]:bg-cyan-950 dark:data-[state=active]:text-cyan-300"
-                >
-                    <Layers className="h-4 w-4" />
-                    Bulk Operations
                 </TabsTrigger>
               </TabsList>
 
@@ -824,14 +801,6 @@ export default function IntegratedDashboard() {
               <Card className="border border-gray-200 bg-white shadow-[0_25px_70px_-45px_rgba(15,23,42,0.25)] dark:bg-gray-900 dark:border-gray-800">
                 <CardContent className="p-8">
                   <AIDocumentProcessingInterface />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="bulk">
-              <Card className="border border-gray-200 bg-white shadow-[0_25px_70px_-45px_rgba(15,23,42,0.25)] dark:bg-gray-900 dark:border-gray-800">
-                <CardContent className="p-8">
-                  <BulkOperationsInterface />
                 </CardContent>
               </Card>
             </TabsContent>

@@ -584,17 +584,25 @@ export default function VerificationPage() {
             </div>
           </div>
 
-          {/* Need Help */}
+          {/* Quick Links */}
           <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              Need help?
+              Other Actions
             </h3>
-            <p className="text-xs text-gray-700 dark:text-gray-300 mb-3">
-              Learn more about verification
-            </p>
-            <a href="#" className="text-xs text-gray-600 hover:text-gray-700 dark:text-gray-400">
-              📚 Verification Guide
-            </a>
+            <div className="space-y-2">
+              <Link
+                href="/upload"
+                className="block text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
+              >
+                📤 Upload New Document
+              </Link>
+              <Link
+                href="/security"
+                className="block text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
+              >
+                🔍 Forensic Comparison
+              </Link>
+            </div>
           </div>
         </div>
       }
