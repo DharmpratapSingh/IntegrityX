@@ -95,11 +95,30 @@ def main():
         print(f"Error message: {str(e)}")
         print()
 
-        # Try to get more details
+        # Try to get more details from the exception
+        print("Exception attributes:")
+        for attr in dir(e):
+            if not attr.startswith('_'):
+                try:
+                    val = getattr(e, attr)
+                    if not callable(val):
+                        print(f"  {attr}: {val}")
+                except:
+                    pass
+        print()
+
+        # Try to get response details
         if hasattr(e, 'response'):
             print("Response details:")
             print(f"  Status: {e.response.status_code if hasattr(e.response, 'status_code') else 'N/A'}")
-            print(f"  Body: {e.response.text if hasattr(e.response, 'text') else 'N/A'}")
+            try:
+                print(f"  Body: {e.response.text if hasattr(e.response, 'text') else 'N/A'}")
+            except:
+                print(f"  Body: [Unable to read]")
+            try:
+                print(f"  Headers: {dict(e.response.headers) if hasattr(e.response, 'headers') else 'N/A'}")
+            except:
+                print(f"  Headers: [Unable to read]")
         print()
 
     # Test 2: Insert into audit_logs (ETId 100004)
@@ -141,6 +160,52 @@ def main():
             print(f"  Status: {e.response.status_code if hasattr(e.response, 'status_code') else 'N/A'}")
             print(f"  Body: {e.response.text if hasattr(e.response, 'text') else 'N/A'}")
         print()
+
+    # Test 3: Try to query existing data (read test)
+    print("=" * 80)
+    print("TEST 3: Try to query loan_documents schema")
+    print("=" * 80)
+
+    try:
+        # Try to get existing records
+        query_result = wal.data_requests.get_records(
+            ETId=100001,
+            limit=5
+        )
+        print("✅ QUERY SUCCESSFUL!")
+        print(f"Found {len(query_result) if isinstance(query_result, list) else 'unknown'} records")
+        if query_result:
+            print("Sample record:")
+            print(json.dumps(query_result[0] if isinstance(query_result, list) else query_result, indent=2, default=str))
+        print()
+    except Exception as e:
+        print(f"❌ QUERY FAILED!")
+        print(f"Error: {str(e)}")
+        print()
+
+    print("=" * 80)
+    print("DIAGNOSIS")
+    print("=" * 80)
+    print()
+    print("🔍 500 Internal Server Error means:")
+    print("  ✅ Connection to Walacor works")
+    print("  ✅ Authentication is valid")
+    print("  ✅ Request format is correct")
+    print("  ❌ Walacor server crashed when processing the insert")
+    print()
+    print("💡 Possible causes:")
+    print("  1. Schema fields not properly initialized in Walacor backend database")
+    print("  2. Missing database tables/columns for the schema")
+    print("  3. Schema version mismatch (client expects SV 2, server has different version)")
+    print("  4. Walacor server bug or misconfiguration")
+    print("  5. Database constraints (foreign keys, triggers) failing")
+    print()
+    print("📋 Recommended actions:")
+    print("  1. Check Walacor server logs for detailed error")
+    print("  2. Contact Walacor support with this error")
+    print("  3. Try inserting via Walacor Dashboard UI to see if it works")
+    print("  4. Verify schema is fully initialized (not just created)")
+    print()
 
     print("=" * 80)
     print("TEST COMPLETE")
