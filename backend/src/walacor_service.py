@@ -292,7 +292,8 @@ class WalacorIntegrityService:
 
                     result = self.wal.data_requests.insert_single_record(
                         jsonRecord=json.dumps(blockchain_data),
-                        ETId=self.LOAN_DOCUMENTS_ETID
+                        ETId=self.LOAN_DOCUMENTS_ETID,
+                        schemaVersion=2
                     )
                     print(f"✅ Successfully stored document hash in Walacor blockchain")
                     # success resets breaker
@@ -523,7 +524,8 @@ class WalacorIntegrityService:
 
                     result = self.wal.data_requests.insert_single_record(
                         jsonRecord=json.dumps(blockchain_data),
-                        ETId=self.LOAN_DOCUMENTS_ETID
+                        ETId=self.LOAN_DOCUMENTS_ETID,
+                        schemaVersion=2
                     )
                     
                     # Extract transaction ID from Walacor response
@@ -640,7 +642,8 @@ class WalacorIntegrityService:
                 # Real Walacor connection - only essential audit info
                 result = self.wal.data_requests.insert_single_record(
                     jsonRecord=json.dumps(blockchain_audit_data),
-                    ETId=self.AUDIT_LOGS_ETID
+                    ETId=self.AUDIT_LOGS_ETID,
+                    schemaVersion=2
                 )
             else:
                 # Local blockchain simulation - only essential audit data
@@ -786,7 +789,8 @@ class WalacorIntegrityService:
             # Store in Walacor
             result = self.wal.data_requests.insert_single_record(
                 jsonRecord=json.dumps(provenance_data),
-                ETId=self.DOCUMENT_PROVENANCE_ETID
+                ETId=self.DOCUMENT_PROVENANCE_ETID,
+                schemaVersion=2
             )
             
             print(f"✅ Provenance link created: {parent_doc_id} -> {child_doc_id} ({relationship_type})")
@@ -843,7 +847,8 @@ class WalacorIntegrityService:
             # Store in Walacor
             result = self.wal.data_requests.insert_single_record(
                 jsonRecord=json.dumps(attestation_data),
-                ETId=self.ATTESTATIONS_ETID
+                ETId=self.ATTESTATIONS_ETID,
+                schemaVersion=2
             )
             
             print(f"✅ Attestation created: {attestation_type} by {attestor_name} for document {document_id}")
