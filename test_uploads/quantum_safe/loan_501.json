@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_QUANTUM_SAFE_015_1763006525_DOC1_DOC2",
+    "loan_type": "Auto Loan",
+    "loan_amount": 750000,
+    "interest_rate": 6.5,
+    "loan_term_years": 15,
+    "property_type": "Land",
+    "property_address": "5723 Joel Cape, Port Monique, UT 22003",
+    "purchase_price": 1125000,
+    "down_payment": 375000,
+    "loan_purpose": "Home Purchase",
+    "created_by": "test_user_15@integrityx.com",
+    "document_type": "Document 2 for LOAN_QUANTUM_SAFE_015_1763006525_DOC1_DOC2"
+  },
+  "borrower_information": {
+    "full_name": "Sandra Williams",
+    "first_name": "Sandra",
+    "last_name": "Williams",
+    "email": "sandra.williams15@example.com",
+    "phone": "996-859-5256x415",
+    "date_of_birth": "1956-03-09",
+    "ssn": "368-13-5874",
+    "address": "682 John Stravenue Apt. 884, Amandachester, CO 20504",
+    "city": "Wubury",
+    "state": "SD",
+    "zip_code": "45262",
+    "annual_income": 250000,
+    "annual_income_range": 250000.0,
+    "employment_type": "Self-Employed",
+    "employer_name": "Murphy Ltd",
+    "job_title": "Illustrator",
+    "years_employed": 29,
+    "credit_score": 750,
+    "bank_name": "Lucero LLC Bank",
+    "account_number": "QHRT88937383472277",
+    "routing_number": "074993855",
+    "marital_status": "Widowed",
+    "dependents": 3,
+    "income_source": "Commission"
+  },
+  "financial_summary": {
+    "total_assets": 1214958.106138289,
+    "total_liabilities": 99849.65522849465,
+    "debt_to_income_ratio": 300.0,
+    "monthly_payment": 6533.31
+  },
+  "property_details": {
+    "address": "5723 Joel Cape, Port Monique, UT 22003",
+    "property_type": "Land",
+    "year_built": 1971,
+    "square_feet": 3186,
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "estimated_value": 1150612.648489448
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": true,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:02:06.099061",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": ""
+  }
+}

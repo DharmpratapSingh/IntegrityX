@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_020_1763006521_DOC1_DOC2",
+    "loan_type": "Credit Line",
+    "loan_amount": 500000,
+    "interest_rate": 3.5,
+    "loan_term_years": 7,
+    "property_type": "Townhouse",
+    "property_address": "09703 Heather Lakes, Martinchester, CO 21662",
+    "purchase_price": 650000,
+    "down_payment": 150000,
+    "loan_purpose": "Refinance",
+    "created_by": "test_user_20@integrityx.com",
+    "document_type": "Document 2 for LOAN_STANDARD_020_1763006521_DOC1_DOC2"
+  },
+  "borrower_information": {
+    "full_name": "Margaret Thomas",
+    "first_name": "Margaret",
+    "last_name": "Thomas",
+    "email": "margaret.thomas20@example.com",
+    "phone": "219-743-4618x986",
+    "date_of_birth": "1995-12-17",
+    "ssn": "675-70-9723",
+    "address": "0128 Campbell Station Apt. 796, Ruiztown, WI 61277",
+    "city": "West Christopherland",
+    "state": "GU",
+    "zip_code": "13434",
+    "annual_income": 40000,
+    "annual_income_range": 40000.0,
+    "employment_type": "Business Owner",
+    "employer_name": "Carrillo Group",
+    "job_title": "Buyer, retail",
+    "years_employed": 2,
+    "credit_score": 580,
+    "bank_name": "Saunders-Reid Bank",
+    "account_number": "NVEZ98117306991669",
+    "routing_number": "072604764",
+    "marital_status": "Married",
+    "dependents": 1,
+    "income_source": "Commission"
+  },
+  "financial_summary": {
+    "total_assets": 152689.94632469007,
+    "total_liabilities": 85011.30671796139,
+    "debt_to_income_ratio": 1250.0,
+    "monthly_payment": 6719.93
+  },
+  "property_details": {
+    "address": "09703 Heather Lakes, Martinchester, CO 21662",
+    "property_type": "Townhouse",
+    "year_built": 1964,
+    "square_feet": 4803,
+    "bedrooms": 3,
+    "bathrooms": 4,
+    "estimated_value": 658718.9845568852
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": false,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:02:01.910308",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Few old go use fly grow. Without media option country science less.\nNation culture indicate culture. Should ready government. Push despite indeed."
+  }
+}

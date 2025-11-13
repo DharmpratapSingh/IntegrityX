@@ -27,7 +27,8 @@ class ContainerService:
         walacor_tx_id: str,
         file_count: int,
         created_by: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        borrower_info: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         Create a parent container artifact for a directory upload.
@@ -68,7 +69,7 @@ class ContainerService:
 
                 # Store directory metadata
                 'local_metadata': metadata or {},
-                'borrower_info': {}  # Will be populated from children
+                'borrower_info': borrower_info or {}  # Store borrower info from parent
             }
 
             # Insert into database

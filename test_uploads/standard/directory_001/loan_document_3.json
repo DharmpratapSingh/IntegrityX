@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_021_1763006329",
+    "loan_type": "Construction Loan",
+    "loan_amount": 350000,
+    "interest_rate": 4.0,
+    "loan_term_years": 20,
+    "property_type": "Land",
+    "property_address": "8054 Li Causeway, Port Sethton, MI 82617",
+    "purchase_price": 437500,
+    "down_payment": 87500,
+    "loan_purpose": "Refinance",
+    "created_by": "test_user_21@integrityx.com",
+    "document_type": "Loan Document 3"
+  },
+  "borrower_information": {
+    "full_name": "Susan Lopez",
+    "first_name": "Susan",
+    "last_name": "Lopez",
+    "email": "susan.lopez21@example.com",
+    "phone": "723-806-1984x90755",
+    "date_of_birth": "1964-12-13",
+    "ssn": "968-30-7900",
+    "address": "129 Luna Greens Suite 551, West James, ND 39699",
+    "city": "Port Veronica",
+    "state": "HI",
+    "zip_code": "61173",
+    "annual_income": 500000,
+    "annual_income_range": 500000.0,
+    "employment_type": "Self-Employed",
+    "employer_name": "Williams-Banks",
+    "job_title": "Scientist, clinical (histocompatibility and immunogenetics)",
+    "years_employed": 14,
+    "credit_score": 800,
+    "bank_name": "Vargas-James Bank",
+    "account_number": "QKSG95803136773040",
+    "routing_number": "016760732",
+    "marital_status": "Single",
+    "dependents": 5,
+    "income_source": "Commission"
+  },
+  "financial_summary": {
+    "total_assets": 2233206.931234885,
+    "total_liabilities": 90571.16054684467,
+    "debt_to_income_ratio": 70.0,
+    "monthly_payment": 2120.93
+  },
+  "property_details": {
+    "address": "8054 Li Causeway, Port Sethton, MI 82617",
+    "property_type": "Land",
+    "year_built": 2017,
+    "square_feet": 3344,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "estimated_value": 448454.74486305634
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": false,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T22:58:49.105384",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Still young yes church. Opportunity movement between under machine really policy eat. Big reality even home explain."
+  }
+}

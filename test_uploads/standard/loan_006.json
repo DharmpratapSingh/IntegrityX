@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_006_1763006497",
+    "loan_type": "Credit Line",
+    "loan_amount": 50000,
+    "interest_rate": 6.0,
+    "loan_term_years": 10,
+    "property_type": "Condo",
+    "property_address": "388 Patricia Island Apt. 703, East Michaelview, AS 56179",
+    "purchase_price": 62500,
+    "down_payment": 12500,
+    "loan_purpose": "Debt Consolidation",
+    "created_by": "test_user_6@integrityx.com",
+    "document_type": "Title Deed"
+  },
+  "borrower_information": {
+    "full_name": "Donald Harris",
+    "first_name": "Donald",
+    "last_name": "Harris",
+    "email": "donald.harris6@example.com",
+    "phone": "+1-882-745-0864x08711",
+    "date_of_birth": "1982-04-28",
+    "ssn": "895-82-7980",
+    "address": "690 Reilly Falls, Sarahbury, IA 68023",
+    "city": "New Emily",
+    "state": "ID",
+    "zip_code": "58846",
+    "annual_income": 250000,
+    "annual_income_range": 250000.0,
+    "employment_type": "Freelancer",
+    "employer_name": "Parker-David",
+    "job_title": "Horticulturist, amenity",
+    "years_employed": 11,
+    "credit_score": 720,
+    "bank_name": "Frank-Allen Bank",
+    "account_number": "SXWJ19576481569837",
+    "routing_number": "059305756",
+    "marital_status": "Widowed",
+    "dependents": 1,
+    "income_source": "Social Security"
+  },
+  "financial_summary": {
+    "total_assets": 1093375.276916743,
+    "total_liabilities": 12093.442900093994,
+    "debt_to_income_ratio": 20.0,
+    "monthly_payment": 555.1
+  },
+  "property_details": {
+    "address": "388 Patricia Island Apt. 703, East Michaelview, AS 56179",
+    "property_type": "Condo",
+    "year_built": 1959,
+    "square_feet": 1616,
+    "bedrooms": 5,
+    "bathrooms": 1,
+    "estimated_value": 74227.56730626855
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": true,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:01:37.538280",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Former management direction a participant scene. Or data teacher the house.\nNatural perform task head speak truth could. Account law country bill case beat."
+  }
+}

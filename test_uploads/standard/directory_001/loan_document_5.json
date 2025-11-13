@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_021_1763006329",
+    "loan_type": "Construction Loan",
+    "loan_amount": 350000,
+    "interest_rate": 4.0,
+    "loan_term_years": 20,
+    "property_type": "Land",
+    "property_address": "8054 Li Causeway, Port Sethton, MI 82617",
+    "purchase_price": 437500,
+    "down_payment": 87500,
+    "loan_purpose": "Refinance",
+    "created_by": "test_user_21@integrityx.com",
+    "document_type": "Loan Document 5"
+  },
+  "borrower_information": {
+    "full_name": "Susan Lopez",
+    "first_name": "Susan",
+    "last_name": "Lopez",
+    "email": "susan.lopez21@example.com",
+    "phone": "723-806-1984x90755",
+    "date_of_birth": "1964-12-13",
+    "ssn": "968-30-7900",
+    "address": "129 Luna Greens Suite 551, West James, ND 39699",
+    "city": "Port Veronica",
+    "state": "HI",
+    "zip_code": "61173",
+    "annual_income": 500000,
+    "annual_income_range": 500000.0,
+    "employment_type": "Self-Employed",
+    "employer_name": "Williams-Banks",
+    "job_title": "Scientist, clinical (histocompatibility and immunogenetics)",
+    "years_employed": 14,
+    "credit_score": 800,
+    "bank_name": "Vargas-James Bank",
+    "account_number": "QKSG95803136773040",
+    "routing_number": "016760732",
+    "marital_status": "Single",
+    "dependents": 5,
+    "income_source": "Commission"
+  },
+  "financial_summary": {
+    "total_assets": 1292616.457812922,
+    "total_liabilities": 35167.07541457323,
+    "debt_to_income_ratio": 70.0,
+    "monthly_payment": 2120.93
+  },
+  "property_details": {
+    "address": "8054 Li Causeway, Port Sethton, MI 82617",
+    "property_type": "Land",
+    "year_built": 1994,
+    "square_feet": 1285,
+    "bedrooms": 5,
+    "bathrooms": 4,
+    "estimated_value": 434748.2544500775
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": true,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T22:58:49.107280",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Physical stock between soon soon measure. Medical human state Congress form generation."
+  }
+}

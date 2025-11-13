@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_020_1763006451_DOC1_DOC2_DOC3_DOC4",
+    "loan_type": "Mortgage",
+    "loan_amount": 350000,
+    "interest_rate": 4.5,
+    "loan_term_years": 10,
+    "property_type": "Mobile Home",
+    "property_address": "45244 Allen Forks Apt. 058, Port Mistyberg, OK 64388",
+    "purchase_price": 455000,
+    "down_payment": 105000,
+    "loan_purpose": "Home Improvement",
+    "created_by": "test_user_20@integrityx.com",
+    "document_type": "Document 4 for LOAN_STANDARD_020_1763006451_DOC1_DOC2_DOC3_DOC4"
+  },
+  "borrower_information": {
+    "full_name": "Ashley Young",
+    "first_name": "Ashley",
+    "last_name": "Young",
+    "email": "ashley.young20@example.com",
+    "phone": "+1-926-697-8446x59586",
+    "date_of_birth": "1964-01-13",
+    "ssn": "276-90-4539",
+    "address": "236 Silva Viaduct Apt. 338, Ryanfort, SD 56835",
+    "city": "Dawsonland",
+    "state": "NV",
+    "zip_code": "43169",
+    "annual_income": 80000,
+    "annual_income_range": 80000.0,
+    "employment_type": "Contractor",
+    "employer_name": "Williams, Smith and Wright",
+    "job_title": "Chief Technology Officer",
+    "years_employed": 23,
+    "credit_score": 820,
+    "bank_name": "Blackburn, Mccarty and Hines Bank",
+    "account_number": "BFXA17818989013703",
+    "routing_number": "076942354",
+    "marital_status": "Single",
+    "dependents": 0,
+    "income_source": "Salary"
+  },
+  "financial_summary": {
+    "total_assets": 191913.65908428378,
+    "total_liabilities": 37321.8155246474,
+    "debt_to_income_ratio": 437.5,
+    "monthly_payment": 3627.34
+  },
+  "property_details": {
+    "address": "45244 Allen Forks Apt. 058, Port Mistyberg, OK 64388",
+    "property_type": "Mobile Home",
+    "year_built": 2016,
+    "square_feet": 4863,
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "estimated_value": 472932.3637255589
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": true,
+    "assets_verified": true,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:00:52.072909",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": ""
+  }
+}

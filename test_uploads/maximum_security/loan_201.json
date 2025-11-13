@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_MAXIMUM_SECURITY_012_1763006531_DOC1_DOC2",
+    "loan_type": "Student Loan",
+    "loan_amount": 400000,
+    "interest_rate": 7.0,
+    "loan_term_years": 20,
+    "property_type": "Townhouse",
+    "property_address": "33017 Richard Land, East Sophiatown, KY 25810",
+    "purchase_price": 420000,
+    "down_payment": 20000,
+    "loan_purpose": "Education",
+    "created_by": "test_user_12@integrityx.com",
+    "document_type": "Document 2 for LOAN_MAXIMUM_SECURITY_012_1763006531_DOC1_DOC2"
+  },
+  "borrower_information": {
+    "full_name": "Ashley Martin",
+    "first_name": "Ashley",
+    "last_name": "Martin",
+    "email": "ashley.martin12@example.com",
+    "phone": "830-382-7610x91574",
+    "date_of_birth": "1990-11-19",
+    "ssn": "877-18-6575",
+    "address": "0213 Waters Parkway, Nicholebury, DE 94805",
+    "city": "Paulborough",
+    "state": "MI",
+    "zip_code": "80394",
+    "annual_income": 50000,
+    "annual_income_range": 50000.0,
+    "employment_type": "Consultant",
+    "employer_name": "Brown PLC",
+    "job_title": "Insurance account manager",
+    "years_employed": 11,
+    "credit_score": 680,
+    "bank_name": "Scott, Price and Huynh Bank",
+    "account_number": "ERTT52508266842744",
+    "routing_number": "124294226",
+    "marital_status": "Single",
+    "dependents": 1,
+    "income_source": "Alimony"
+  },
+  "financial_summary": {
+    "total_assets": 241395.66245170654,
+    "total_liabilities": 107968.7519598465,
+    "debt_to_income_ratio": 800.0,
+    "monthly_payment": 3101.2
+  },
+  "property_details": {
+    "address": "33017 Richard Land, East Sophiatown, KY 25810",
+    "property_type": "Townhouse",
+    "year_built": 1952,
+    "square_feet": 4199,
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "estimated_value": 384025.14084115817
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": false,
+    "assets_verified": true,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:02:11.768220",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Hour lawyer face improve dream imagine have. President firm piece focus sense place. Heavy good city our part through may."
+  }
+}

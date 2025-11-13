@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_QUANTUM_SAFE_008_1763006505",
+    "loan_type": "Refinance",
+    "loan_amount": 600000,
+    "interest_rate": 3.5,
+    "loan_term_years": 20,
+    "property_type": "Mobile Home",
+    "property_address": "45115 Melissa Common, Lake Patriciaville, TX 21081",
+    "purchase_price": 810000,
+    "down_payment": 210000,
+    "loan_purpose": "Home Improvement",
+    "created_by": "test_user_8@integrityx.com",
+    "document_type": "Income Verification"
+  },
+  "borrower_information": {
+    "full_name": "Elizabeth Martinez",
+    "first_name": "Elizabeth",
+    "last_name": "Martinez",
+    "email": "elizabeth.martinez8@example.com",
+    "phone": "7024439959",
+    "date_of_birth": "1978-11-30",
+    "ssn": "217-70-1895",
+    "address": "18127 Fry Rapid Apt. 450, West Denise, WA 97296",
+    "city": "South Arielside",
+    "state": "DC",
+    "zip_code": "60171",
+    "annual_income": 250000,
+    "annual_income_range": 250000.0,
+    "employment_type": "Full-Time Employee",
+    "employer_name": "Fitzgerald-Johnson",
+    "job_title": "Legal executive",
+    "years_employed": 18,
+    "credit_score": 620,
+    "bank_name": "Hill, Short and Clayton Bank",
+    "account_number": "DXLZ66379204666011",
+    "routing_number": "071333081",
+    "marital_status": "Married",
+    "dependents": 3,
+    "income_source": "Investment Income"
+  },
+  "financial_summary": {
+    "total_assets": 638211.8524391709,
+    "total_liabilities": 171714.42437717482,
+    "debt_to_income_ratio": 240.0,
+    "monthly_payment": 3479.76
+  },
+  "property_details": {
+    "address": "45115 Melissa Common, Lake Patriciaville, TX 21081",
+    "property_type": "Mobile Home",
+    "year_built": 1985,
+    "square_feet": 4064,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "estimated_value": 915709.9132949706
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": false,
+    "assets_verified": true,
+    "credit_checked": true,
+    "appraisal_completed": true
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:01:45.333961",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Site direction control military. Challenge size night themselves arrive. When position part. During page particularly forward especially."
+  }
+}

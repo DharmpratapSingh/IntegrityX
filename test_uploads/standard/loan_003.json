@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_003_1763006495",
+    "loan_type": "Credit Line",
+    "loan_amount": 600000,
+    "interest_rate": 4.5,
+    "loan_term_years": 5,
+    "property_type": "Condo",
+    "property_address": "574 Nicholas Squares, West Georgeshire, MS 89487",
+    "purchase_price": 810000,
+    "down_payment": 210000,
+    "loan_purpose": "Home Improvement",
+    "created_by": "test_user_3@integrityx.com",
+    "document_type": "Asset Statement"
+  },
+  "borrower_information": {
+    "full_name": "Barbara King",
+    "first_name": "Barbara",
+    "last_name": "King",
+    "email": "barbara.king3@example.com",
+    "phone": "264-781-0662",
+    "date_of_birth": "1992-07-12",
+    "ssn": "633-35-2920",
+    "address": "9154 Collins Junctions Apt. 182, Valeriestad, FM 10778",
+    "city": "Hamiltonburgh",
+    "state": "LA",
+    "zip_code": "52152",
+    "annual_income": 120000,
+    "annual_income_range": 120000.0,
+    "employment_type": "Contractor",
+    "employer_name": "Hansen, Mills and Weeks",
+    "job_title": "Sales executive",
+    "years_employed": 6,
+    "credit_score": 850,
+    "bank_name": "Parsons-Mendoza Bank",
+    "account_number": "HDLB52346840012215",
+    "routing_number": "104950454",
+    "marital_status": "Widowed",
+    "dependents": 4,
+    "income_source": "Other"
+  },
+  "financial_summary": {
+    "total_assets": 246351.2813279695,
+    "total_liabilities": 147777.57457358524,
+    "debt_to_income_ratio": 500.0,
+    "monthly_payment": 11185.81
+  },
+  "property_details": {
+    "address": "574 Nicholas Squares, West Georgeshire, MS 89487",
+    "property_type": "Condo",
+    "year_built": 1995,
+    "square_feet": 1362,
+    "bedrooms": 1,
+    "bathrooms": 4,
+    "estimated_value": 857351.8740986532
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": true,
+    "assets_verified": true,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:01:35.691909",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": ""
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_QUANTUM_SAFE_017_1763006457_DOC1_DOC2_DOC3",
+    "loan_type": "Auto Loan",
+    "loan_amount": 2000000,
+    "interest_rate": 4.0,
+    "loan_term_years": 12,
+    "property_type": "Investment Property",
+    "property_address": "5436 Marissa Hills Suite 195, Port Brianmouth, AS 99724",
+    "purchase_price": 3000000,
+    "down_payment": 1000000,
+    "loan_purpose": "Other",
+    "created_by": "test_user_17@integrityx.com",
+    "document_type": "Document 3 for LOAN_QUANTUM_SAFE_017_1763006457_DOC1_DOC2_DOC3"
+  },
+  "borrower_information": {
+    "full_name": "Sandra Harris",
+    "first_name": "Sandra",
+    "last_name": "Harris",
+    "email": "sandra.harris17@example.com",
+    "phone": "366-361-8818x112",
+    "date_of_birth": "1993-10-03",
+    "ssn": "112-23-3885",
+    "address": "1666 Charles Crossroad, South Lisa, FM 51160",
+    "city": "South Josephland",
+    "state": "NM",
+    "zip_code": "78190",
+    "annual_income": 400000,
+    "annual_income_range": 400000.0,
+    "employment_type": "Part-Time Employee",
+    "employer_name": "Jackson Group",
+    "job_title": "Investment banker, corporate",
+    "years_employed": 19,
+    "credit_score": 720,
+    "bank_name": "Hayes Inc Bank",
+    "account_number": "TJKD46601657049825",
+    "routing_number": "087446920",
+    "marital_status": "Divorced",
+    "dependents": 3,
+    "income_source": "Investment Income"
+  },
+  "financial_summary": {
+    "total_assets": 904490.9073766343,
+    "total_liabilities": 295053.93490936625,
+    "debt_to_income_ratio": 500.0,
+    "monthly_payment": 17510.57
+  },
+  "property_details": {
+    "address": "5436 Marissa Hills Suite 195, Port Brianmouth, AS 99724",
+    "property_type": "Investment Property",
+    "year_built": 1984,
+    "square_feet": 990,
+    "bedrooms": 4,
+    "bathrooms": 1,
+    "estimated_value": 2718215.263801124
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": false,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:00:58.036278",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Check system next defense. Everyone lot world either effect number recent however. Floor heart us very."
+  }
+}

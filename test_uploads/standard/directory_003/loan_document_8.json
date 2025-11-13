@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_023_1763006541",
+    "loan_type": "Auto Loan",
+    "loan_amount": 400000,
+    "interest_rate": 8.0,
+    "loan_term_years": 7,
+    "property_type": "Condo",
+    "property_address": "6543 Black Hill, West Lisa, WV 97168",
+    "purchase_price": 460000,
+    "down_payment": 60000,
+    "loan_purpose": "Refinance",
+    "created_by": "test_user_23@integrityx.com",
+    "document_type": "Loan Document 8"
+  },
+  "borrower_information": {
+    "full_name": "Anthony Rodriguez",
+    "first_name": "Anthony",
+    "last_name": "Rodriguez",
+    "email": "anthony.rodriguez23@example.com",
+    "phone": "(954)722-8429",
+    "date_of_birth": "1999-04-25",
+    "ssn": "860-96-5463",
+    "address": "358 Laura Manor, Juanhaven, PR 30793",
+    "city": "Justinville",
+    "state": "TX",
+    "zip_code": "48086",
+    "annual_income": 150000,
+    "annual_income_range": 150000.0,
+    "employment_type": "Retired",
+    "employer_name": "Hardin-Douglas",
+    "job_title": "Music tutor",
+    "years_employed": 25,
+    "credit_score": 680,
+    "bank_name": "Armstrong, Crane and Nunez Bank",
+    "account_number": "GGEB99918657942256",
+    "routing_number": "050245200",
+    "marital_status": "Divorced",
+    "dependents": 5,
+    "income_source": "Business Income"
+  },
+  "financial_summary": {
+    "total_assets": 681756.4060269084,
+    "total_liabilities": 89804.93484410063,
+    "debt_to_income_ratio": 266.67,
+    "monthly_payment": 6234.49
+  },
+  "property_details": {
+    "address": "6543 Black Hill, West Lisa, WV 97168",
+    "property_type": "Condo",
+    "year_built": 1994,
+    "square_feet": 2335,
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "estimated_value": 547609.8229180855
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": true,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:02:21.787483",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Car town Congress. Color present necessary accept environmental open.\nTerm under note moment where thing east. When pretty couple share discussion fear."
+  }
+}

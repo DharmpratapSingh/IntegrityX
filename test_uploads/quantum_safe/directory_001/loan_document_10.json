@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_QUANTUM_SAFE_021_1763006539",
+    "loan_type": "Home Equity",
+    "loan_amount": 750000,
+    "interest_rate": 5.5,
+    "loan_term_years": 10,
+    "property_type": "Manufactured",
+    "property_address": "PSC 8499, Box 3294, APO AE 35703",
+    "purchase_price": 1125000,
+    "down_payment": 375000,
+    "loan_purpose": "Education",
+    "created_by": "test_user_21@integrityx.com",
+    "document_type": "Loan Document 10"
+  },
+  "borrower_information": {
+    "full_name": "Susan Jackson",
+    "first_name": "Susan",
+    "last_name": "Jackson",
+    "email": "susan.jackson21@example.com",
+    "phone": "558-712-2293x347",
+    "date_of_birth": "1987-10-18",
+    "ssn": "463-57-1550",
+    "address": "USS Walsh, FPO AA 50849",
+    "city": "Woodview",
+    "state": "VT",
+    "zip_code": "70659",
+    "annual_income": 60000,
+    "annual_income_range": 60000.0,
+    "employment_type": "Student",
+    "employer_name": "Green-Miller",
+    "job_title": "Therapist, art",
+    "years_employed": 23,
+    "credit_score": 720,
+    "bank_name": "Anthony LLC Bank",
+    "account_number": "KFWW60017655022952",
+    "routing_number": "065380888",
+    "marital_status": "Divorced",
+    "dependents": 2,
+    "income_source": "Other"
+  },
+  "financial_summary": {
+    "total_assets": 200273.49285559164,
+    "total_liabilities": 198323.70763694716,
+    "debt_to_income_ratio": 1250.0,
+    "monthly_payment": 8139.47
+  },
+  "property_details": {
+    "address": "PSC 8499, Box 3294, APO AE 35703",
+    "property_type": "Manufactured",
+    "year_built": 2018,
+    "square_feet": 4755,
+    "bedrooms": 3,
+    "bathrooms": 4,
+    "estimated_value": 1297789.9080145985
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": true,
+    "assets_verified": true,
+    "credit_checked": true,
+    "appraisal_completed": true
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:02:19.505645",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": ""
+  }
+}

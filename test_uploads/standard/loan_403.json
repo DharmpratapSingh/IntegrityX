@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_014_1763006306_DOC1_DOC2_DOC3_DOC4",
+    "loan_type": "Business Loan",
+    "loan_amount": 50000,
+    "interest_rate": 4.5,
+    "loan_term_years": 15,
+    "property_type": "Commercial",
+    "property_address": "80176 Abbott Mall, Raymondstad, RI 58942",
+    "purchase_price": 62500,
+    "down_payment": 12500,
+    "loan_purpose": "Home Improvement",
+    "created_by": "test_user_14@integrityx.com",
+    "document_type": "Document 4 for LOAN_STANDARD_014_1763006306_DOC1_DOC2_DOC3_DOC4"
+  },
+  "borrower_information": {
+    "full_name": "Ashley Rodriguez",
+    "first_name": "Ashley",
+    "last_name": "Rodriguez",
+    "email": "ashley.rodriguez14@example.com",
+    "phone": "859.532.2346x73098",
+    "date_of_birth": "1985-09-02",
+    "ssn": "383-47-9333",
+    "address": "349 Baker Club, South David, OH 64117",
+    "city": "Leetown",
+    "state": "WA",
+    "zip_code": "73361",
+    "annual_income": 40000,
+    "annual_income_range": 40000.0,
+    "employment_type": "Full-Time Employee",
+    "employer_name": "Burton and Sons",
+    "job_title": "Financial adviser",
+    "years_employed": 27,
+    "credit_score": 650,
+    "bank_name": "Suarez, Dorsey and Daniel Bank",
+    "account_number": "GDST62024805008978",
+    "routing_number": "057141514",
+    "marital_status": "Married",
+    "dependents": 1,
+    "income_source": "Other"
+  },
+  "financial_summary": {
+    "total_assets": 153162.90910328814,
+    "total_liabilities": 8611.703530743669,
+    "debt_to_income_ratio": 125.0,
+    "monthly_payment": 382.5
+  },
+  "property_details": {
+    "address": "80176 Abbott Mall, Raymondstad, RI 58942",
+    "property_type": "Commercial",
+    "year_built": 1985,
+    "square_feet": 3149,
+    "bedrooms": 2,
+    "bathrooms": 4,
+    "estimated_value": 70824.20023780705
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": false,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": true
+  },
+  "metadata": {
+    "created_at": "2025-11-12T22:58:26.967786",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": ""
+  }
+}

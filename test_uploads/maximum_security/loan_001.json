@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_MAXIMUM_SECURITY_001_1763006507",
+    "loan_type": "Home Equity",
+    "loan_amount": 350000,
+    "interest_rate": 4.0,
+    "loan_term_years": 30,
+    "property_type": "Co-op",
+    "property_address": "825 Moore Mountain, Alanburgh, MD 90215",
+    "purchase_price": 525000,
+    "down_payment": 175000,
+    "loan_purpose": "Home Improvement",
+    "created_by": "test_user_1@integrityx.com",
+    "document_type": "Bank Statement"
+  },
+  "borrower_information": {
+    "full_name": "Matthew Brown",
+    "first_name": "Matthew",
+    "last_name": "Brown",
+    "email": "matthew.brown1@example.com",
+    "phone": "001-298-462-8365x648",
+    "date_of_birth": "1993-05-24",
+    "ssn": "145-61-9132",
+    "address": "PSC 0519, Box 7968, APO AE 92748",
+    "city": "East Julie",
+    "state": "RI",
+    "zip_code": "76329",
+    "annual_income": 30000,
+    "annual_income_range": 30000.0,
+    "employment_type": "Business Owner",
+    "employer_name": "Bradford LLC",
+    "job_title": "Landscape architect",
+    "years_employed": 14,
+    "credit_score": 850,
+    "bank_name": "Ingram Group Bank",
+    "account_number": "MIPM22548633490206",
+    "routing_number": "084205054",
+    "marital_status": "Divorced",
+    "dependents": 4,
+    "income_source": "Retirement"
+  },
+  "financial_summary": {
+    "total_assets": 76130.96871713093,
+    "total_liabilities": 96047.5426070428,
+    "debt_to_income_ratio": 1166.67,
+    "monthly_payment": 1670.95
+  },
+  "property_details": {
+    "address": "825 Moore Mountain, Alanburgh, MD 90215",
+    "property_type": "Co-op",
+    "year_built": 1967,
+    "square_feet": 1094,
+    "bedrooms": 1,
+    "bathrooms": 3,
+    "estimated_value": 497682.67540206533
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": true,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:01:47.241284",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Enjoy may door. Individual inside economic stock dinner off. List garden your campaign professional visit within.\nRun war trade machine vote concern again. Bad hour clearly notice eye enough assume."
+  }
+}

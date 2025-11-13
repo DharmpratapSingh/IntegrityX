@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_QUANTUM_SAFE_013_1763006524_DOC1",
+    "loan_type": "Refinance",
+    "loan_amount": 450000,
+    "interest_rate": 5.0,
+    "loan_term_years": 15,
+    "property_type": "Land",
+    "property_address": "320 Andrew Ridges Apt. 883, Parkstad, WY 03317",
+    "purchase_price": 585000,
+    "down_payment": 135000,
+    "loan_purpose": "Home Purchase",
+    "created_by": "test_user_13@integrityx.com",
+    "document_type": "Document 1 for LOAN_QUANTUM_SAFE_013_1763006524_DOC1"
+  },
+  "borrower_information": {
+    "full_name": "Jennifer Allen",
+    "first_name": "Jennifer",
+    "last_name": "Allen",
+    "email": "jennifer.allen13@example.com",
+    "phone": "2667443524",
+    "date_of_birth": "1960-06-30",
+    "ssn": "149-88-3296",
+    "address": "587 Martin Mount, South Charlesberg, KS 07050",
+    "city": "Derekton",
+    "state": "CA",
+    "zip_code": "72961",
+    "annual_income": 100000,
+    "annual_income_range": 100000.0,
+    "employment_type": "Unemployed",
+    "employer_name": "Elliott LLC",
+    "job_title": "Management consultant",
+    "years_employed": 18,
+    "credit_score": 750,
+    "bank_name": "Williams LLC Bank",
+    "account_number": "SKLW33804321541924",
+    "routing_number": "034882728",
+    "marital_status": "Married",
+    "dependents": 2,
+    "income_source": "Commission"
+  },
+  "financial_summary": {
+    "total_assets": 474365.6405397464,
+    "total_liabilities": 111310.43773063729,
+    "debt_to_income_ratio": 450.0,
+    "monthly_payment": 3558.57
+  },
+  "property_details": {
+    "address": "320 Andrew Ridges Apt. 883, Parkstad, WY 03317",
+    "property_type": "Land",
+    "year_built": 1950,
+    "square_feet": 4754,
+    "bedrooms": 5,
+    "bathrooms": 3,
+    "estimated_value": 574323.8673825809
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": false,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": true
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:02:04.196136",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": ""
+  }
+}

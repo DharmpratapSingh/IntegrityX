@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_014_1763006516_DOC1_DOC2",
+    "loan_type": "Home Equity",
+    "loan_amount": 50000,
+    "interest_rate": 7.0,
+    "loan_term_years": 20,
+    "property_type": "Commercial",
+    "property_address": "331 Sharon Corner, New Shawnmouth, DE 88456",
+    "purchase_price": 67500,
+    "down_payment": 17500,
+    "loan_purpose": "Home Purchase",
+    "created_by": "test_user_14@integrityx.com",
+    "document_type": "Document 2 for LOAN_STANDARD_014_1763006516_DOC1_DOC2"
+  },
+  "borrower_information": {
+    "full_name": "James Taylor",
+    "first_name": "James",
+    "last_name": "Taylor",
+    "email": "james.taylor14@example.com",
+    "phone": "339-925-5228x114",
+    "date_of_birth": "1984-01-28",
+    "ssn": "636-49-1942",
+    "address": "0588 Mark Club Apt. 460, Garciaborough, NH 59607",
+    "city": "Guerreroberg",
+    "state": "KY",
+    "zip_code": "54229",
+    "annual_income": 80000,
+    "annual_income_range": 80000.0,
+    "employment_type": "Freelancer",
+    "employer_name": "Smith Group",
+    "job_title": "Retail buyer",
+    "years_employed": 29,
+    "credit_score": 650,
+    "bank_name": "Skinner, Suarez and Dunlap Bank",
+    "account_number": "YFJI54041796007690",
+    "routing_number": "050828562",
+    "marital_status": "Married",
+    "dependents": 3,
+    "income_source": "Child Support"
+  },
+  "financial_summary": {
+    "total_assets": 187242.62985331847,
+    "total_liabilities": 11713.413446592782,
+    "debt_to_income_ratio": 62.5,
+    "monthly_payment": 387.65
+  },
+  "property_details": {
+    "address": "331 Sharon Corner, New Shawnmouth, DE 88456",
+    "property_type": "Commercial",
+    "year_built": 2009,
+    "square_feet": 4448,
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "estimated_value": 67956.05254715425
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": true,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:01:56.729152",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": ""
+  }
+}

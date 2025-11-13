@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_QUANTUM_SAFE_012_1763006523_DOC1_DOC2",
+    "loan_type": "Home Equity",
+    "loan_amount": 600000,
+    "interest_rate": 4.0,
+    "loan_term_years": 25,
+    "property_type": "Mobile Home",
+    "property_address": "1230 Daniel Turnpike, Port Richardtown, PA 51319",
+    "purchase_price": 900000,
+    "down_payment": 300000,
+    "loan_purpose": "Education",
+    "created_by": "test_user_12@integrityx.com",
+    "document_type": "Document 2 for LOAN_QUANTUM_SAFE_012_1763006523_DOC1_DOC2"
+  },
+  "borrower_information": {
+    "full_name": "Charles Clark",
+    "first_name": "Charles",
+    "last_name": "Clark",
+    "email": "charles.clark12@example.com",
+    "phone": "+1-405-975-6099x3427",
+    "date_of_birth": "1986-08-07",
+    "ssn": "146-35-4938",
+    "address": "87916 Angela Ferry, Shepardburgh, MH 05926",
+    "city": "Loriborough",
+    "state": "UT",
+    "zip_code": "91115",
+    "annual_income": 60000,
+    "annual_income_range": 60000.0,
+    "employment_type": "Unemployed",
+    "employer_name": "Mendoza-Obrien",
+    "job_title": "Industrial/product designer",
+    "years_employed": 10,
+    "credit_score": 650,
+    "bank_name": "Robinson-Escobar Bank",
+    "account_number": "BQJN44346024466151",
+    "routing_number": "022458216",
+    "marital_status": "Single",
+    "dependents": 4,
+    "income_source": "Salary"
+  },
+  "financial_summary": {
+    "total_assets": 276744.3844385257,
+    "total_liabilities": 95960.52045535878,
+    "debt_to_income_ratio": 1000.0,
+    "monthly_payment": 3167.02
+  },
+  "property_details": {
+    "address": "1230 Daniel Turnpike, Port Richardtown, PA 51319",
+    "property_type": "Mobile Home",
+    "year_built": 2004,
+    "square_feet": 3864,
+    "bedrooms": 1,
+    "bathrooms": 2,
+    "estimated_value": 940331.1362549642
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": true,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:02:03.584415",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Either need student serious. Want score term drug. Same land color tend also. Somebody television third good."
+  }
+}

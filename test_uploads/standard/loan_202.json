@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_012_1763006444_DOC1_DOC2_DOC3",
+    "loan_type": "Student Loan",
+    "loan_amount": 500000,
+    "interest_rate": 4.0,
+    "loan_term_years": 30,
+    "property_type": "Condo",
+    "property_address": "PSC 7860, Box 9732, APO AP 05048",
+    "purchase_price": 700000,
+    "down_payment": 200000,
+    "loan_purpose": "Vehicle Purchase",
+    "created_by": "test_user_12@integrityx.com",
+    "document_type": "Document 3 for LOAN_STANDARD_012_1763006444_DOC1_DOC2_DOC3"
+  },
+  "borrower_information": {
+    "full_name": "Nancy Garcia",
+    "first_name": "Nancy",
+    "last_name": "Garcia",
+    "email": "nancy.garcia12@example.com",
+    "phone": "3168538328",
+    "date_of_birth": "1994-10-27",
+    "ssn": "478-78-7701",
+    "address": "8907 Deborah Heights, Dianeland, TX 64257",
+    "city": "Martinezview",
+    "state": "VA",
+    "zip_code": "47174",
+    "annual_income": 200000,
+    "annual_income_range": 200000.0,
+    "employment_type": "Contractor",
+    "employer_name": "Grimes, Hancock and Wright",
+    "job_title": "Production manager",
+    "years_employed": 1,
+    "credit_score": 700,
+    "bank_name": "Baird, Gonzalez and Delacruz Bank",
+    "account_number": "VDGC54897526210981",
+    "routing_number": "051071538",
+    "marital_status": "Widowed",
+    "dependents": 4,
+    "income_source": "Investment Income"
+  },
+  "financial_summary": {
+    "total_assets": 477712.61692555173,
+    "total_liabilities": 144109.58709145556,
+    "debt_to_income_ratio": 250.0,
+    "monthly_payment": 2387.08
+  },
+  "property_details": {
+    "address": "PSC 7860, Box 9732, APO AP 05048",
+    "property_type": "Condo",
+    "year_built": 2016,
+    "square_feet": 1931,
+    "bedrooms": 2,
+    "bathrooms": 4,
+    "estimated_value": 658683.3456402086
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": true,
+    "assets_verified": true,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:00:45.071462",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Them allow million above similar. Strategy age paper.\nHour father room prepare while each. Seem keep stuff up during miss wide understand. Write fire ready employee one enter notice."
+  }
+}

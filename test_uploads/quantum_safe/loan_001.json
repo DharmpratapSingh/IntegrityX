@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_QUANTUM_SAFE_001_1763006500",
+    "loan_type": "Student Loan",
+    "loan_amount": 1500000,
+    "interest_rate": 5.5,
+    "loan_term_years": 20,
+    "property_type": "Mobile Home",
+    "property_address": "PSC 9232, Box 2441, APO AP 81824",
+    "purchase_price": 1575000,
+    "down_payment": 75000,
+    "loan_purpose": "Other",
+    "created_by": "test_user_1@integrityx.com",
+    "document_type": "Asset Statement"
+  },
+  "borrower_information": {
+    "full_name": "Sandra King",
+    "first_name": "Sandra",
+    "last_name": "King",
+    "email": "sandra.king1@example.com",
+    "phone": "741-849-6538x210",
+    "date_of_birth": "1987-04-18",
+    "ssn": "374-52-6586",
+    "address": "13286 Wright Shore, East Danielfurt, NV 29048",
+    "city": "Jamesbury",
+    "state": "NC",
+    "zip_code": "17032",
+    "annual_income": 70000,
+    "annual_income_range": 70000.0,
+    "employment_type": "Unemployed",
+    "employer_name": "Levy, Hopkins and Lee",
+    "job_title": "Accounting technician",
+    "years_employed": 19,
+    "credit_score": 820,
+    "bank_name": "Carlson-Wright Bank",
+    "account_number": "BZFP52251239278959",
+    "routing_number": "105457998",
+    "marital_status": "Divorced",
+    "dependents": 5,
+    "income_source": "Rental Income"
+  },
+  "financial_summary": {
+    "total_assets": 304622.96527962753,
+    "total_liabilities": 374897.9462376814,
+    "debt_to_income_ratio": 2142.86,
+    "monthly_payment": 10318.31
+  },
+  "property_details": {
+    "address": "PSC 9232, Box 2441, APO AP 81824",
+    "property_type": "Mobile Home",
+    "year_built": 1951,
+    "square_feet": 872,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "estimated_value": 1865355.2041741377
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": true,
+    "assets_verified": true,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:01:40.655359",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Quite wide certain. Center second key eight. Win plan civil TV mouth deep.\nFor attorney land character break contain board. History its city seek."
+  }
+}

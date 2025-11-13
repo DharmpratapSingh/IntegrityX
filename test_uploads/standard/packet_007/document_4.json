@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_017_1763006379_DOC1_DOC2_DOC3_DOC4",
+    "loan_type": "Student Loan",
+    "loan_amount": 750000,
+    "interest_rate": 3.0,
+    "loan_term_years": 20,
+    "property_type": "Condo",
+    "property_address": "91423 Harmon Hollow Suite 459, East Ashleyborough, FL 82179",
+    "purchase_price": 1050000,
+    "down_payment": 300000,
+    "loan_purpose": "Other",
+    "created_by": "test_user_17@integrityx.com",
+    "document_type": "Document 4 for LOAN_STANDARD_017_1763006379_DOC1_DOC2_DOC3_DOC4"
+  },
+  "borrower_information": {
+    "full_name": "Barbara Miller",
+    "first_name": "Barbara",
+    "last_name": "Miller",
+    "email": "barbara.miller17@example.com",
+    "phone": "751.403.3705x3187",
+    "date_of_birth": "1951-02-06",
+    "ssn": "968-39-2886",
+    "address": "792 Long Spurs, South Rogerview, GA 65674",
+    "city": "Campbellville",
+    "state": "CA",
+    "zip_code": "81815",
+    "annual_income": 400000,
+    "annual_income_range": 400000.0,
+    "employment_type": "Part-Time Employee",
+    "employer_name": "Hill LLC",
+    "job_title": "Television floor manager",
+    "years_employed": 4,
+    "credit_score": 620,
+    "bank_name": "Johnson Ltd Bank",
+    "account_number": "TRJK40150605544262",
+    "routing_number": "043475126",
+    "marital_status": "Divorced",
+    "dependents": 3,
+    "income_source": "Business Income"
+  },
+  "financial_summary": {
+    "total_assets": 1486289.6828334047,
+    "total_liabilities": 137241.9939924985,
+    "debt_to_income_ratio": 187.5,
+    "monthly_payment": 4159.48
+  },
+  "property_details": {
+    "address": "91423 Harmon Hollow Suite 459, East Ashleyborough, FL 82179",
+    "property_type": "Condo",
+    "year_built": 1983,
+    "square_feet": 2943,
+    "bedrooms": 5,
+    "bathrooms": 2,
+    "estimated_value": 1239384.714835537
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": true,
+    "assets_verified": true,
+    "credit_checked": true,
+    "appraisal_completed": true
+  },
+  "metadata": {
+    "created_at": "2025-11-12T22:59:39.614791",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "While me teacher customer interview political minute weight.\nCustomer different role.\nScience though second paper model care. Ever clearly oil value south."
+  }
+}

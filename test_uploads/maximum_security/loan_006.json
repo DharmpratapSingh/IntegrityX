@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_MAXIMUM_SECURITY_006_1763006510",
+    "loan_type": "Mortgage",
+    "loan_amount": 50000,
+    "interest_rate": 7.0,
+    "loan_term_years": 7,
+    "property_type": "Mobile Home",
+    "property_address": "945 Cox Courts, North Michael, HI 06551",
+    "purchase_price": 70000,
+    "down_payment": 20000,
+    "loan_purpose": "Home Improvement",
+    "created_by": "test_user_6@integrityx.com",
+    "document_type": "Title Deed"
+  },
+  "borrower_information": {
+    "full_name": "Barbara Wilson",
+    "first_name": "Barbara",
+    "last_name": "Wilson",
+    "email": "barbara.wilson6@example.com",
+    "phone": "438.649.9344x31081",
+    "date_of_birth": "1959-07-31",
+    "ssn": "328-92-7908",
+    "address": "PSC 5434, Box 9346, APO AA 66711",
+    "city": "East Cindymouth",
+    "state": "ND",
+    "zip_code": "28032",
+    "annual_income": 300000,
+    "annual_income_range": 300000.0,
+    "employment_type": "Contractor",
+    "employer_name": "Howard-Mills",
+    "job_title": "Advice worker",
+    "years_employed": 7,
+    "credit_score": 620,
+    "bank_name": "Farley-Solomon Bank",
+    "account_number": "CJBN39713681496750",
+    "routing_number": "034500767",
+    "marital_status": "Married",
+    "dependents": 0,
+    "income_source": "Other"
+  },
+  "financial_summary": {
+    "total_assets": 1027112.5062560475,
+    "total_liabilities": 13809.553759684546,
+    "debt_to_income_ratio": 16.67,
+    "monthly_payment": 754.63
+  },
+  "property_details": {
+    "address": "945 Cox Courts, North Michael, HI 06551",
+    "property_type": "Mobile Home",
+    "year_built": 2001,
+    "square_feet": 2855,
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "estimated_value": 66614.68961330333
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": true,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": true
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:01:50.444255",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Individual early writer send quite already interesting present. Cold popular she relate hot media. History such growth investment investment director."
+  }
+}

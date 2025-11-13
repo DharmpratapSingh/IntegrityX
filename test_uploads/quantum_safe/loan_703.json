@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_QUANTUM_SAFE_017_1763006388_DOC1_DOC2_DOC3_DOC4",
+    "loan_type": "Refinance",
+    "loan_amount": 350000,
+    "interest_rate": 7.0,
+    "loan_term_years": 7,
+    "property_type": "Manufactured",
+    "property_address": "08912 Davis Prairie Suite 839, Williamsville, WV 05612",
+    "purchase_price": 472499,
+    "down_payment": 122499,
+    "loan_purpose": "Home Purchase",
+    "created_by": "test_user_17@integrityx.com",
+    "document_type": "Document 4 for LOAN_QUANTUM_SAFE_017_1763006388_DOC1_DOC2_DOC3_DOC4"
+  },
+  "borrower_information": {
+    "full_name": "Michael Smith",
+    "first_name": "Michael",
+    "last_name": "Smith",
+    "email": "michael.smith17@example.com",
+    "phone": "606-814-1470",
+    "date_of_birth": "2000-05-12",
+    "ssn": "647-36-7886",
+    "address": "84596 Harper Mountains, Veronicamouth, MP 30019",
+    "city": "Stevenschester",
+    "state": "RI",
+    "zip_code": "37429",
+    "annual_income": 120000,
+    "annual_income_range": 120000.0,
+    "employment_type": "Consultant",
+    "employer_name": "Perkins Group",
+    "job_title": "Civil Service fast streamer",
+    "years_employed": 12,
+    "credit_score": 750,
+    "bank_name": "Johnston PLC Bank",
+    "account_number": "KVMB33772431512232",
+    "routing_number": "105403926",
+    "marital_status": "Single",
+    "dependents": 4,
+    "income_source": "Commission"
+  },
+  "financial_summary": {
+    "total_assets": 472258.48941650847,
+    "total_liabilities": 96726.89730591144,
+    "debt_to_income_ratio": 291.67,
+    "monthly_payment": 5282.44
+  },
+  "property_details": {
+    "address": "08912 Davis Prairie Suite 839, Williamsville, WV 05612",
+    "property_type": "Manufactured",
+    "year_built": 1981,
+    "square_feet": 4864,
+    "bedrooms": 1,
+    "bathrooms": 2,
+    "estimated_value": 463677.2558793104
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": true,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T22:59:49.312216",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "On tonight year on sense power wish. Argue ahead relate. Interest skill billion hold lot too condition."
+  }
+}

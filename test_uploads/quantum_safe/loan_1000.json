@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_QUANTUM_SAFE_020_1763006530_DOC1",
+    "loan_type": "Credit Line",
+    "loan_amount": 250000,
+    "interest_rate": 3.5,
+    "loan_term_years": 7,
+    "property_type": "Land",
+    "property_address": "88359 Barbara Route Suite 245, Kellymouth, MO 84717",
+    "purchase_price": 375000,
+    "down_payment": 125000,
+    "loan_purpose": "Refinance",
+    "created_by": "test_user_20@integrityx.com",
+    "document_type": "Document 1 for LOAN_QUANTUM_SAFE_020_1763006530_DOC1"
+  },
+  "borrower_information": {
+    "full_name": "James Miller",
+    "first_name": "James",
+    "last_name": "Miller",
+    "email": "james.miller20@example.com",
+    "phone": "(427)219-0784x5341",
+    "date_of_birth": "1972-08-04",
+    "ssn": "565-46-7939",
+    "address": "8345 Rios Coves Suite 917, New Ronnie, MP 80913",
+    "city": "Lake Trevorside",
+    "state": "NH",
+    "zip_code": "82585",
+    "annual_income": 400000,
+    "annual_income_range": 400000.0,
+    "employment_type": "Consultant",
+    "employer_name": "Sanchez LLC",
+    "job_title": "Public relations account executive",
+    "years_employed": 30,
+    "credit_score": 750,
+    "bank_name": "Reese-Villegas Bank",
+    "account_number": "CDGY06171040504554",
+    "routing_number": "057210526",
+    "marital_status": "Divorced",
+    "dependents": 2,
+    "income_source": "Alimony"
+  },
+  "financial_summary": {
+    "total_assets": 1536251.1618770612,
+    "total_liabilities": 69926.63215446488,
+    "debt_to_income_ratio": 62.5,
+    "monthly_payment": 3359.96
+  },
+  "property_details": {
+    "address": "88359 Barbara Route Suite 245, Kellymouth, MO 84717",
+    "property_type": "Land",
+    "year_built": 1988,
+    "square_feet": 914,
+    "bedrooms": 4,
+    "bathrooms": 1,
+    "estimated_value": 359750.91373496415
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": true,
+    "assets_verified": true,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:02:10.041998",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Seven property response check.\nEnough movement skin spend us accept box case. Thing cause so learn structure PM. Seem those seek have general. Game break manager force perform."
+  }
+}

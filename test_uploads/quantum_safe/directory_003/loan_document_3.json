@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_QUANTUM_SAFE_023_1763006265",
+    "loan_type": "Bridge Loan",
+    "loan_amount": 100000,
+    "interest_rate": 3.5,
+    "loan_term_years": 10,
+    "property_type": "Townhouse",
+    "property_address": "1900 Hall Drive, South Joseph, AL 88978",
+    "purchase_price": 125000,
+    "down_payment": 25000,
+    "loan_purpose": "Debt Consolidation",
+    "created_by": "test_user_23@integrityx.com",
+    "document_type": "Loan Document 3"
+  },
+  "borrower_information": {
+    "full_name": "Lisa Brown",
+    "first_name": "Lisa",
+    "last_name": "Brown",
+    "email": "lisa.brown23@example.com",
+    "phone": "440.550.6018",
+    "date_of_birth": "1970-10-23",
+    "ssn": "700-46-4898",
+    "address": "845 Hill Divide, South Jessica, OR 88263",
+    "city": "East Patriciatown",
+    "state": "PA",
+    "zip_code": "60596",
+    "annual_income": 40000,
+    "annual_income_range": 40000.0,
+    "employment_type": "Contractor",
+    "employer_name": "Walter-Reyes",
+    "job_title": "Dancer",
+    "years_employed": 16,
+    "credit_score": 850,
+    "bank_name": "Buck Group Bank",
+    "account_number": "FOAD80999000500368",
+    "routing_number": "071220042",
+    "marital_status": "Married",
+    "dependents": 2,
+    "income_source": "Social Security"
+  },
+  "financial_summary": {
+    "total_assets": 120180.20657513455,
+    "total_liabilities": 10761.150625015613,
+    "debt_to_income_ratio": 250.0,
+    "monthly_payment": 988.86
+  },
+  "property_details": {
+    "address": "1900 Hall Drive, South Joseph, AL 88978",
+    "property_type": "Townhouse",
+    "year_built": 1976,
+    "square_feet": 2964,
+    "bedrooms": 5,
+    "bathrooms": 4,
+    "estimated_value": 135725.26405676652
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": true,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": true
+  },
+  "metadata": {
+    "created_at": "2025-11-12T22:57:45.588736",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": ""
+  }
+}

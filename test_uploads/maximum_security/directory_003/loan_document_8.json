@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_MAXIMUM_SECURITY_023_1763006473",
+    "loan_type": "Personal Loan",
+    "loan_amount": 75000,
+    "interest_rate": 2.5,
+    "loan_term_years": 7,
+    "property_type": "Land",
+    "property_address": "14378 Cory Fall Suite 295, South Michaelshire, WY 02131",
+    "purchase_price": 112500,
+    "down_payment": 37500,
+    "loan_purpose": "Education",
+    "created_by": "test_user_23@integrityx.com",
+    "document_type": "Loan Document 8"
+  },
+  "borrower_information": {
+    "full_name": "Charles Jackson",
+    "first_name": "Charles",
+    "last_name": "Jackson",
+    "email": "charles.jackson23@example.com",
+    "phone": "529-905-1085",
+    "date_of_birth": "1988-05-11",
+    "ssn": "744-74-3819",
+    "address": "41373 Christine Keys, Lake Stephanie, FL 38129",
+    "city": "Miafort",
+    "state": "WV",
+    "zip_code": "65010",
+    "annual_income": 150000,
+    "annual_income_range": 150000.0,
+    "employment_type": "Contractor",
+    "employer_name": "Lee-Carpenter",
+    "job_title": "Wellsite geologist",
+    "years_employed": 21,
+    "credit_score": 850,
+    "bank_name": "Cox Inc Bank",
+    "account_number": "WASB55554517670891",
+    "routing_number": "110717267",
+    "marital_status": "Divorced",
+    "dependents": 4,
+    "income_source": "Rental Income"
+  },
+  "financial_summary": {
+    "total_assets": 569203.7099879484,
+    "total_liabilities": 10258.11549870263,
+    "debt_to_income_ratio": 50.0,
+    "monthly_payment": 974.19
+  },
+  "property_details": {
+    "address": "14378 Cory Fall Suite 295, South Michaelshire, WY 02131",
+    "property_type": "Land",
+    "year_built": 1993,
+    "square_feet": 4715,
+    "bedrooms": 3,
+    "bathrooms": 4,
+    "estimated_value": 106254.75206750585
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": true,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": true
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:01:13.372827",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Dinner should hope on six idea appear energy. Tree skill purpose same. Drug house career land score her vote order."
+  }
+}

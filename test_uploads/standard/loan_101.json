@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_011_1763006513_DOC1_DOC2",
+    "loan_type": "Credit Line",
+    "loan_amount": 600000,
+    "interest_rate": 7.5,
+    "loan_term_years": 5,
+    "property_type": "Land",
+    "property_address": "54908 Joel Turnpike, Theresamouth, AS 26721",
+    "purchase_price": 660000,
+    "down_payment": 60000,
+    "loan_purpose": "Home Improvement",
+    "created_by": "test_user_11@integrityx.com",
+    "document_type": "Document 2 for LOAN_STANDARD_011_1763006513_DOC1_DOC2"
+  },
+  "borrower_information": {
+    "full_name": "Nancy Rodriguez",
+    "first_name": "Nancy",
+    "last_name": "Rodriguez",
+    "email": "nancy.rodriguez11@example.com",
+    "phone": "736-338-9431",
+    "date_of_birth": "1954-05-04",
+    "ssn": "877-22-8224",
+    "address": "300 Misty Corners, North Matthew, LA 54250",
+    "city": "South Sandra",
+    "state": "MN",
+    "zip_code": "73855",
+    "annual_income": 120000,
+    "annual_income_range": 120000.0,
+    "employment_type": "Unemployed",
+    "employer_name": "Garner and Sons",
+    "job_title": "Automotive engineer",
+    "years_employed": 14,
+    "credit_score": 580,
+    "bank_name": "Rodriguez-Williams Bank",
+    "account_number": "ADVE24938688897519",
+    "routing_number": "086707068",
+    "marital_status": "Widowed",
+    "dependents": 5,
+    "income_source": "Retirement"
+  },
+  "financial_summary": {
+    "total_assets": 504027.12395934196,
+    "total_liabilities": 142848.8699507245,
+    "debt_to_income_ratio": 500.0,
+    "monthly_payment": 12022.77
+  },
+  "property_details": {
+    "address": "54908 Joel Turnpike, Theresamouth, AS 26721",
+    "property_type": "Land",
+    "year_built": 2001,
+    "square_feet": 1857,
+    "bedrooms": 4,
+    "bathrooms": 4,
+    "estimated_value": 768897.9891833143
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": false,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:01:53.932081",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "National score ball start partner another. Increase night east of without.\nNor major west less. Day employee include a place how speak over."
+  }
+}

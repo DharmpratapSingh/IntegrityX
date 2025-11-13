@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_QUANTUM_SAFE_012_1763006384_DOC1_DOC2_DOC3_DOC4",
+    "loan_type": "Mortgage",
+    "loan_amount": 300000,
+    "interest_rate": 3.0,
+    "loan_term_years": 7,
+    "property_type": "Multi-Family",
+    "property_address": "29011 Jerry Manor, Kristinahaven, MP 14564",
+    "purchase_price": 390000,
+    "down_payment": 90000,
+    "loan_purpose": "Debt Consolidation",
+    "created_by": "test_user_12@integrityx.com",
+    "document_type": "Document 4 for LOAN_QUANTUM_SAFE_012_1763006384_DOC1_DOC2_DOC3_DOC4"
+  },
+  "borrower_information": {
+    "full_name": "Mark Williams",
+    "first_name": "Mark",
+    "last_name": "Williams",
+    "email": "mark.williams12@example.com",
+    "phone": "(345)884-8300",
+    "date_of_birth": "1964-08-21",
+    "ssn": "216-12-3127",
+    "address": "665 Burke Freeway Apt. 537, Danielleberg, MD 34968",
+    "city": "South Caitlin",
+    "state": "TX",
+    "zip_code": "57474",
+    "annual_income": 40000,
+    "annual_income_range": 40000.0,
+    "employment_type": "Contractor",
+    "employer_name": "Brown, Williams and Clark",
+    "job_title": "Print production planner",
+    "years_employed": 7,
+    "credit_score": 780,
+    "bank_name": "Werner Group Bank",
+    "account_number": "AOEN18516142799156",
+    "routing_number": "015427238",
+    "marital_status": "Divorced",
+    "dependents": 3,
+    "income_source": "Child Support"
+  },
+  "financial_summary": {
+    "total_assets": 93394.2484109838,
+    "total_liabilities": 75462.80270585476,
+    "debt_to_income_ratio": 750.0,
+    "monthly_payment": 3963.99
+  },
+  "property_details": {
+    "address": "29011 Jerry Manor, Kristinahaven, MP 14564",
+    "property_type": "Multi-Family",
+    "year_built": 1963,
+    "square_feet": 1698,
+    "bedrooms": 2,
+    "bathrooms": 3,
+    "estimated_value": 384531.36386153765
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": true,
+    "assets_verified": true,
+    "credit_checked": true,
+    "appraisal_completed": true
+  },
+  "metadata": {
+    "created_at": "2025-11-12T22:59:44.813952",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Worry end gun live strategy. Challenge current that heavy. People poor morning enter. Almost network land recognize focus."
+  }
+}

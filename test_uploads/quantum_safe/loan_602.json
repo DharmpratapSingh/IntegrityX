@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_QUANTUM_SAFE_016_1763006456_DOC1_DOC2_DOC3",
+    "loan_type": "Personal Loan",
+    "loan_amount": 600000,
+    "interest_rate": 2.5,
+    "loan_term_years": 5,
+    "property_type": "Land",
+    "property_address": "27292 Patrick Points, Mccannland, NE 38611",
+    "purchase_price": 900000,
+    "down_payment": 300000,
+    "loan_purpose": "Refinance",
+    "created_by": "test_user_16@integrityx.com",
+    "document_type": "Document 3 for LOAN_QUANTUM_SAFE_016_1763006456_DOC1_DOC2_DOC3"
+  },
+  "borrower_information": {
+    "full_name": "Christopher Garcia",
+    "first_name": "Christopher",
+    "last_name": "Garcia",
+    "email": "christopher.garcia16@example.com",
+    "phone": "(588)962-5125x1022",
+    "date_of_birth": "1998-10-04",
+    "ssn": "216-43-5489",
+    "address": "029 Charles Village Apt. 047, Hartfort, CO 17919",
+    "city": "Adamsland",
+    "state": "CT",
+    "zip_code": "72262",
+    "annual_income": 40000,
+    "annual_income_range": 40000.0,
+    "employment_type": "Freelancer",
+    "employer_name": "Boyd-Payne",
+    "job_title": "Presenter, broadcasting",
+    "years_employed": 11,
+    "credit_score": 720,
+    "bank_name": "Morris-Arnold Bank",
+    "account_number": "HOLW65856969268538",
+    "routing_number": "069365935",
+    "marital_status": "Single",
+    "dependents": 1,
+    "income_source": "Social Security"
+  },
+  "financial_summary": {
+    "total_assets": 141037.85317632597,
+    "total_liabilities": 128011.03159571107,
+    "debt_to_income_ratio": 1500.0,
+    "monthly_payment": 10648.42
+  },
+  "property_details": {
+    "address": "27292 Patrick Points, Mccannland, NE 38611",
+    "property_type": "Land",
+    "year_built": 1979,
+    "square_feet": 1586,
+    "bedrooms": 3,
+    "bathrooms": 1,
+    "estimated_value": 882377.0492104664
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": false,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:00:57.212625",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": ""
+  }
+}

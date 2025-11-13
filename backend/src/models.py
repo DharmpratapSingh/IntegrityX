@@ -599,7 +599,7 @@ if __name__ == "__main__":
         artifact = Artifact(
             loan_id="LOAN_2024_001",
             artifact_type="loan_packet",
-            etid=100001,  # Entity Type ID for loan packets
+            etid=10000001,  # Entity Type ID for loan documents
             payload_sha256="a1b2c3d4e5f6" * 8,  # 64 character hash
             manifest_sha256="f6e5d4c3b2a1" * 8,
             walacor_tx_id="WAL_TX_123456789",

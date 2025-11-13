@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_016_1763006518_DOC1_DOC2_DOC3_DOC4",
+    "loan_type": "Construction Loan",
+    "loan_amount": 200000,
+    "interest_rate": 3.0,
+    "loan_term_years": 10,
+    "property_type": "Condo",
+    "property_address": "33791 Carter Stravenue, Charlesborough, WY 44365",
+    "purchase_price": 300000,
+    "down_payment": 100000,
+    "loan_purpose": "Other",
+    "created_by": "test_user_16@integrityx.com",
+    "document_type": "Document 4 for LOAN_STANDARD_016_1763006518_DOC1_DOC2_DOC3_DOC4"
+  },
+  "borrower_information": {
+    "full_name": "Nancy Garcia",
+    "first_name": "Nancy",
+    "last_name": "Garcia",
+    "email": "nancy.garcia16@example.com",
+    "phone": "001-958-852-6480x7544",
+    "date_of_birth": "1959-07-12",
+    "ssn": "453-23-7134",
+    "address": "00391 Meghan Brook Apt. 401, Port Matthew, MA 33249",
+    "city": "Lake Courtneytown",
+    "state": "NE",
+    "zip_code": "63719",
+    "annual_income": 250000,
+    "annual_income_range": 250000.0,
+    "employment_type": "Freelancer",
+    "employer_name": "Aguirre, Levine and Ramirez",
+    "job_title": "Teacher, early years/pre",
+    "years_employed": 18,
+    "credit_score": 650,
+    "bank_name": "Smith-Stephens Bank",
+    "account_number": "AAWU08424908459020",
+    "routing_number": "116206947",
+    "marital_status": "Single",
+    "dependents": 1,
+    "income_source": "Salary"
+  },
+  "financial_summary": {
+    "total_assets": 1026667.0671101384,
+    "total_liabilities": 38908.65221562961,
+    "debt_to_income_ratio": 80.0,
+    "monthly_payment": 1931.21
+  },
+  "property_details": {
+    "address": "33791 Carter Stravenue, Charlesborough, WY 44365",
+    "property_type": "Condo",
+    "year_built": 1964,
+    "square_feet": 2395,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "estimated_value": 314943.2878860967
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": false,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:01:58.486452",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": ""
+  }
+}

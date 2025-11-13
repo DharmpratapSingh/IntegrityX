@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_QUANTUM_SAFE_022_1763006062",
+    "loan_type": "Mortgage",
+    "loan_amount": 1000000,
+    "interest_rate": 7.0,
+    "loan_term_years": 30,
+    "property_type": "Co-op",
+    "property_address": "1716 Lee Mountain Apt. 292, East John, VA 00890",
+    "purchase_price": 1100000,
+    "down_payment": 100000,
+    "loan_purpose": "Home Improvement",
+    "created_by": "test_user_22@integrityx.com",
+    "document_type": "Loan Document 1"
+  },
+  "borrower_information": {
+    "full_name": "Susan Hernandez",
+    "first_name": "Susan",
+    "last_name": "Hernandez",
+    "email": "susan.hernandez22@example.com",
+    "phone": "001-808-657-1569x3232",
+    "date_of_birth": "1978-04-22",
+    "ssn": "904-50-5894",
+    "address": "7659 Sandoval Squares Apt. 712, Hillmouth, CA 20354",
+    "city": "South Wendy",
+    "state": "NH",
+    "zip_code": "47729",
+    "annual_income": 40000,
+    "annual_income_range": 40000.0,
+    "employment_type": "Unemployed",
+    "employer_name": "Walker Ltd",
+    "job_title": "English as a second language teacher",
+    "years_employed": 29,
+    "credit_score": 800,
+    "bank_name": "Evans, Strong and Lopez Bank",
+    "account_number": "XOLI31174456045807",
+    "routing_number": "081853098",
+    "marital_status": "Married",
+    "dependents": 1,
+    "income_source": "Other"
+  },
+  "financial_summary": {
+    "total_assets": 125400.84072459648,
+    "total_liabilities": 137911.31492527836,
+    "debt_to_income_ratio": 2500.0,
+    "monthly_payment": 6653.02
+  },
+  "property_details": {
+    "address": "1716 Lee Mountain Apt. 292, East John, VA 00890",
+    "property_type": "Co-op",
+    "year_built": 1971,
+    "square_feet": 4448,
+    "bedrooms": 2,
+    "bathrooms": 1,
+    "estimated_value": 1092849.9696965413
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": false,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": true
+  },
+  "metadata": {
+    "created_at": "2025-11-12T22:54:22.476358",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Control find management. College stop commercial. Production nice share attorney speech several.\nElse raise if house provide expert cold. Security population painting present."
+  }
+}

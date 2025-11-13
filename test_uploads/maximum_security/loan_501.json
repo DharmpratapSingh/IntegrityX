@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_MAXIMUM_SECURITY_015_1763006534_DOC1_DOC2",
+    "loan_type": "Business Loan",
+    "loan_amount": 2000000,
+    "interest_rate": 2.5,
+    "loan_term_years": 10,
+    "property_type": "Commercial",
+    "property_address": "PSC 0516, Box 9812, APO AP 44567",
+    "purchase_price": 3000000,
+    "down_payment": 1000000,
+    "loan_purpose": "Refinance",
+    "created_by": "test_user_15@integrityx.com",
+    "document_type": "Document 2 for LOAN_MAXIMUM_SECURITY_015_1763006534_DOC1_DOC2"
+  },
+  "borrower_information": {
+    "full_name": "Lisa Jackson",
+    "first_name": "Lisa",
+    "last_name": "Jackson",
+    "email": "lisa.jackson15@example.com",
+    "phone": "001-509-331-0191x171",
+    "date_of_birth": "1986-01-26",
+    "ssn": "118-75-3869",
+    "address": "37863 Jason Grove Apt. 296, New Barbara, SD 07098",
+    "city": "Port Christopherton",
+    "state": "IN",
+    "zip_code": "65838",
+    "annual_income": 500000,
+    "annual_income_range": 500000.0,
+    "employment_type": "Freelancer",
+    "employer_name": "Lewis Group",
+    "job_title": "Lecturer, higher education",
+    "years_employed": 25,
+    "credit_score": 750,
+    "bank_name": "Tran-Suarez Bank",
+    "account_number": "VTSR20798092367652",
+    "routing_number": "042886907",
+    "marital_status": "Single",
+    "dependents": 1,
+    "income_source": "Social Security"
+  },
+  "financial_summary": {
+    "total_assets": 1187184.2243645808,
+    "total_liabilities": 578314.9208685092,
+    "debt_to_income_ratio": 400.0,
+    "monthly_payment": 18853.98
+  },
+  "property_details": {
+    "address": "PSC 0516, Box 9812, APO AP 44567",
+    "property_type": "Commercial",
+    "year_built": 1989,
+    "square_feet": 3439,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "estimated_value": 3583212.044508761
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": true,
+    "assets_verified": true,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:02:14.317533",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Enough stock themselves rest. Push statement mention debate experience.\nApproach positive open by moment. Exactly page tell structure north. Want stage money show budget happy."
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_007_1763006498",
+    "loan_type": "Credit Line",
+    "loan_amount": 400000,
+    "interest_rate": 4.5,
+    "loan_term_years": 15,
+    "property_type": "Multi-Family",
+    "property_address": "508 Tran Lakes Suite 067, Cindyshire, MA 41696",
+    "purchase_price": 420000,
+    "down_payment": 20000,
+    "loan_purpose": "Education",
+    "created_by": "test_user_7@integrityx.com",
+    "document_type": "Title Deed"
+  },
+  "borrower_information": {
+    "full_name": "Jessica Moore",
+    "first_name": "Jessica",
+    "last_name": "Moore",
+    "email": "jessica.moore7@example.com",
+    "phone": "(213)410-3884",
+    "date_of_birth": "1993-05-13",
+    "ssn": "407-63-4390",
+    "address": "3129 Haynes Street, West Eric, PA 50097",
+    "city": "Lake Desiree",
+    "state": "PA",
+    "zip_code": "60365",
+    "annual_income": 80000,
+    "annual_income_range": 80000.0,
+    "employment_type": "Full-Time Employee",
+    "employer_name": "Johnson, Bowen and Howard",
+    "job_title": "Advice worker",
+    "years_employed": 7,
+    "credit_score": 620,
+    "bank_name": "Scott and Sons Bank",
+    "account_number": "UWXO42648308970681",
+    "routing_number": "033129822",
+    "marital_status": "Single",
+    "dependents": 5,
+    "income_source": "Alimony"
+  },
+  "financial_summary": {
+    "total_assets": 250776.06981605059,
+    "total_liabilities": 111287.49905855268,
+    "debt_to_income_ratio": 500.0,
+    "monthly_payment": 3059.97
+  },
+  "property_details": {
+    "address": "508 Tran Lakes Suite 067, Cindyshire, MA 41696",
+    "property_type": "Multi-Family",
+    "year_built": 1991,
+    "square_feet": 4906,
+    "bedrooms": 4,
+    "bathrooms": 1,
+    "estimated_value": 448781.7514821886
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": true,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:01:38.160793",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "But land let base public young. Past follow agent hour.\nShoulder almost song about. Some piece we. Body participant former.\nFact white set season follow early."
+  }
+}

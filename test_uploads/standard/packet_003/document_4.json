@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_STANDARD_013_1763006445_DOC1_DOC2_DOC3_DOC4",
+    "loan_type": "Auto Loan",
+    "loan_amount": 250000,
+    "interest_rate": 7.0,
+    "loan_term_years": 20,
+    "property_type": "Single Family",
+    "property_address": "11259 Gordon Cliffs Suite 376, Josephmouth, IL 72777",
+    "purchase_price": 275000,
+    "down_payment": 25000,
+    "loan_purpose": "Vehicle Purchase",
+    "created_by": "test_user_13@integrityx.com",
+    "document_type": "Document 4 for LOAN_STANDARD_013_1763006445_DOC1_DOC2_DOC3_DOC4"
+  },
+  "borrower_information": {
+    "full_name": "Ashley Robinson",
+    "first_name": "Ashley",
+    "last_name": "Robinson",
+    "email": "ashley.robinson13@example.com",
+    "phone": "456.584.3509",
+    "date_of_birth": "1980-02-06",
+    "ssn": "470-16-6942",
+    "address": "79516 Gomez Burgs, Port Crystalshire, CA 82405",
+    "city": "Greenborough",
+    "state": "TN",
+    "zip_code": "95777",
+    "annual_income": 60000,
+    "annual_income_range": 60000.0,
+    "employment_type": "Retired",
+    "employer_name": "Wilson PLC",
+    "job_title": "Engineer, site",
+    "years_employed": 9,
+    "credit_score": 720,
+    "bank_name": "Merritt PLC Bank",
+    "account_number": "UFXY66607866368727",
+    "routing_number": "025699807",
+    "marital_status": "Single",
+    "dependents": 2,
+    "income_source": "Other"
+  },
+  "financial_summary": {
+    "total_assets": 143084.28747639136,
+    "total_liabilities": 58600.32018138814,
+    "debt_to_income_ratio": 416.67,
+    "monthly_payment": 1938.25
+  },
+  "property_details": {
+    "address": "11259 Gordon Cliffs Suite 376, Josephmouth, IL 72777",
+    "property_type": "Single Family",
+    "year_built": 1981,
+    "square_feet": 3099,
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "estimated_value": 271517.34794960497
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": false,
+    "assets_verified": true,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:00:46.003084",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": ""
+  }
+}

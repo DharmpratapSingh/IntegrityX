@@ -71,6 +71,99 @@ class AnalyticsService:
         except Exception as e:
             logger.error(f"Error getting document analytics: {e}")
             return {"error": str(e)}
+    
+    async def _get_all_documents_analytics(self) -> Dict[str, Any]:
+        """Get analytics for all documents."""
+        try:
+            if not self.db_service:
+                return {
+                    "total_documents": 0,
+                    "sealed_documents": 0,
+                    "total_loans": 0,
+                    "documents_by_type": {},
+                    "sealing_rate": 0.0
+                }
+            
+            # Get all artifacts using database service method
+            try:
+                all_artifacts = self.db_service.get_all_artifacts()
+                total_documents = len(all_artifacts)
+                
+                # Count sealed documents (those with walacor_tx_id)
+                sealed_documents = sum(1 for a in all_artifacts if a.walacor_tx_id is not None)
+                
+                # Count unique loans (by loan_id)
+                unique_loans = set()
+                for a in all_artifacts:
+                    if a.loan_id:
+                        unique_loans.add(a.loan_id)
+                total_loans = len(unique_loans)
+                
+            except Exception as e:
+                logger.warning(f"Error getting artifacts: {e}, trying direct query")
+                # Fallback to direct count
+                total_documents = await self._count_artifacts()
+                sealed_documents = 0
+                total_loans = 0
+                
+                # Try to get session and query directly
+                try:
+                    session = self.db_service._ensure_session()
+                    from sqlalchemy import text
+                    sealed_result = session.execute(
+                        text("SELECT COUNT(*) FROM artifacts WHERE walacor_tx_id IS NOT NULL")
+                    )
+                    sealed_documents = sealed_result.scalar() or 0
+                    
+                    loans_result = session.execute(
+                        text("SELECT COUNT(DISTINCT loan_id) FROM artifacts WHERE loan_id IS NOT NULL")
+                    )
+                    total_loans = loans_result.scalar() or 0
+                except Exception as e2:
+                    logger.warning(f"Error in fallback query: {e2}")
+            
+            # Calculate sealing rate
+            sealing_rate = round((sealed_documents / total_documents * 100), 2) if total_documents > 0 else 0.0
+            
+            return {
+                "total_documents": total_documents,
+                "sealed_documents": sealed_documents,
+                "total_loans": total_loans,
+                "sealing_rate": sealing_rate,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error getting all documents analytics: {e}")
+            return {
+                "total_documents": 0,
+                "sealed_documents": 0,
+                "total_loans": 0,
+                "sealing_rate": 0.0,
+                "error": str(e)
+            }
+    
+    async def _get_single_document_analytics(self, artifact_id: str) -> Dict[str, Any]:
+        """Get analytics for a single document."""
+        try:
+            if not self.db_service:
+                return {"error": "Database service not available"}
+            
+            # Get artifact from database
+            artifact = self.db_service.get_artifact_by_id(artifact_id)
+            if not artifact:
+                return {"error": f"Artifact {artifact_id} not found"}
+            
+            return {
+                "artifact_id": artifact_id,
+                "loan_id": artifact.loan_id,
+                "is_sealed": artifact.walacor_tx_id is not None,
+                "created_at": artifact.created_at.isoformat() if artifact.created_at else None,
+                "document_type": artifact.artifact_type,
+                "has_attestations": False  # Could query attestations table
+            }
+        except Exception as e:
+            logger.error(f"Error getting single document analytics: {e}")
+            return {"error": str(e)}
 
     async def get_attestation_analytics(self) -> Dict[str, Any]:
         """Get analytics for attestations."""
@@ -166,11 +259,26 @@ class AnalyticsService:
     async def _count_artifacts(self) -> int:
         """Count total artifacts."""
         try:
-            if hasattr(self.db_service, 'session'):
-                result = self.db_service.session.execute("SELECT COUNT(*) FROM artifacts")
-                return result.scalar() or 0
-            return 0
-        except:
+            if not self.db_service:
+                return 0
+            
+            # Use database service method to get all artifacts
+            try:
+                all_artifacts = self.db_service.get_all_artifacts()
+                return len(all_artifacts)
+            except Exception as e:
+                logger.warning(f"Error getting artifacts via service: {e}")
+                # Fallback to direct query
+                try:
+                    session = self.db_service._ensure_session()
+                    from sqlalchemy import text
+                    result = session.execute(text("SELECT COUNT(*) FROM artifacts"))
+                    return result.scalar() or 0
+                except Exception as e2:
+                    logger.warning(f"Error in direct query: {e2}")
+                    return 0
+        except Exception as e:
+            logger.error(f"Error counting artifacts: {e}")
             return 0
 
     async def _count_attestations(self) -> int:

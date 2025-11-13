@@ -2016,7 +2016,7 @@ async def ingest_packet(
         artifact_id = services["db"].insert_artifact(
             loan_id=request.loan_id,
             artifact_type="loan_packet",
-            etid=100001,  # ETID for loan packets
+            etid=10010,  # ETID 10010 (documentversion) - has working table
             payload_sha256=manifest_result['hash'],
             walacor_tx_id=walacor_result.get("tx_id", "WAL_TX_PACKET_" + datetime.now().strftime("%Y%m%d%H%M%S")),
             created_by=request.created_by,
@@ -2183,6 +2183,7 @@ async def get_artifacts(
     date_to: Optional[str] = Query(None, description="Filter to date (YYYY-MM-DD)"),
     amount_min: Optional[float] = Query(None, description="Minimum loan amount"),
     amount_max: Optional[float] = Query(None, description="Maximum loan amount"),
+    security_level: Optional[str] = Query(None, description="Filter by security level (standard, quantum_safe, maximum)"),
     limit: int = Query(50, description="Number of results to return"),
     offset: int = Query(0, description="Number of results to skip"),
     services: dict = Depends(get_services)
@@ -2190,10 +2191,10 @@ async def get_artifacts(
     """
     Get artifacts with optional search filters.
     
-    Supports searching by borrower information, loan details, and date/amount ranges.
+    Supports searching by borrower information, loan details, date/amount ranges, and security level.
     """
     try:
-        logger.info(f"Searching artifacts with filters: borrower_name={borrower_name}, borrower_email={borrower_email}, loan_id={loan_id}")
+        logger.info(f"Searching artifacts with filters: borrower_name={borrower_name}, borrower_email={borrower_email}, loan_id={loan_id}, security_level={security_level}")
         
         # Get all artifacts from database
         artifacts = services["db"].get_all_artifacts()
@@ -2258,6 +2259,33 @@ async def get_artifacts(
                 if amount_min is not None and loan_amount < amount_min:
                     matches = False
                 if amount_max is not None and loan_amount > amount_max:
+                    matches = False
+            
+            # Security level filter
+            if security_level:
+                # Extract security level from local_metadata
+                artifact_security_level = "standard"  # Default
+                if artifact.local_metadata:
+                    artifact_security_level = artifact.local_metadata.get('security_level', 'standard')
+                if parent_artifact and parent_artifact.local_metadata:
+                    artifact_security_level = parent_artifact.local_metadata.get('security_level', artifact_security_level)
+                
+                # Normalize security level values for comparison
+                security_level_normalized = security_level.lower().strip().replace(' ', '_').replace('-', '_')
+                artifact_security_normalized = str(artifact_security_level).lower().strip().replace(' ', '_').replace('-', '_')
+                
+                # Map common variations and check match
+                is_match = False
+                if security_level_normalized == 'maximum':
+                    is_match = artifact_security_normalized in ('maximum', 'maximum_security')
+                elif security_level_normalized == 'quantum_safe':
+                    is_match = artifact_security_normalized in ('quantum_safe', 'quantum-safe')
+                elif security_level_normalized == 'standard':
+                    is_match = artifact_security_normalized == 'standard'
+                else:
+                    is_match = security_level_normalized == artifact_security_normalized
+                
+                if not is_match:
                     matches = False
             
             if matches:
@@ -5925,7 +5953,7 @@ async def seal_loan_document(
         artifact_id = services["db"].insert_artifact(
             loan_id=request.loan_id,
             artifact_type="json",
-            etid=100001,  # Use documented ETID for loan documents
+            etid=10000001,  # Use documented ETID for loan documents
             payload_sha256=walacor_result.get("document_hash", document_hash),
             walacor_tx_id=walacor_result.get("walacor_tx_id", f"TX_{int(time.time() * 1000)}_{document_hash[:8]}"),
             created_by=request.created_by,
@@ -5934,6 +5962,7 @@ async def seal_loan_document(
                 "comprehensive_document": comprehensive_document,
                 "comprehensive_hash": walacor_result.get("document_hash", document_hash),
                 "includes_borrower_info": True,
+                "security_level": "standard",  # Set security level for standard mode
                 "sealed_at": walacor_result.get("sealed_timestamp", get_eastern_now_iso()),
                 "walacor_envelope": walacor_result.get("envelope_metadata", {}),
                 "blockchain_proof": walacor_result.get("blockchain_proof", {})
@@ -6061,15 +6090,17 @@ async def seal_directory(
             directory_name=request.directory_name,
             directory_hash=request.directory_hash,
             loan_id=loan_data.loan_id,
-            etid=100001,  # Use documented ETID for loan documents
+            etid=10000001,  # Use documented ETID for loan documents
             walacor_tx_id=walacor_tx_id,
             file_count=len(request.files),
             created_by=loan_data.created_by,
             metadata={
                 "directory_metadata": directory_metadata,
+                "security_level": "standard",  # Default to standard, can be overridden by request
                 "sealed_at": walacor_result.get("sealed_timestamp", get_eastern_now_iso()),
                 "blockchain_proof": walacor_result.get("blockchain_proof", {})
-            }
+            },
+            borrower_info=encrypted_borrower_data
         )
 
         logger.info(f"✅ Created directory container: {container_id}")
@@ -6082,7 +6113,7 @@ async def seal_directory(
                 filename=file_info.filename,
                 file_hash=file_info.file_hash,
                 loan_id=loan_data.loan_id,
-                etid=100001,
+                etid=10010,
                 created_by=loan_data.created_by,
                 borrower_info=encrypted_borrower_data,
                 metadata={
@@ -6216,7 +6247,7 @@ async def seal_loan_document_maximum_security(
         artifact_id = services["db"].insert_artifact(
             loan_id=request.loan_id,
             artifact_type="json",
-            etid=100001,
+            etid=10010,
             payload_sha256=primary_hash,
             walacor_tx_id=walacor_result.get("walacor_tx_id", f"TX_{int(time.time() * 1000)}_{primary_hash[:8]}"),
             created_by=request.created_by,
@@ -6620,7 +6651,7 @@ async def seal_loan_document_quantum_safe(
         artifact_id = services["db"].insert_artifact(
             loan_id=request.loan_id,
             artifact_type="json",
-            etid=100001,
+            etid=10010,
             payload_sha256=primary_hash,
             walacor_tx_id=walacor_result.get("walacor_tx_id", f"TX_{int(time.time() * 1000)}_{primary_hash[:8]}"),
             created_by=request.created_by,

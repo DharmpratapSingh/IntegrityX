@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_MAXIMUM_SECURITY_004_1763006509",
+    "loan_type": "Credit Line",
+    "loan_amount": 450000,
+    "interest_rate": 4.0,
+    "loan_term_years": 7,
+    "property_type": "Investment Property",
+    "property_address": "70882 Adam Ridge, South Heather, VA 43462",
+    "purchase_price": 472500,
+    "down_payment": 22500,
+    "loan_purpose": "Refinance",
+    "created_by": "test_user_4@integrityx.com",
+    "document_type": "Bank Statement"
+  },
+  "borrower_information": {
+    "full_name": "Karen Brown",
+    "first_name": "Karen",
+    "last_name": "Brown",
+    "email": "karen.brown4@example.com",
+    "phone": "510-818-2585x5289",
+    "date_of_birth": "1959-04-16",
+    "ssn": "804-11-7102",
+    "address": "394 Macdonald Mission, Burnsfort, MD 06038",
+    "city": "Stewartbury",
+    "state": "HI",
+    "zip_code": "67654",
+    "annual_income": 120000,
+    "annual_income_range": 120000.0,
+    "employment_type": "Freelancer",
+    "employer_name": "Chapman-Wilson",
+    "job_title": "Administrator, local government",
+    "years_employed": 22,
+    "credit_score": 700,
+    "bank_name": "Day, Trujillo and James Bank",
+    "account_number": "EQXX87526247195457",
+    "routing_number": "046026705",
+    "marital_status": "Single",
+    "dependents": 5,
+    "income_source": "Retirement"
+  },
+  "financial_summary": {
+    "total_assets": 518660.7047465137,
+    "total_liabilities": 128164.43417966343,
+    "debt_to_income_ratio": 375.0,
+    "monthly_payment": 6150.96
+  },
+  "property_details": {
+    "address": "70882 Adam Ridge, South Heather, VA 43462",
+    "property_type": "Investment Property",
+    "year_built": 2012,
+    "square_feet": 1686,
+    "bedrooms": 5,
+    "bathrooms": 3,
+    "estimated_value": 562336.457079836
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": true,
+    "assets_verified": true,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:01:49.134503",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Fly benefit need their by degree. Bar through dream. Money business ago term task worker."
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_MAXIMUM_SECURITY_013_1763006532_DOC1_DOC2_DOC3",
+    "loan_type": "Personal Loan",
+    "loan_amount": 75000,
+    "interest_rate": 4.5,
+    "loan_term_years": 7,
+    "property_type": "Commercial",
+    "property_address": "PSC 6161, Box 9287, APO AA 77819",
+    "purchase_price": 97500,
+    "down_payment": 22500,
+    "loan_purpose": "Education",
+    "created_by": "test_user_13@integrityx.com",
+    "document_type": "Document 3 for LOAN_MAXIMUM_SECURITY_013_1763006532_DOC1_DOC2_DOC3"
+  },
+  "borrower_information": {
+    "full_name": "Sarah Martin",
+    "first_name": "Sarah",
+    "last_name": "Martin",
+    "email": "sarah.martin13@example.com",
+    "phone": "2265924259",
+    "date_of_birth": "1963-10-18",
+    "ssn": "173-14-1533",
+    "address": "3286 Hayden Port Apt. 106, Denisetown, RI 96198",
+    "city": "Hernandezberg",
+    "state": "MA",
+    "zip_code": "24232",
+    "annual_income": 150000,
+    "annual_income_range": 150000.0,
+    "employment_type": "Contractor",
+    "employer_name": "Taylor-Sparks",
+    "job_title": "Astronomer",
+    "years_employed": 17,
+    "credit_score": 720,
+    "bank_name": "Taylor and Sons Bank",
+    "account_number": "DDGY09977251007714",
+    "routing_number": "095715151",
+    "marital_status": "Married",
+    "dependents": 5,
+    "income_source": "Other"
+  },
+  "financial_summary": {
+    "total_assets": 434967.29089230136,
+    "total_liabilities": 21432.090553125025,
+    "debt_to_income_ratio": 50.0,
+    "monthly_payment": 1042.51
+  },
+  "property_details": {
+    "address": "PSC 6161, Box 9287, APO AA 77819",
+    "property_type": "Commercial",
+    "year_built": 1982,
+    "square_feet": 4831,
+    "bedrooms": 3,
+    "bathrooms": 4,
+    "estimated_value": 110480.72666130544
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": true,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:02:12.618538",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Series front party material. Industry effect bill city sometimes because part. Under across discuss until."
+  }
+}

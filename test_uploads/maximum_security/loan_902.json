@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_MAXIMUM_SECURITY_019_1763006537_DOC1_DOC2_DOC3",
+    "loan_type": "Personal Loan",
+    "loan_amount": 150000,
+    "interest_rate": 5.0,
+    "loan_term_years": 20,
+    "property_type": "Commercial",
+    "property_address": "PSC 5191, Box 5387, APO AE 43034",
+    "purchase_price": 180000,
+    "down_payment": 30000,
+    "loan_purpose": "Vehicle Purchase",
+    "created_by": "test_user_19@integrityx.com",
+    "document_type": "Document 3 for LOAN_MAXIMUM_SECURITY_019_1763006537_DOC1_DOC2_DOC3"
+  },
+  "borrower_information": {
+    "full_name": "Michael Lopez",
+    "first_name": "Michael",
+    "last_name": "Lopez",
+    "email": "michael.lopez19@example.com",
+    "phone": "(573)376-8754",
+    "date_of_birth": "1953-03-11",
+    "ssn": "182-42-7724",
+    "address": "46636 Curtis Orchard Apt. 750, Silvaland, MP 78616",
+    "city": "Port Scott",
+    "state": "UT",
+    "zip_code": "73379",
+    "annual_income": 100000,
+    "annual_income_range": 100000.0,
+    "employment_type": "Freelancer",
+    "employer_name": "Oconnell-Lopez",
+    "job_title": "Engineer, energy",
+    "years_employed": 25,
+    "credit_score": 750,
+    "bank_name": "Rubio-Graves Bank",
+    "account_number": "GRYO36153542558224",
+    "routing_number": "022774770",
+    "marital_status": "Single",
+    "dependents": 0,
+    "income_source": "Retirement"
+  },
+  "financial_summary": {
+    "total_assets": 289503.5933620535,
+    "total_liabilities": 34187.78002027427,
+    "debt_to_income_ratio": 150.0,
+    "monthly_payment": 989.93
+  },
+  "property_details": {
+    "address": "PSC 5191, Box 5387, APO AE 43034",
+    "property_type": "Commercial",
+    "year_built": 2002,
+    "square_feet": 2452,
+    "bedrooms": 5,
+    "bathrooms": 1,
+    "estimated_value": 200066.64700134657
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": false,
+    "assets_verified": true,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:02:18.032550",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": ""
+  }
+}

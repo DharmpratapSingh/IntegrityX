@@ -55,6 +55,7 @@ export default function DocumentsPage() {
   const [dateTo, setDateTo] = useState('')
   const [amountMin, setAmountMin] = useState('')
   const [amountMax, setAmountMax] = useState('')
+  const [securityLevel, setSecurityLevel] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   
   // Pagination
@@ -105,6 +106,7 @@ export default function DocumentsPage() {
       if (dateTo) params.append('date_to', dateTo)
       if (amountMin) params.append('amount_min', amountMin)
       if (amountMax) params.append('amount_max', amountMax)
+      if (securityLevel) params.append('security_level', securityLevel)
       
       params.append('limit', '20')
       params.append('offset', String((page - 1) * 20))
@@ -129,7 +131,10 @@ export default function DocumentsPage() {
           return {
             id: doc.id,
             loan_id: doc.loan_id || '',
-            borrower_name: doc.borrower_name || doc.directory_name || doc.loan_id || 'Unknown',
+            // For directories, don't use directory_name as borrower_name - keep it empty/Unknown
+            borrower_name: (artifactContainerType === 'directory_container') 
+              ? (doc.borrower_name || '')  // Directories: only use actual borrower_name, not directory_name
+              : (doc.borrower_name || 'Unknown'),  // Files: use borrower_name or 'Unknown'
             borrower_email: sanitizedEmail,
             loan_amount: doc.loan_amount ?? 0,
             document_type: baseDocumentType,
@@ -137,8 +142,8 @@ export default function DocumentsPage() {
             walacor_tx_id: doc.walacor_tx_id || '',
             artifact_type: doc.artifact_type || baseDocumentType,
             created_by: doc.created_by || '',
-            sealed_status: doc.walacor_tx_id ? 'Sealed' : 'Not Sealed',
-            security_level: doc.local_metadata?.security_level || doc.security_level || 'standard',
+            sealed_status: doc.sealed_status || (doc.walacor_tx_id ? 'Sealed' : 'Not Sealed'),
+            security_level: doc.security_level || doc.local_metadata?.security_level || 'standard',
             artifact_container_type: artifactContainerType,
             parent_id: doc.parent_id || null,
             directory_name: doc.directory_name || null,
@@ -243,6 +248,7 @@ export default function DocumentsPage() {
     setDateTo('')
     setAmountMin('')
     setAmountMax('')
+    setSecurityLevel('')
     setCurrentPage(1)
     fetchDocuments(1)
   }
@@ -275,23 +281,23 @@ export default function DocumentsPage() {
     switch (securityLevel) {
       case 'quantum_safe':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
-            <Zap className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200 shadow-sm">
+            <Zap className="h-3.5 w-3.5 mr-1.5" />
             Quantum Safe
           </span>
         )
       case 'maximum':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <Lock className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold bg-red-100 text-red-800 border border-red-200 shadow-sm">
+            <Lock className="h-3.5 w-3.5 mr-1.5" />
             Maximum Security
           </span>
         )
       case 'standard':
       default:
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            <Shield className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200 shadow-sm">
+            <Shield className="h-3.5 w-3.5 mr-1.5" />
             Standard
           </span>
         )
@@ -976,14 +982,17 @@ export default function DocumentsPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
       {/* Search and Filter */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Search Loans by Borrower Information</h2>
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Search Documents</h2>
+            <p className="text-sm text-gray-500">Filter by borrower information, dates, amounts, and security level</p>
+          </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
           >
             <Filter className="h-4 w-4 mr-2" />
             {showFilters ? 'Hide Filters' : 'Show Filters'}
@@ -991,97 +1000,118 @@ export default function DocumentsPage() {
         </div>
 
         {/* Basic Search */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Borrower Name</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Borrower Name</label>
               <input
                 type="text"
               placeholder="Enter borrower name..."
               value={borrowerName}
               onChange={(e) => setBorrowerName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
               />
             </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
             <input
               type="email"
               placeholder="Enter email address..."
               value={borrowerEmail}
               onChange={(e) => setBorrowerEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Loan ID</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Loan ID</label>
             <input
               type="text"
               placeholder="Enter loan ID..."
               value={loanId}
               onChange={(e) => setLoanId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
             />
           </div>
         </div>
 
         {/* Advanced Filters */}
         {showFilters && (
-          <div className="border-t pt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div className="border-t border-gray-200 pt-6 mt-6">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">Advanced Filters</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date From</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Date From</label>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date To</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Date To</label>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Min Amount</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Min Amount</label>
                 <input
                   type="number"
                   placeholder="0"
                   value={amountMin}
                   onChange={(e) => setAmountMin(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Max Amount</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Max Amount</label>
                 <input
                   type="number"
                   placeholder="1000000"
                   value={amountMax}
                   onChange={(e) => setAmountMax(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Security Level</label>
+                <select
+                  value={securityLevel}
+                  onChange={(e) => {
+                    setSecurityLevel(e.target.value)
+                    // Auto-search when filter changes
+                    setTimeout(() => {
+                      setCurrentPage(1)
+                      fetchDocuments(1)
+                    }, 100)
+                  }}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                >
+                  <option value="">All Levels</option>
+                  <option value="standard">Standard</option>
+                  <option value="quantum_safe">Quantum Safe</option>
+                  <option value="maximum">Maximum Security</option>
+                </select>
               </div>
             </div>
           </div>
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
           <button
             onClick={handleSearch}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
           >
             <Search className="h-4 w-4 mr-2" />
             Search
           </button>
           <button
             onClick={handleClearFilters}
-            className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            className="inline-flex items-center px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
           >
             Clear Filters
           </button>
@@ -1090,47 +1120,49 @@ export default function DocumentsPage() {
 
       {/* Results Summary and Export Controls */}
       {totalCount > 0 && (
-        <div className="mb-4 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            Showing {flattenedRows.length} of {totalCount} loan documents
-          </div>
-          <div className="flex items-center space-x-3">
-            {selectedDocuments.size > 0 && (
-              <div className="text-sm text-gray-600">
-                {selectedDocuments.size} selected
+        <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="text-sm font-medium text-gray-700">
+                Showing <span className="font-bold text-gray-900">{flattenedRows.length}</span> of <span className="font-bold text-gray-900">{totalCount.toLocaleString()}</span> documents
               </div>
-            )}
-            <div className="flex items-center space-x-2">
+              {selectedDocuments.size > 0 && (
+                <div className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-700 rounded-lg">
+                  {selectedDocuments.size} selected
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => exportBulkDocuments('PDF')}
                 disabled={selectedDocuments.size === 0 || isExporting}
-                className="inline-flex items-center px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium bg-red-50 text-red-700 rounded-lg hover:bg-red-100 border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <Download className="h-3 w-3 mr-1" />
+                <Download className="h-4 w-4 mr-1.5" />
                 Export PDF
               </button>
               <button
                 onClick={() => exportBulkDocuments('JSON')}
                 disabled={selectedDocuments.size === 0 || isExporting}
-                className="inline-flex items-center px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <Download className="h-3 w-3 mr-1" />
+                <Download className="h-4 w-4 mr-1.5" />
                 Export JSON
               </button>
               <button
                 onClick={() => exportBulkDocuments('CSV')}
                 disabled={selectedDocuments.size === 0 || isExporting}
-                className="inline-flex items-center px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium bg-green-50 text-green-700 rounded-lg hover:bg-green-100 border border-green-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <Download className="h-3 w-3 mr-1" />
+                <Download className="h-4 w-4 mr-1.5" />
                 Export CSV
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={selectedDocuments.size === 0 || isDeleting}
-                className="inline-flex items-center px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium bg-red-50 text-red-700 rounded-lg hover:bg-red-100 border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <AlertCircle className="h-3 w-3 mr-1" />
+                <Trash2 className="h-4 w-4 mr-1.5" />
                 Delete
               </button>
             </div>
@@ -1139,13 +1171,13 @@ export default function DocumentsPage() {
       )}
 
       {/* Documents Table */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         {flattenedRows.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full table-fixed">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-300">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-12">
                     <button
                       onClick={handleSelectAll}
                       className="flex items-center justify-center w-4 h-4"
@@ -1157,36 +1189,47 @@ export default function DocumentsPage() {
                       )}
                     </button>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32">
                     Loan ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-48">
                     Borrower Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32">
                     Upload Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32">
                     Sealed Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32">
                     Security Level
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-20">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-100">
                 {flattenedRows.map((row) => {
                   const doc = row.doc
                   const isDirectory = row.type === 'directory'
                   const isChild = row.type === 'child'
                   const depth = row.depth
                   const isExpanded = expandedDirectories.has(doc.id)
-                  const borrowerDisplay = cleanBorrowerName(doc.borrower_name || (row.parent?.borrower_name || ''))
-                  const borrowerText =
-                    borrowerDisplay === 'Unknown' && isDirectory ? 'Directory Container' : borrowerDisplay
+                  // For directories, show "Directory Container" if no borrower name
+                  // For children, inherit from parent if available
+                  let borrowerDisplay = ''
+                  if (isDirectory) {
+                    borrowerDisplay = cleanBorrowerName(doc.borrower_name || '')
+                    borrowerDisplay = borrowerDisplay || 'Directory Container'
+                  } else if (isChild && row.parent) {
+                    borrowerDisplay = cleanBorrowerName(doc.borrower_name || row.parent.borrower_name || '')
+                    borrowerDisplay = borrowerDisplay || 'Unknown'
+                  } else {
+                    borrowerDisplay = cleanBorrowerName(doc.borrower_name || '')
+                    borrowerDisplay = borrowerDisplay || 'Unknown'
+                  }
+                  const borrowerText = borrowerDisplay
                   const sealedLabel = doc.sealed_status || (doc.walacor_tx_id ? 'Sealed' : 'Not Sealed')
                   const isSealed = sealedLabel.toLowerCase().includes('sealed')
                   const sealedBadgeClass = isSealed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
@@ -1198,7 +1241,7 @@ export default function DocumentsPage() {
                   return (
                     <tr
                       key={`${row.type}-${doc.id}`}
-                      className={`${isChild ? 'bg-gray-50' : ''} hover:bg-gray-50`}
+                      className={`${isChild ? 'bg-gray-50/50' : 'bg-white'} hover:bg-blue-50/30 transition-colors border-b border-gray-100`}
                     >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
@@ -1217,22 +1260,22 @@ export default function DocumentsPage() {
                         {isDirectory && (
                           <button
                             onClick={() => toggleDirectory(doc.id)}
-                            className="mr-2 inline-flex items-center justify-center w-6 h-6 rounded-md border border-gray-300 bg-white hover:bg-gray-100 transition-colors"
+                            className="mr-2 inline-flex items-center justify-center w-7 h-7 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm"
                           >
                             <ChevronRight
-                              className={`h-4 w-4 text-gray-600 transition-transform ${isExpanded ? 'transform rotate-90' : ''}`}
+                              className={`h-4 w-4 text-gray-600 transition-transform duration-200 ${isExpanded ? 'transform rotate-90' : ''}`}
                             />
                           </button>
                         )}
                         {!isDirectory && depth > 0 && (
-                          <span className="inline-block w-3 h-3 mr-2 border-l border-gray-300"></span>
+                          <span className="inline-block w-4 h-4 mr-2 border-l-2 border-gray-300"></span>
                         )}
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 truncate" title={loanDisplay}>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-gray-900 truncate" title={loanDisplay}>
                             {loanDisplay}
                           </div>
                           {directorySecondary && (
-                            <div className="text-xs text-gray-400 mt-0.5 truncate" title={directorySecondary}>
+                            <div className="text-xs text-gray-500 mt-0.5 truncate" title={directorySecondary}>
                               {directorySecondary}
                             </div>
                           )}
@@ -1243,20 +1286,20 @@ export default function DocumentsPage() {
                       <div className="text-sm font-medium text-gray-900 truncate" title={borrowerText}>
                         {borrowerText}
                       </div>
-                      {doc.borrower_email && !isDirectory && (
-                        <div className="text-xs text-gray-400 mt-0.5 truncate" title={doc.borrower_email}>
-                          {doc.borrower_email.split(/\s+/)[0]} {/* Only show first part of email if it contains spaces */}
+                      {doc.borrower_email && !isDirectory && borrowerText !== 'Unknown' && borrowerText !== 'Directory Container' && (
+                        <div className="text-xs text-gray-500 mt-0.5 truncate" title={doc.borrower_email}>
+                          {doc.borrower_email.split(/\s+/)[0]}
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 w-32 text-sm text-gray-500">
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1 text-gray-400" />
-                        {formatDate(doc.upload_date)}
+                    <td className="px-6 py-4 w-32">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Calendar className="h-4 w-4 mr-1.5 text-gray-400" />
+                        <span>{formatDate(doc.upload_date)}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 w-32">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${sealedBadgeClass}`}>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold ${sealedBadgeClass} shadow-sm`}>
                         {sealedLabel}
                       </span>
                     </td>
@@ -1385,28 +1428,31 @@ export default function DocumentsPage() {
 
       {/* Pagination */}
       {totalCount > 20 && (
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            Showing {flattenedRows.length} of {totalCount} results
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <span className="px-3 py-2 text-sm font-medium text-gray-700">
-              Page {currentPage} of {Math.ceil(totalCount / 20)}
-            </span>
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={!hasMore}
-              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
+        <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-600">
+              Page <span className="font-semibold text-gray-900">{currentPage}</span> of <span className="font-semibold text-gray-900">{Math.ceil(totalCount / 20)}</span> 
+              {' '}({totalCount.toLocaleString()} total documents)
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+              >
+                Previous
+              </button>
+              <div className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 rounded-lg border border-gray-200">
+                {currentPage} / {Math.ceil(totalCount / 20)}
+              </div>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={!hasMore || currentPage >= Math.ceil(totalCount / 20)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       )}

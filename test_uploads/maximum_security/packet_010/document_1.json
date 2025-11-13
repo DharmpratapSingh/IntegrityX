@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_MAXIMUM_SECURITY_020_1763006538_DOC1",
+    "loan_type": "Mortgage",
+    "loan_amount": 1000000,
+    "interest_rate": 7.0,
+    "loan_term_years": 12,
+    "property_type": "Land",
+    "property_address": "55181 Nelson Lock, Port Tiffany, OR 03735",
+    "purchase_price": 1350000,
+    "down_payment": 350000,
+    "loan_purpose": "Business Expansion",
+    "created_by": "test_user_20@integrityx.com",
+    "document_type": "Document 1 for LOAN_MAXIMUM_SECURITY_020_1763006538_DOC1"
+  },
+  "borrower_information": {
+    "full_name": "John Clark",
+    "first_name": "John",
+    "last_name": "Clark",
+    "email": "john.clark20@example.com",
+    "phone": "747-209-9808",
+    "date_of_birth": "1985-12-21",
+    "ssn": "133-92-7698",
+    "address": "5654 Jason Stravenue, Heatherberg, WI 92143",
+    "city": "Danahaven",
+    "state": "MI",
+    "zip_code": "78107",
+    "annual_income": 400000,
+    "annual_income_range": 400000.0,
+    "employment_type": "Retired",
+    "employer_name": "Gonzalez, Watts and Bradley",
+    "job_title": "Claims inspector/assessor",
+    "years_employed": 13,
+    "credit_score": 580,
+    "bank_name": "Fisher Ltd Bank",
+    "account_number": "DUQW08345028245012",
+    "routing_number": "127013242",
+    "marital_status": "Divorced",
+    "dependents": 0,
+    "income_source": "Commission"
+  },
+  "financial_summary": {
+    "total_assets": 1467947.525978995,
+    "total_liabilities": 113315.93967969208,
+    "debt_to_income_ratio": 250.0,
+    "monthly_payment": 10283.81
+  },
+  "property_details": {
+    "address": "55181 Nelson Lock, Port Tiffany, OR 03735",
+    "property_type": "Land",
+    "year_built": 1999,
+    "square_feet": 3745,
+    "bedrooms": 5,
+    "bathrooms": 3,
+    "estimated_value": 1253751.9139283125
+  },
+  "verification_status": {
+    "income_verified": true,
+    "employment_verified": true,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": false
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:02:18.645095",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": ""
+  }
+}

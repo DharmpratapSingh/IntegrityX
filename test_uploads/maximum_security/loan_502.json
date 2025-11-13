@@ -1,0 +1,70 @@
+{
+  "loan_information": {
+    "loan_id": "LOAN_MAXIMUM_SECURITY_015_1763006465_DOC1_DOC2_DOC3",
+    "loan_type": "Credit Line",
+    "loan_amount": 5000000,
+    "interest_rate": 5.5,
+    "loan_term_years": 30,
+    "property_type": "Townhouse",
+    "property_address": "7249 Barr Field, Harringtonmouth, MP 90862",
+    "purchase_price": 7500000,
+    "down_payment": 2500000,
+    "loan_purpose": "Refinance",
+    "created_by": "test_user_15@integrityx.com",
+    "document_type": "Document 3 for LOAN_MAXIMUM_SECURITY_015_1763006465_DOC1_DOC2_DOC3"
+  },
+  "borrower_information": {
+    "full_name": "Michael Anderson",
+    "first_name": "Michael",
+    "last_name": "Anderson",
+    "email": "michael.anderson15@example.com",
+    "phone": "4135740884",
+    "date_of_birth": "1998-09-24",
+    "ssn": "973-65-4092",
+    "address": "40350 Robertson Station, Randallstad, SC 37112",
+    "city": "West Nicoleberg",
+    "state": "VT",
+    "zip_code": "62702",
+    "annual_income": 500000,
+    "annual_income_range": 500000.0,
+    "employment_type": "Business Owner",
+    "employer_name": "Griffin Ltd",
+    "job_title": "Engineer, water",
+    "years_employed": 13,
+    "credit_score": 650,
+    "bank_name": "Bryant LLC Bank",
+    "account_number": "MGBK30226317467186",
+    "routing_number": "024552851",
+    "marital_status": "Widowed",
+    "dependents": 0,
+    "income_source": "Investment Income"
+  },
+  "financial_summary": {
+    "total_assets": 1705366.1834904882,
+    "total_liabilities": 1380116.7589688695,
+    "debt_to_income_ratio": 1000.0,
+    "monthly_payment": 28389.45
+  },
+  "property_details": {
+    "address": "7249 Barr Field, Harringtonmouth, MP 90862",
+    "property_type": "Townhouse",
+    "year_built": 1959,
+    "square_feet": 3975,
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "estimated_value": 7681863.878787903
+  },
+  "verification_status": {
+    "income_verified": false,
+    "employment_verified": false,
+    "assets_verified": false,
+    "credit_checked": true,
+    "appraisal_completed": true
+  },
+  "metadata": {
+    "created_at": "2025-11-12T23:01:05.311449",
+    "document_version": "1.0",
+    "processing_status": "submitted",
+    "reviewer_notes": "Easy yet field top. Stock others pressure eight benefit politics. Address likely become avoid us guess option traditional."
+  }
+}
