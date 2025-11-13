@@ -69,6 +69,13 @@ def main():
         100004: "audit_logs"
     }
 
+    # Get all schemas first
+    try:
+        all_schemas = wal.schema.get_list_with_latest_version()
+    except Exception as e:
+        print(f"❌ Failed to get schema list: {e}")
+        sys.exit(1)
+
     # Inspect each schema
     for etid, expected_name in target_schemas.items():
         print("=" * 80)
@@ -76,8 +83,18 @@ def main():
         print("=" * 80)
 
         try:
-            # Get schema details
-            schema_detail = wal.schema.get_schema(etid)
+            # Find schema in list
+            schema_detail = None
+            for schema in all_schemas:
+                if schema.ETId == etid:
+                    schema_detail = schema
+                    break
+
+            if not schema_detail:
+                print(f"❌ Schema not found in Walacor!")
+                print()
+                continue
+
             schema_data = schema_detail.model_dump()
 
             # Basic info
