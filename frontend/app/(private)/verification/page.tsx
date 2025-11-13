@@ -609,10 +609,10 @@ export default function VerificationPage() {
     >
       <div>
         {/* Hero Section */}
-        <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white rounded-xl mb-8">
+        <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white border-b border-gray-200 dark:border-gray-800">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
 
-        <div className="relative max-w-7xl mx-auto px-6 py-16">
+        <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
           <div className="space-y-6">
             <div className="space-y-3">
               <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
@@ -835,7 +835,7 @@ export default function VerificationPage() {
 
                   {/* Document Info */}
                   {comparisonData.document && (
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-4">
                       <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Original Document</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                         <div>
@@ -1272,14 +1272,48 @@ export default function VerificationPage() {
               </div>
 
               {zkpProof.blockchainProof && (
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Blockchain Transaction ID</label>
-                  <code className="block p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg text-xs break-all font-mono mt-1 text-blue-900 dark:text-blue-300">
-                    {zkpProof.blockchainProof}
-                  </code>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    ✅ Document is sealed on blockchain. Publicly verifiable on Walacor network.
-                  </p>
+                <div className="space-y-3">
+                  {/* Enhanced Walacor Badge */}
+                  <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-2 border-blue-400 dark:border-blue-600 rounded-lg">
+                    <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-blue-900 dark:text-blue-100">
+                          ✅ Verified on Walacor Blockchain
+                        </span>
+                        <span className="text-xs px-2 py-0.5 bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 rounded-full font-medium">
+                          Immutable
+                        </span>
+                      </div>
+                      <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                        This document is permanently sealed and publicly verifiable on the Walacor network
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Transaction ID with Copy Button */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                      Blockchain Transaction ID
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(zkpProof.blockchainProof || '')
+                          toast.success('Transaction ID copied to clipboard')
+                        }}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs flex items-center gap-1 transition-colors"
+                      >
+                        <Copy className="h-3 w-3" />
+                        Copy
+                      </button>
+                    </label>
+                    <code className="block p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg text-xs break-all font-mono mt-1 text-blue-900 dark:text-blue-300">
+                      {zkpProof.blockchainProof}
+                    </code>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 flex items-center gap-1">
+                      <Shield className="h-3 w-3" />
+                      Publicly verifiable on Walacor network • Tamper-proof guarantee
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

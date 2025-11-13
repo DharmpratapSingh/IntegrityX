@@ -5,7 +5,7 @@ import { json as fetchJson, fetchWithTimeout } from '@/utils/api'
 import { formatEasternTimeWithTZ, formatForFilename, getCurrentEasternTime } from '@/utils/timezone'
 import Link from 'next/link'
 import { DashboardLayout } from '@/components/DashboardLayout'
-import { Search, FileText, Eye, Plus, Filter, Calendar, Hash, AlertCircle, RefreshCw, Download, CheckSquare, Square, Shield, Lock, Zap, CheckCircle, TrendingUp, MoreVertical, Trash2, ChevronRight } from 'lucide-react'
+import { Search, FileText, Eye, Plus, Filter, Calendar, Hash, AlertCircle, RefreshCw, Download, CheckSquare, Square, Shield, Lock, Zap, CheckCircle, TrendingUp, MoreVertical, Trash2, ChevronRight, Copy } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -143,7 +143,18 @@ export default function DocumentsPage() {
             artifact_type: doc.artifact_type || baseDocumentType,
             created_by: doc.created_by || '',
             sealed_status: doc.sealed_status || (doc.walacor_tx_id ? 'Sealed' : 'Not Sealed'),
-            security_level: doc.security_level || doc.local_metadata?.security_level || 'standard',
+            security_level: (() => {
+              // Prioritize local_metadata.security_level, then doc.security_level, then default to 'standard'
+              const metadataLevel = doc.local_metadata?.security_level;
+              const apiLevel = doc.security_level;
+              // Normalize values to handle variations
+              const level = metadataLevel || apiLevel || 'standard';
+              // Ensure we return a valid security level
+              if (['standard', 'quantum_safe', 'maximum'].includes(level)) {
+                return level;
+              }
+              return 'standard';
+            })(),
             artifact_container_type: artifactContainerType,
             parent_id: doc.parent_id || null,
             directory_name: doc.directory_name || null,
@@ -918,10 +929,10 @@ export default function DocumentsPage() {
     >
       <div>
         {/* Hero Section */}
-        <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white rounded-xl mb-8 border border-gray-200 dark:border-gray-800">
+        <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white border-b border-gray-200 dark:border-gray-800">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
 
-        <div className="relative max-w-7xl mx-auto px-6 py-16">
+        <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="space-y-3">
@@ -982,7 +993,7 @@ export default function DocumentsPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
       {/* Search and Filter */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
@@ -1120,7 +1131,7 @@ export default function DocumentsPage() {
 
       {/* Results Summary and Export Controls */}
       {totalCount > 0 && (
-        <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="text-sm font-medium text-gray-700">
@@ -1299,9 +1310,29 @@ export default function DocumentsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 w-32">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold ${sealedBadgeClass} shadow-sm`}>
-                        {sealedLabel}
-                      </span>
+                      {doc.walacor_tx_id ? (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 shadow-sm">
+                            <Shield className="h-3 w-3 mr-1" />
+                            Sealed on Walacor
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigator.clipboard.writeText(doc.walacor_tx_id || '')
+                              // You can add a toast notification here if available
+                            }}
+                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                            title="Copy Transaction ID"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold ${sealedBadgeClass} shadow-sm`}>
+                          {sealedLabel}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 w-32">
                       {getSecurityLevelBadge(doc.security_level)}
@@ -1428,7 +1459,7 @@ export default function DocumentsPage() {
 
       {/* Pagination */}
       {totalCount > 20 && (
-        <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-sm text-gray-600">
               Page <span className="font-semibold text-gray-900">{currentPage}</span> of <span className="font-semibold text-gray-900">{Math.ceil(totalCount / 20)}</span> 

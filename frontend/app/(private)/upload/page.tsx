@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Hash, Shield, ArrowLeft, ChevronDown, ChevronUp, User, HelpCircle, AlertCircle, X, RefreshCw, Mail, Download, UserCheck, FileCheck, AlertTriangle, Info, Sparkles, TrendingUp, Lightbulb, Zap, BarChart3, Layers } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Hash, Shield, ArrowLeft, ChevronDown, ChevronUp, User, HelpCircle, AlertCircle, X, RefreshCw, Mail, Download, UserCheck, FileCheck, AlertTriangle, Info, Sparkles, TrendingUp, Lightbulb, Zap, BarChart3, Layers, Calendar as CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
 import { simpleToast as toast } from '@/components/ui/simple-toast';
 import { sealLoanDocument, sealLoanDocumentMaximumSecurity, sealLoanDocumentQuantumSafe, sealDirectory, type LoanData, type BorrowerInfo, type DirectoryFileInfo, type DirectorySealResponse } from '@/lib/api/loanDocuments';
 import { DuplicateDetection } from '@/components/DuplicateDetection';
@@ -35,7 +38,8 @@ import {
   sanitizeGovernmentIdType, 
   sanitizeDocumentType, 
   sanitizeNotes,
-  sanitizeFormData
+  sanitizeFormData,
+  sanitizeTextarea
 } from '@/utils/dataSanitization';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
@@ -129,6 +133,8 @@ interface KYCData {
   
   // Identification Information
   citizenshipCountry: string;
+  ssnOrItinType: string; // 'SSN' or 'ITIN'
+  ssnOrItinNumber: string; // The actual SSN or ITIN number
   identificationType: string;
   identificationNumber: string;
   idIssuingCountry: string;
@@ -143,9 +149,7 @@ interface KYCData {
   isPEP: string;
   pepDetails: string;
   
-  // Document Uploads
-  governmentIdFile: File | null;
-  proofOfAddressFile: File | null;
+  // Document Uploads (removed - collecting from form fields instead)
 }
 
 interface KYCErrors {
@@ -208,6 +212,7 @@ export default function UploadPage() {
   // Individual form field states for better reactivity
   const [formData, setFormData] = useState({
     loanId: '',
+    loanType: '', // New field: Home Loan, Personal Loan, Auto Loan, etc.
     documentType: 'loan_application',
     loanAmount: '',
     loanTerm: '',
@@ -229,7 +234,28 @@ export default function UploadPage() {
     borrowerIdNumberLast4: '',
     borrowerEmploymentStatus: 'employed',
     borrowerAnnualIncome: '',
-    borrowerCoBorrowerName: ''
+    borrowerCoBorrowerName: '',
+    // Conditional fields based on loan type
+    propertyValue: '', // Home Loan
+    downPayment: '', // Home Loan
+    propertyType: '', // Home Loan
+    vehicleMake: '', // Auto Loan
+    vehicleModel: '', // Auto Loan
+    vehicleYear: '', // Auto Loan
+    vehicleVIN: '', // Auto Loan
+    purchasePrice: '', // Auto Loan
+    businessName: '', // Business Loan
+    businessType: '', // Business Loan
+    businessRegistrationNumber: '', // Business Loan
+    annualRevenue: '', // Business Loan
+    schoolName: '', // Student Loan
+    degreeProgram: '', // Student Loan
+    expectedGraduationDate: '', // Student Loan
+    currentLoanNumber: '', // Refinance
+    currentLender: '', // Refinance
+    refinancePurpose: '', // Refinance
+    currentMortgageBalance: '', // Home Equity
+    equityAmount: '' // Home Equity
   });
 
   // Debug: Log formData changes
@@ -263,10 +289,19 @@ export default function UploadPage() {
           const demoFile = new File([blob], fileName, { type: 'application/json' });
 
           // Simulate file drop
-          setTimeout(() => {
+          setTimeout(async () => {
             console.log('🚀 Auto-uploading demo file...');
             setFile(demoFile);
             setCurrentStep(2);
+
+            // Calculate file hash (required for upload button to be enabled)
+            try {
+              const hash = await calculateFileHash(demoFile);
+              setFileHash(hash);
+              console.log('Demo file hash calculated:', hash);
+            } catch (error) {
+              console.error('Failed to calculate demo file hash:', error);
+            }
 
             // Trigger auto-fill
             autoFillFromJSON(demoFile).then(() => {
@@ -285,6 +320,85 @@ export default function UploadPage() {
             ...demoKYC
           }));
         }, 1500);
+
+        // Pre-fill Loan Information including loanType and conditional fields
+        setTimeout(() => {
+          if (demoDocuments && demoDocuments.length > 0) {
+            const firstDoc = demoDocuments[0];
+            const loanMeta: any = {
+              loanId: firstDoc.loan_id,
+              loanType: firstDoc.loan_type || 'home_loan',
+              documentType: firstDoc.document_type || 'loan_application',
+              loanAmount: firstDoc.loan_amount,
+              loanTerm: firstDoc.loan_term_months,
+              interestRate: firstDoc.interest_rate,
+              propertyAddress: firstDoc.property_address || '',
+            };
+
+            // Add conditional fields based on loan type
+            if (firstDoc.loan_type === 'home_loan' || firstDoc.loan_type === 'home_equity') {
+              if (firstDoc.property_value) loanMeta.propertyValue = firstDoc.property_value;
+              if (firstDoc.down_payment) loanMeta.downPayment = firstDoc.down_payment;
+              if (firstDoc.property_type) loanMeta.propertyType = firstDoc.property_type;
+              if (firstDoc.current_mortgage_balance) loanMeta.currentMortgageBalance = firstDoc.current_mortgage_balance;
+              if (firstDoc.equity_amount) loanMeta.equityAmount = firstDoc.equity_amount;
+            } else if (firstDoc.loan_type === 'auto_loan') {
+              if (firstDoc.vehicle_make) loanMeta.vehicleMake = firstDoc.vehicle_make;
+              if (firstDoc.vehicle_model) loanMeta.vehicleModel = firstDoc.vehicle_model;
+              if (firstDoc.vehicle_year) loanMeta.vehicleYear = firstDoc.vehicle_year;
+              if (firstDoc.vehicle_vin) loanMeta.vehicleVIN = firstDoc.vehicle_vin;
+              if (firstDoc.purchase_price) loanMeta.purchasePrice = firstDoc.purchase_price;
+            } else if (firstDoc.loan_type === 'business_loan') {
+              if (firstDoc.business_name) loanMeta.businessName = firstDoc.business_name;
+              if (firstDoc.business_type) loanMeta.businessType = firstDoc.business_type;
+              if (firstDoc.business_registration_number) loanMeta.businessRegistrationNumber = firstDoc.business_registration_number;
+              if (firstDoc.annual_revenue) loanMeta.annualRevenue = firstDoc.annual_revenue;
+            } else if (firstDoc.loan_type === 'student_loan') {
+              if (firstDoc.school_name) loanMeta.schoolName = firstDoc.school_name;
+              if (firstDoc.degree_program) loanMeta.degreeProgram = firstDoc.degree_program;
+              if (firstDoc.expected_graduation_date) loanMeta.expectedGraduationDate = firstDoc.expected_graduation_date;
+            } else if (firstDoc.loan_type === 'refinance') {
+              if (firstDoc.current_loan_number) loanMeta.currentLoanNumber = firstDoc.current_loan_number;
+              if (firstDoc.current_lender) loanMeta.currentLender = firstDoc.current_lender;
+              if (firstDoc.refinance_purpose) loanMeta.refinancePurpose = firstDoc.refinance_purpose;
+            }
+
+            // Update formData
+            setFormData(prev => ({
+              ...prev,
+              loanId: loanMeta.loanId,
+              loanType: loanMeta.loanType,
+              documentType: loanMeta.documentType,
+              loanAmount: String(loanMeta.loanAmount),
+              loanTerm: String(loanMeta.loanTerm),
+              interestRate: String(loanMeta.interestRate),
+              propertyAddress: loanMeta.propertyAddress,
+              propertyValue: String(loanMeta.propertyValue || ''),
+              downPayment: String(loanMeta.downPayment || ''),
+              propertyType: loanMeta.propertyType || '',
+              vehicleMake: loanMeta.vehicleMake || '',
+              vehicleModel: loanMeta.vehicleModel || '',
+              vehicleYear: String(loanMeta.vehicleYear || ''),
+              vehicleVIN: loanMeta.vehicleVIN || '',
+              purchasePrice: String(loanMeta.purchasePrice || ''),
+              businessName: loanMeta.businessName || '',
+              businessType: loanMeta.businessType || '',
+              businessRegistrationNumber: loanMeta.businessRegistrationNumber || '',
+              annualRevenue: String(loanMeta.annualRevenue || ''),
+              schoolName: loanMeta.schoolName || '',
+              degreeProgram: loanMeta.degreeProgram || '',
+              expectedGraduationDate: loanMeta.expectedGraduationDate || '',
+              currentLoanNumber: loanMeta.currentLoanNumber || '',
+              currentLender: loanMeta.currentLender || '',
+              refinancePurpose: loanMeta.refinancePurpose || '',
+              currentMortgageBalance: String(loanMeta.currentMortgageBalance || ''),
+              equityAmount: String(loanMeta.equityAmount || ''),
+            }));
+
+            // Update metadata
+            setMetadata(JSON.stringify(loanMeta, null, 2));
+          }
+        }, 2000);
 
       } catch (error) {
         console.error('Error generating demo data:', error);
@@ -318,6 +432,8 @@ export default function UploadPage() {
     postalZipCode: '',
     country: 'US',
     citizenshipCountry: 'US',
+    ssnOrItinType: '',
+    ssnOrItinNumber: '',
     identificationType: '',
     identificationNumber: '',
     idIssuingCountry: 'US',
@@ -327,13 +443,41 @@ export default function UploadPage() {
     expectedNumberOfMonthlyTransactions: 0,
     isPEP: '',
     pepDetails: '',
-    governmentIdFile: null,
-    proofOfAddressFile: null,
+    // Document Uploads removed - collecting from form fields instead
   });
   const [kycErrors, setKycErrors] = useState<KYCErrors>({});
   const [isKycExpanded, setIsKycExpanded] = useState(false);
   const [isSavingKyc, setIsSavingKyc] = useState(false);
   const [kycSaved, setKycSaved] = useState(false);
+  const [loanFormErrors, setLoanFormErrors] = useState<{
+    loanId?: string;
+    loanType?: string;
+    documentType?: string;
+    loanAmount?: string;
+    loanTerm?: string;
+    interestRate?: string;
+    propertyAddress?: string;
+    propertyValue?: string;
+    downPayment?: string;
+    propertyType?: string;
+    vehicleMake?: string;
+    vehicleModel?: string;
+    vehicleYear?: string;
+    vehicleVIN?: string;
+    purchasePrice?: string;
+    businessName?: string;
+    businessType?: string;
+    businessRegistrationNumber?: string;
+    annualRevenue?: string;
+    schoolName?: string;
+    degreeProgram?: string;
+    expectedGraduationDate?: string;
+    currentLoanNumber?: string;
+    currentLender?: string;
+    refinancePurpose?: string;
+    currentMortgageBalance?: string;
+    equityAmount?: string;
+  }>({});
   const [privacyNoticeDismissed, setPrivacyNoticeDismissed] = useState(false);
   const [borrowerErrors, setBorrowerErrors] = useState<Record<string, string>>({});
 
@@ -733,32 +877,67 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
   const createComprehensiveDocument = (): any => {
     const currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
     
-    // Extract loan information
+    // Extract loan information including loanType and conditional fields
     const loanData = {
       loan_id: currentMeta.loanId || `loan-${Date.now()}`,
+      loan_type: currentMeta.loanType || '',
       document_type: currentMeta.documentType || 'unknown',
       loan_amount: currentMeta.loanAmount || 0,
       borrower_name: currentMeta.borrowerName || '',
       notes: currentMeta.notes || '',
-      etid: etid
+      etid: etid,
+      // Include conditional fields based on loan type
+      ...(currentMeta.loanType === 'home_loan' || currentMeta.loanType === 'home_equity' ? {
+        property_value: currentMeta.propertyValue,
+        down_payment: currentMeta.downPayment,
+        property_type: currentMeta.propertyType,
+        current_mortgage_balance: currentMeta.currentMortgageBalance,
+        equity_amount: currentMeta.equityAmount
+      } : {}),
+      ...(currentMeta.loanType === 'auto_loan' ? {
+        vehicle_make: currentMeta.vehicleMake,
+        vehicle_model: currentMeta.vehicleModel,
+        vehicle_year: currentMeta.vehicleYear,
+        vehicle_vin: currentMeta.vehicleVIN,
+        purchase_price: currentMeta.purchasePrice
+      } : {}),
+      ...(currentMeta.loanType === 'business_loan' ? {
+        business_name: currentMeta.businessName,
+        business_type: currentMeta.businessType,
+        business_registration_number: currentMeta.businessRegistrationNumber,
+        annual_revenue: currentMeta.annualRevenue
+      } : {}),
+      ...(currentMeta.loanType === 'student_loan' ? {
+        school_name: currentMeta.schoolName,
+        degree_program: currentMeta.degreeProgram,
+        expected_graduation_date: currentMeta.expectedGraduationDate
+      } : {}),
+      ...(currentMeta.loanType === 'refinance' ? {
+        current_loan_number: currentMeta.currentLoanNumber,
+        current_lender: currentMeta.currentLender,
+        refinance_purpose: currentMeta.refinancePurpose
+      } : {})
     };
 
-    // Extract borrower information
+    // Extract borrower information - prioritize KYC data
     const borrowerData = {
-      full_name: currentMeta.borrowerFullName || '',
-      dob: currentMeta.borrowerDateOfBirth || '',
-      email: currentMeta.borrowerEmail || '',
-      phone: currentMeta.borrowerPhone || '',
+      full_name: kycData.fullLegalName || currentMeta.borrowerFullName || '',
+      dob: kycData.dateOfBirth || currentMeta.borrowerDateOfBirth || '',
+      email: kycData.emailAddress || currentMeta.borrowerEmail || '',
+      phone: kycData.phoneNumber || currentMeta.borrowerPhone || '',
       address: {
-        street: currentMeta.borrowerStreetAddress || '',
-        city: currentMeta.borrowerCity || '',
-        state: currentMeta.borrowerState || '',
-        zip_code: currentMeta.borrowerZipCode || '',
-        country: currentMeta.borrowerCountry || 'US'
+        street: kycData.streetAddress1 || currentMeta.borrowerStreetAddress || '',
+        city: kycData.city || currentMeta.borrowerCity || '',
+        state: kycData.stateProvince || currentMeta.borrowerState || '',
+        zip_code: kycData.postalZipCode || currentMeta.borrowerZipCode || '',
+        country: kycData.country || currentMeta.borrowerCountry || 'US'
       },
-      ssn_last4: currentMeta.borrowerSSNLast4 || '',
-      id_type: currentMeta.borrowerGovernmentIdType || '',
-      id_last4: currentMeta.borrowerIdNumberLast4 || '',
+      // SSN/ITIN from KYC
+      ssn_or_itin_type: kycData.ssnOrItinType || '',
+      ssn_or_itin_number: kycData.ssnOrItinNumber || '',
+      ssn_last4: kycData.ssnOrItinNumber ? kycData.ssnOrItinNumber.slice(-4).replace(/-/g, '') : (currentMeta.borrowerSSNLast4 || ''),
+      id_type: kycData.identificationType || currentMeta.borrowerGovernmentIdType || '',
+      id_last4: kycData.identificationNumber ? kycData.identificationNumber.slice(-4) : (currentMeta.borrowerIdNumberLast4 || ''),
       employment_status: currentMeta.borrowerEmploymentStatus || '',
       annual_income: currentMeta.borrowerAnnualIncome || 0,
       co_borrower_name: currentMeta.borrowerCoBorrowerName || ''
@@ -1021,12 +1200,161 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
   const isSingleMode = uploadMode === 'single';
   const hasPrimaryFile = isSingleMode ? Boolean(file && fileHash) : selectedFiles.length > 0;
+  
+  // Check if KYC validation would pass (without setting errors)
+  const isKycValid = useMemo(() => {
+    if (!kycData.fullLegalName?.trim()) return false;
+    if (!kycData.dateOfBirth) return false;
+    if (!kycData.phoneNumber?.trim()) return false;
+    if (!kycData.emailAddress?.trim()) return false;
+    if (!kycData.streetAddress1?.trim()) return false;
+    if (!kycData.city?.trim()) return false;
+    if (!kycData.stateProvince) return false;
+    if (!kycData.postalZipCode?.trim()) return false;
+    if (!kycData.country) return false;
+    if (!kycData.citizenshipCountry) return false;
+    if (!kycData.ssnOrItinType) return false;
+    if (!kycData.ssnOrItinNumber?.trim()) return false;
+    // Only require Identification Type, Number, and ID Issuing Country when ITIN is selected
+    // SSN can serve both identification and SSN criteria, so these fields are not needed for SSN
+    if (kycData.ssnOrItinType === 'ITIN') {
+      if (!kycData.identificationType) return false;
+      if (!kycData.identificationNumber?.trim()) return false;
+      if (!kycData.idIssuingCountry) return false;
+    }
+    if (!kycData.sourceOfFunds) return false;
+    if (!kycData.purposeOfLoan?.trim() || kycData.purposeOfLoan.trim().length < 20) return false;
+    if (!kycData.expectedMonthlyTransactionVolume || kycData.expectedMonthlyTransactionVolume <= 0) return false;
+    if (!kycData.expectedNumberOfMonthlyTransactions || kycData.expectedNumberOfMonthlyTransactions <= 0) return false;
+    if (!kycData.isPEP) return false;
+    if (kycData.isPEP === 'Yes' && !kycData.pepDetails?.trim()) return false;
+    // governmentIdFile validation removed - collecting from form fields instead
+    return true;
+  }, [kycData]);
+  
+  // Helper function to get required fields for each loan type
+  const getRequiredFieldsForLoanType = (loanType: string): string[] => {
+    switch (loanType) {
+      case 'home_loan':
+        return ['propertyAddress', 'propertyValue', 'downPayment', 'propertyType'];
+      case 'personal_loan':
+        return []; // Personal loans typically don't need additional fields beyond standard ones
+      case 'auto_loan':
+        return ['vehicleMake', 'vehicleModel', 'vehicleYear', 'vehicleVIN', 'purchasePrice'];
+      case 'business_loan':
+        return ['businessName', 'businessType', 'businessRegistrationNumber', 'annualRevenue'];
+      case 'student_loan':
+        return ['schoolName', 'degreeProgram', 'expectedGraduationDate'];
+      case 'refinance':
+        return ['currentLoanNumber', 'currentLender', 'refinancePurpose'];
+      case 'home_equity':
+        return ['propertyAddress', 'propertyValue', 'currentMortgageBalance', 'equityAmount'];
+      default:
+        return [];
+    }
+  };
+
+  // Check if Loan Information fields are valid (required fields)
+  const isFormValid = useMemo(() => {
+    if (!hasPrimaryFile) return false;
+    let currentMeta = {};
+    try {
+      currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
+    } catch (e) {
+      return false; // Invalid JSON means form is invalid
+    }
+    // Required Loan Information fields (always required)
+    if (!currentMeta.loanId?.trim()) return false;
+    if (!currentMeta.loanType?.trim()) return false; // Loan Type is now required
+    if (!currentMeta.documentType?.trim()) return false;
+    if (!currentMeta.loanAmount || currentMeta.loanAmount <= 0) return false;
+    if (!currentMeta.loanTerm || currentMeta.loanTerm <= 0) return false;
+    if (!currentMeta.interestRate || currentMeta.interestRate <= 0) return false;
+    
+    // Check conditional required fields based on loan type
+    const requiredFields = getRequiredFieldsForLoanType(currentMeta.loanType || '');
+    for (const field of requiredFields) {
+      const value = currentMeta[field];
+      if (!value || (typeof value === 'string' && !value.trim()) || (typeof value === 'number' && value <= 0)) {
+        return false;
+      }
+    }
+    
+    return true;
+  }, [metadata, hasPrimaryFile]);
+
+  // Compute loan form errors
+  useEffect(() => {
+    if (!hasPrimaryFile) {
+      setLoanFormErrors({});
+      return;
+    }
+    let currentMeta = {};
+    try {
+      currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
+    } catch (e) {
+      setLoanFormErrors({});
+      return;
+    }
+    const errors: typeof loanFormErrors = {};
+    if (!currentMeta.loanId?.trim()) errors.loanId = 'Loan ID is required';
+    if (!currentMeta.loanType?.trim()) errors.loanType = 'Loan Type is required';
+    if (!currentMeta.documentType?.trim()) errors.documentType = 'Document Type is required';
+    if (!currentMeta.loanAmount || currentMeta.loanAmount <= 0) errors.loanAmount = 'Loan Amount is required and must be greater than 0';
+    if (!currentMeta.loanTerm || currentMeta.loanTerm <= 0) errors.loanTerm = 'Loan Term is required and must be greater than 0';
+    if (!currentMeta.interestRate || currentMeta.interestRate <= 0) errors.interestRate = 'Interest Rate is required and must be greater than 0';
+    
+    // Check conditional required fields based on loan type
+    const requiredFields = getRequiredFieldsForLoanType(currentMeta.loanType || '');
+    for (const field of requiredFields) {
+      const value = currentMeta[field];
+      if (!value || (typeof value === 'string' && !value.trim()) || (typeof value === 'number' && value <= 0)) {
+        const fieldLabels: Record<string, string> = {
+          propertyAddress: 'Property Address',
+          propertyValue: 'Property Value',
+          downPayment: 'Down Payment',
+          propertyType: 'Property Type',
+          vehicleMake: 'Vehicle Make',
+          vehicleModel: 'Vehicle Model',
+          vehicleYear: 'Vehicle Year',
+          vehicleVIN: 'Vehicle VIN',
+          purchasePrice: 'Purchase Price',
+          businessName: 'Business Name',
+          businessType: 'Business Type',
+          businessRegistrationNumber: 'Business Registration Number',
+          annualRevenue: 'Annual Revenue',
+          schoolName: 'School Name',
+          degreeProgram: 'Degree Program',
+          expectedGraduationDate: 'Expected Graduation Date',
+          currentLoanNumber: 'Current Loan Number',
+          currentLender: 'Current Lender',
+          refinancePurpose: 'Refinance Purpose',
+          currentMortgageBalance: 'Current Mortgage Balance',
+          equityAmount: 'Equity Amount'
+        };
+        errors[field as keyof typeof errors] = `${fieldLabels[field] || field} is required`;
+      }
+    }
+    
+    setLoanFormErrors(errors);
+  }, [metadata, hasPrimaryFile]);
+  
+  // Check if file is already sealed (blocks upload)
+  const isFileAlreadySealed = Boolean(verifyResult && verifyResult.is_valid);
+  
+  // Check required fields (marked with red stars):
+  // - File must be selected
+  // - All required KYC fields must be filled
+  // - All required Loan Information fields must be filled
+  // - File must not be already sealed
   const isUploadDisabled =
     isUploading ||
     isVerifying ||
     Boolean(uploadResult) ||
-    Boolean(verifyResult && verifyResult.is_valid) ||
-    !hasPrimaryFile;
+    isFileAlreadySealed ||
+    !hasPrimaryFile ||
+    !isKycValid ||
+    !isFormValid;
 
   const validateLoanFile = (file: File): { isValid: boolean; reason?: string } => {
     const validExtensions = ['.pdf', '.json', '.docx', '.xlsx', '.txt', '.jpg', '.jpeg', '.png'];
@@ -1104,7 +1432,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         
         if (existingVerify && existingVerify.is_valid) {
           setVerifyResult(existingVerify);
-          toast.success('Document already sealed!');
+          toast.error('⚠️ This document is already sealed! Upload is blocked to prevent duplicates.');
         }
       } catch (error) {
         toast.error('Failed to calculate file hash');
@@ -1306,7 +1634,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         
         if (existingVerify && existingVerify.is_valid) {
           setVerifyResult(existingVerify);
-          toast.success('Document already sealed!');
+          toast.error('⚠️ This document is already sealed! Upload is blocked to prevent duplicates.');
         }
       } catch (error) {
         toast.error('Failed to calculate file hash');
@@ -1338,10 +1666,19 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         const demoFile = new File([blob], fileName, { type: 'application/json' });
 
         // Simulate file drop
-        setTimeout(() => {
+        setTimeout(async () => {
           console.log('🚀 Auto-uploading demo file...');
           setFile(demoFile);
           setCurrentStep(2);
+
+          // Calculate file hash (required for upload button to be enabled)
+          try {
+            const hash = await calculateFileHash(demoFile);
+            setFileHash(hash);
+            console.log('Demo file hash calculated:', hash);
+          } catch (error) {
+            console.error('Failed to calculate demo file hash:', error);
+          }
 
           // Trigger auto-fill
           autoFillFromJSON(demoFile).then(() => {
@@ -1360,6 +1697,85 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           ...demoKYC
         }));
       }, 800);
+
+      // Pre-fill Loan Information including loanType and conditional fields
+      setTimeout(() => {
+        if (demoDocuments && demoDocuments.length > 0) {
+          const firstDoc = demoDocuments[0];
+          const loanMeta: any = {
+            loanId: firstDoc.loan_id,
+            loanType: firstDoc.loan_type || 'home_loan',
+            documentType: firstDoc.document_type || 'loan_application',
+            loanAmount: firstDoc.loan_amount,
+            loanTerm: firstDoc.loan_term_months,
+            interestRate: firstDoc.interest_rate,
+            propertyAddress: firstDoc.property_address || '',
+          };
+
+          // Add conditional fields based on loan type
+          if (firstDoc.loan_type === 'home_loan' || firstDoc.loan_type === 'home_equity') {
+            if (firstDoc.property_value) loanMeta.propertyValue = firstDoc.property_value;
+            if (firstDoc.down_payment) loanMeta.downPayment = firstDoc.down_payment;
+            if (firstDoc.property_type) loanMeta.propertyType = firstDoc.property_type;
+            if (firstDoc.current_mortgage_balance) loanMeta.currentMortgageBalance = firstDoc.current_mortgage_balance;
+            if (firstDoc.equity_amount) loanMeta.equityAmount = firstDoc.equity_amount;
+          } else if (firstDoc.loan_type === 'auto_loan') {
+            if (firstDoc.vehicle_make) loanMeta.vehicleMake = firstDoc.vehicle_make;
+            if (firstDoc.vehicle_model) loanMeta.vehicleModel = firstDoc.vehicle_model;
+            if (firstDoc.vehicle_year) loanMeta.vehicleYear = firstDoc.vehicle_year;
+            if (firstDoc.vehicle_vin) loanMeta.vehicleVIN = firstDoc.vehicle_vin;
+            if (firstDoc.purchase_price) loanMeta.purchasePrice = firstDoc.purchase_price;
+          } else if (firstDoc.loan_type === 'business_loan') {
+            if (firstDoc.business_name) loanMeta.businessName = firstDoc.business_name;
+            if (firstDoc.business_type) loanMeta.businessType = firstDoc.business_type;
+            if (firstDoc.business_registration_number) loanMeta.businessRegistrationNumber = firstDoc.business_registration_number;
+            if (firstDoc.annual_revenue) loanMeta.annualRevenue = firstDoc.annual_revenue;
+          } else if (firstDoc.loan_type === 'student_loan') {
+            if (firstDoc.school_name) loanMeta.schoolName = firstDoc.school_name;
+            if (firstDoc.degree_program) loanMeta.degreeProgram = firstDoc.degree_program;
+            if (firstDoc.expected_graduation_date) loanMeta.expectedGraduationDate = firstDoc.expected_graduation_date;
+          } else if (firstDoc.loan_type === 'refinance') {
+            if (firstDoc.current_loan_number) loanMeta.currentLoanNumber = firstDoc.current_loan_number;
+            if (firstDoc.current_lender) loanMeta.currentLender = firstDoc.current_lender;
+            if (firstDoc.refinance_purpose) loanMeta.refinancePurpose = firstDoc.refinance_purpose;
+          }
+
+          // Update formData
+          setFormData(prev => ({
+            ...prev,
+            loanId: loanMeta.loanId,
+            loanType: loanMeta.loanType,
+            documentType: loanMeta.documentType,
+            loanAmount: String(loanMeta.loanAmount),
+            loanTerm: String(loanMeta.loanTerm),
+            interestRate: String(loanMeta.interestRate),
+            propertyAddress: loanMeta.propertyAddress,
+            propertyValue: String(loanMeta.propertyValue || ''),
+            downPayment: String(loanMeta.downPayment || ''),
+            propertyType: loanMeta.propertyType || '',
+            vehicleMake: loanMeta.vehicleMake || '',
+            vehicleModel: loanMeta.vehicleModel || '',
+            vehicleYear: String(loanMeta.vehicleYear || ''),
+            vehicleVIN: loanMeta.vehicleVIN || '',
+            purchasePrice: String(loanMeta.purchasePrice || ''),
+            businessName: loanMeta.businessName || '',
+            businessType: loanMeta.businessType || '',
+            businessRegistrationNumber: loanMeta.businessRegistrationNumber || '',
+            annualRevenue: String(loanMeta.annualRevenue || ''),
+            schoolName: loanMeta.schoolName || '',
+            degreeProgram: loanMeta.degreeProgram || '',
+            expectedGraduationDate: loanMeta.expectedGraduationDate || '',
+            currentLoanNumber: loanMeta.currentLoanNumber || '',
+            currentLender: loanMeta.currentLender || '',
+            refinancePurpose: loanMeta.refinancePurpose || '',
+            currentMortgageBalance: String(loanMeta.currentMortgageBalance || ''),
+            equityAmount: String(loanMeta.equityAmount || ''),
+          }));
+
+          // Update metadata
+          setMetadata(JSON.stringify(loanMeta, null, 2));
+        }
+      }, 1000);
 
     } catch (error) {
       console.error('Error generating demo data:', error);
@@ -1394,12 +1810,46 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           const metadata: Record<string, any> = {};
           demoFiles.forEach((file, index) => {
             const doc = demoDocuments[index];
-            metadata[file.name] = {
+            const fileMeta: any = {
               documentType: doc.document_type || 'loan_application',
               loanId: doc.loan_id,
+              loanType: doc.loan_type || 'home_loan',
               borrowerName: doc.borrower?.full_name || '',
               loanAmount: doc.loan_amount || 0,
+              loanTerm: doc.loan_term_months || 360,
+              interestRate: doc.interest_rate || 4.5,
+              propertyAddress: doc.property_address || '',
             };
+
+            // Add conditional fields based on loan type
+            if (doc.loan_type === 'home_loan' || doc.loan_type === 'home_equity') {
+              if (doc.property_value) fileMeta.propertyValue = doc.property_value;
+              if (doc.down_payment) fileMeta.downPayment = doc.down_payment;
+              if (doc.property_type) fileMeta.propertyType = doc.property_type;
+              if (doc.current_mortgage_balance) fileMeta.currentMortgageBalance = doc.current_mortgage_balance;
+              if (doc.equity_amount) fileMeta.equityAmount = doc.equity_amount;
+            } else if (doc.loan_type === 'auto_loan') {
+              if (doc.vehicle_make) fileMeta.vehicleMake = doc.vehicle_make;
+              if (doc.vehicle_model) fileMeta.vehicleModel = doc.vehicle_model;
+              if (doc.vehicle_year) fileMeta.vehicleYear = doc.vehicle_year;
+              if (doc.vehicle_vin) fileMeta.vehicleVIN = doc.vehicle_vin;
+              if (doc.purchase_price) fileMeta.purchasePrice = doc.purchase_price;
+            } else if (doc.loan_type === 'business_loan') {
+              if (doc.business_name) fileMeta.businessName = doc.business_name;
+              if (doc.business_type) fileMeta.businessType = doc.business_type;
+              if (doc.business_registration_number) fileMeta.businessRegistrationNumber = doc.business_registration_number;
+              if (doc.annual_revenue) fileMeta.annualRevenue = doc.annual_revenue;
+            } else if (doc.loan_type === 'student_loan') {
+              if (doc.school_name) fileMeta.schoolName = doc.school_name;
+              if (doc.degree_program) fileMeta.degreeProgram = doc.degree_program;
+              if (doc.expected_graduation_date) fileMeta.expectedGraduationDate = doc.expected_graduation_date;
+            } else if (doc.loan_type === 'refinance') {
+              if (doc.current_loan_number) fileMeta.currentLoanNumber = doc.current_loan_number;
+              if (doc.current_lender) fileMeta.currentLender = doc.current_lender;
+              if (doc.refinance_purpose) fileMeta.refinancePurpose = doc.refinance_purpose;
+            }
+
+            metadata[file.name] = fileMeta;
           });
           setBulkFileMetadata(metadata);
 
@@ -1532,16 +1982,17 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           )}
 
           {verifyResult && verifyResult.is_valid && (
-            <Alert className="border-green-200 bg-green-50">
-              <Shield className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
+            <Alert className="border-red-200 bg-red-50">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800">
                 <div className="space-y-2">
-                  <div className="font-medium">Document Already Sealed!</div>
+                  <div className="font-medium">❌ Document Already Sealed - Upload Blocked</div>
                   <div className="text-sm">
                     This document was already sealed on{' '}
                     <span className="font-medium">
                       {new Date(verifyResult.details.created_at).toLocaleString()}
                     </span>
+                    . You cannot upload the same file again. Please use a different file.
                   </div>
                   <div className="flex gap-2 mt-3">
                     <Button asChild size="sm">
@@ -2004,6 +2455,12 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     // Clear previous errors
     setUploadState(prev => ({ ...prev, error: null, validationErrors: [] }));
     
+    // Block upload if file is already sealed
+    if (isFileAlreadySealed) {
+      toast.error('❌ Cannot upload: This document is already sealed on the blockchain. Please use a different file.');
+      return;
+    }
+    
   // If potential duplicates are detected, block unless explicitly allowed
   if (duplicateCheckResult?.is_duplicate && !allowUploadDespiteDuplicates) {
     setShowDuplicateWarning(true);
@@ -2072,19 +2529,23 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           createdBy: 'user@example.com' // TODO: Get from auth context
         };
 
+        // Get borrower data from KYC section (preferred) or metadata (fallback)
         const rawBorrowerData = {
-          fullName: currentMeta.borrowerFullName || '',
-          dateOfBirth: currentMeta.borrowerDateOfBirth || '',
-          email: currentMeta.borrowerEmail || '',
-          phone: currentMeta.borrowerPhone || '',
-          streetAddress: currentMeta.borrowerStreetAddress || '',
-          city: currentMeta.borrowerCity || '',
-          state: currentMeta.borrowerState || '',
-          zipCode: currentMeta.borrowerZipCode || '',
-          country: currentMeta.borrowerCountry || 'US',
-          ssnLast4: currentMeta.borrowerSSNLast4 || '',
-          governmentIdType: currentMeta.borrowerGovernmentIdType || 'drivers_license',
-          idNumberLast4: currentMeta.borrowerIdNumberLast4 || '',
+          fullName: kycData.fullLegalName || currentMeta.borrowerFullName || '',
+          dateOfBirth: kycData.dateOfBirth || currentMeta.borrowerDateOfBirth || '',
+          email: kycData.emailAddress || currentMeta.borrowerEmail || '',
+          phone: kycData.phoneNumber || currentMeta.borrowerPhone || '',
+          streetAddress: kycData.streetAddress1 || currentMeta.borrowerStreetAddress || '',
+          city: kycData.city || currentMeta.borrowerCity || '',
+          state: kycData.stateProvince || currentMeta.borrowerState || '',
+          zipCode: kycData.postalZipCode || currentMeta.borrowerZipCode || '',
+          country: kycData.country || currentMeta.borrowerCountry || 'US',
+          // Extract last 4 digits from SSN/ITIN number
+          ssnLast4: kycData.ssnOrItinNumber ? kycData.ssnOrItinNumber.slice(-4).replace(/-/g, '') : (currentMeta.borrowerSSNLast4 || ''),
+          ssnOrItinType: kycData.ssnOrItinType || '',
+          ssnOrItinNumber: kycData.ssnOrItinNumber || '',
+          governmentIdType: kycData.identificationType || currentMeta.borrowerGovernmentIdType || 'drivers_license',
+          idNumberLast4: kycData.identificationNumber ? kycData.identificationNumber.slice(-4) : (currentMeta.borrowerIdNumberLast4 || ''),
           employmentStatus: currentMeta.borrowerEmploymentStatus || 'employed',
           annualIncome: currentMeta.borrowerAnnualIncome || 0,
           coBorrowerName: currentMeta.borrowerCoBorrowerName || ''
@@ -2094,8 +2555,44 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         const sanitizedLoanData = sanitizeFormData(rawLoanData);
         const sanitizedBorrowerData = sanitizeFormData(rawBorrowerData);
         
-        // Create final loan data object
-        const loanData: LoanData = {
+        // Convert annual income to number and then to income range string
+        const annualIncomeNumber = typeof sanitizedBorrowerData.annualIncome === 'string' 
+          ? parseFloat(sanitizedBorrowerData.annualIncome) || 0
+          : Number(sanitizedBorrowerData.annualIncome) || 0;
+        const annualIncomeRange = getIncomeRange(annualIncomeNumber);
+        
+        // Get loanType and conditional fields from metadata
+        const loanType = currentMeta.loanType || '';
+        const conditionalFields: any = {};
+        if (loanType === 'home_loan' || loanType === 'home_equity') {
+          if (currentMeta.propertyValue) conditionalFields.propertyValue = currentMeta.propertyValue;
+          if (currentMeta.downPayment) conditionalFields.downPayment = currentMeta.downPayment;
+          if (currentMeta.propertyType) conditionalFields.propertyType = currentMeta.propertyType;
+          if (currentMeta.currentMortgageBalance) conditionalFields.currentMortgageBalance = currentMeta.currentMortgageBalance;
+          if (currentMeta.equityAmount) conditionalFields.equityAmount = currentMeta.equityAmount;
+        } else if (loanType === 'auto_loan') {
+          if (currentMeta.vehicleMake) conditionalFields.vehicleMake = currentMeta.vehicleMake;
+          if (currentMeta.vehicleModel) conditionalFields.vehicleModel = currentMeta.vehicleModel;
+          if (currentMeta.vehicleYear) conditionalFields.vehicleYear = currentMeta.vehicleYear;
+          if (currentMeta.vehicleVIN) conditionalFields.vehicleVIN = currentMeta.vehicleVIN;
+          if (currentMeta.purchasePrice) conditionalFields.purchasePrice = currentMeta.purchasePrice;
+        } else if (loanType === 'business_loan') {
+          if (currentMeta.businessName) conditionalFields.businessName = currentMeta.businessName;
+          if (currentMeta.businessType) conditionalFields.businessType = currentMeta.businessType;
+          if (currentMeta.businessRegistrationNumber) conditionalFields.businessRegistrationNumber = currentMeta.businessRegistrationNumber;
+          if (currentMeta.annualRevenue) conditionalFields.annualRevenue = currentMeta.annualRevenue;
+        } else if (loanType === 'student_loan') {
+          if (currentMeta.schoolName) conditionalFields.schoolName = currentMeta.schoolName;
+          if (currentMeta.degreeProgram) conditionalFields.degreeProgram = currentMeta.degreeProgram;
+          if (currentMeta.expectedGraduationDate) conditionalFields.expectedGraduationDate = currentMeta.expectedGraduationDate;
+        } else if (loanType === 'refinance') {
+          if (currentMeta.currentLoanNumber) conditionalFields.currentLoanNumber = currentMeta.currentLoanNumber;
+          if (currentMeta.currentLender) conditionalFields.currentLender = currentMeta.currentLender;
+          if (currentMeta.refinancePurpose) conditionalFields.refinancePurpose = currentMeta.refinancePurpose;
+        }
+
+        // Create final loan data object with loanType and conditional fields
+        const loanData: any = {
           loan_id: sanitizedLoanData.loanId,
           document_type: sanitizedLoanData.documentType,
           borrower_name: sanitizedLoanData.borrowerName,
@@ -2103,27 +2600,33 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           loan_amount: sanitizedLoanData.loanAmount,
           interest_rate: sanitizedLoanData.interestRate ? parseFloat(sanitizedLoanData.interestRate) : undefined,
           loan_term: sanitizedLoanData.loanTerm ? parseInt(sanitizedLoanData.loanTerm) : undefined,
-          additional_notes: sanitizedLoanData.additionalNotes
+          additional_notes: sanitizedLoanData.additionalNotes,
+          loanType: loanType, // Include loan type
+          ...conditionalFields // Spread conditional fields
         };
 
-        // Create final borrower data object
-        const borrowerInfo: BorrowerInfo = {
-          full_name: sanitizedBorrowerData.fullName,
-          date_of_birth: sanitizedBorrowerData.dateOfBirth,
-          email: sanitizedBorrowerData.email,
-          phone: sanitizedBorrowerData.phone,
-          address_line1: sanitizedBorrowerData.streetAddress,
-          address_line2: '',
-          city: sanitizedBorrowerData.city,
-          state: sanitizedBorrowerData.state,
-          zip_code: sanitizedBorrowerData.zipCode,
-          country: sanitizedBorrowerData.country,
-          ssn_last4: sanitizedBorrowerData.ssnLast4,
-          id_type: sanitizedBorrowerData.governmentIdType,
-          id_last4: sanitizedBorrowerData.idNumberLast4,
+        // Create final borrower data object - prioritize KYC data over metadata
+        const borrowerInfo: any = {
+          full_name: kycData.fullLegalName || sanitizedBorrowerData.fullName,
+          date_of_birth: kycData.dateOfBirth || sanitizedBorrowerData.dateOfBirth,
+          email: kycData.emailAddress || sanitizedBorrowerData.email,
+          phone: kycData.phoneNumber || sanitizedBorrowerData.phone,
+          address_line1: kycData.streetAddress1 || sanitizedBorrowerData.streetAddress,
+          address_line2: kycData.streetAddress2 || '',
+          city: kycData.city || sanitizedBorrowerData.city,
+          state: kycData.stateProvince || sanitizedBorrowerData.state,
+          zip_code: kycData.postalZipCode || sanitizedBorrowerData.zipCode,
+          country: kycData.country || sanitizedBorrowerData.country,
+          // Extract last 4 digits from SSN/ITIN number
+          ssn_last4: kycData.ssnOrItinNumber ? kycData.ssnOrItinNumber.slice(-4).replace(/-/g, '') : (sanitizedBorrowerData.ssnLast4 || ''),
+          id_type: kycData.identificationType || sanitizedBorrowerData.governmentIdType,
+          id_last4: kycData.identificationNumber ? kycData.identificationNumber.slice(-4) : (sanitizedBorrowerData.idNumberLast4 || ''),
           employment_status: sanitizedBorrowerData.employmentStatus,
-          annual_income_range: sanitizedBorrowerData.annualIncome,
-          is_sealed: false
+          annual_income_range: annualIncomeRange, // Now a string like "$30,000 - $49,999"
+          is_sealed: false,
+          // Include SSN/ITIN fields
+          ssn_or_itin_type: kycData.ssnOrItinType || '',
+          ssn_or_itin_number: kycData.ssnOrItinNumber || ''
         };
 
         console.log('Loan data:', loanData);
@@ -2141,14 +2644,19 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         }, 200);
 
           // Use the appropriate API client based on security mode
+          console.log('🔐 Security Mode Selection:', { quantumSafeMode, maximumSecurityMode });
           let sealResponse;
           if (quantumSafeMode) {
+            console.log('🔬 Using QUANTUM-SAFE endpoint');
             sealResponse = await sealLoanDocumentQuantumSafe(loanData, borrowerInfo, [file]);
           } else if (maximumSecurityMode) {
+            console.log('🛡️ Using MAXIMUM SECURITY endpoint');
             sealResponse = await sealLoanDocumentMaximumSecurity(loanData, borrowerInfo, [file]);
           } else {
+            console.log('📄 Using STANDARD endpoint');
             sealResponse = await sealLoanDocument(loanData, borrowerInfo, [file]);
           }
+          console.log('✅ Seal Response received:', { artifact_id: sealResponse.artifact_id, security_level: sealResponse.quantum_safe_seal?.security_level || sealResponse.comprehensive_seal?.security_level || 'standard' });
         
         clearInterval(progressInterval);
         
@@ -2310,7 +2818,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           id_type: (meta.borrowerGovernmentIdType || 'drivers_license') as BorrowerInfo['id_type'],
           id_last4: meta.borrowerIdNumberLast4 || '',
           employment_status: (meta.borrowerEmploymentStatus || 'employed') as BorrowerInfo['employment_status'],
-          annual_income_range: String(Number.isNaN(annualIncomeNumber) ? 0 : annualIncomeNumber),
+          annual_income_range: getIncomeRange(Number.isNaN(annualIncomeNumber) ? 0 : annualIncomeNumber),
           is_sealed: false
         };
 
@@ -2476,10 +2984,18 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     return "$500,000+";
   };
 
-  // Enhanced validation function
+  // Enhanced validation function - only checks Loan Information fields
+  // KYC fields are validated separately via validateKYC()
   const validateForm = (): ValidationError[] => {
     const errors: ValidationError[] = [];
-    const currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
+    let currentMeta = {};
+    try {
+      currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
+    } catch (e) {
+      // Invalid JSON means form is invalid
+      errors.push({ field: 'metadata', message: 'Invalid form data. Please refresh and try again.' });
+      return errors;
+    }
 
     // File validation
     if (isSingleMode) {
@@ -2505,64 +3021,59 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       }
     }
 
-  // Loan data validation
-  if (!currentMeta.loanId?.trim()) {
-    errors.push({ field: 'loanId', message: 'Loan ID is required' });
-  }
-  if (!currentMeta.loanAmount || currentMeta.loanAmount <= 0) {
-    errors.push({ field: 'loanAmount', message: 'Valid loan amount is required' });
-  }
-  if (!currentMeta.borrowerFullName?.trim()) {
-    errors.push({ field: 'borrowerFullName', message: 'Borrower full name is required' });
-  }
-
-  // Borrower information validation
-  if (!currentMeta.borrowerEmail?.trim()) {
-    errors.push({ field: 'borrowerEmail', message: 'Email address is required' });
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentMeta.borrowerEmail)) {
-    errors.push({ field: 'borrowerEmail', message: 'Please enter a valid email address' });
-  }
-
-  if (!currentMeta.borrowerPhone?.trim()) {
-    errors.push({ field: 'borrowerPhone', message: 'Phone number is required' });
-  }
-
-  if (!currentMeta.borrowerDateOfBirth?.trim()) {
-    errors.push({ field: 'borrowerDateOfBirth', message: 'Date of birth is required' });
-  } else {
-    const dob = new Date(currentMeta.borrowerDateOfBirth);
-    const today = new Date();
-    const age = today.getFullYear() - dob.getFullYear();
-    if (age < 18) {
-      errors.push({ field: 'borrowerDateOfBirth', message: 'Borrower must be at least 18 years old' });
+    // Loan Information validation (required fields with red stars)
+    if (!currentMeta.loanId?.trim()) {
+      errors.push({ field: 'loanId', message: 'Loan ID is required' });
     }
-  }
+    if (!currentMeta.documentType?.trim()) {
+      errors.push({ field: 'documentType', message: 'Document Type is required' });
+    }
+    if (!currentMeta.loanAmount || currentMeta.loanAmount <= 0) {
+      errors.push({ field: 'loanAmount', message: 'Valid loan amount is required' });
+    }
+    if (!currentMeta.loanTerm || currentMeta.loanTerm <= 0) {
+      errors.push({ field: 'loanTerm', message: 'Loan Term is required and must be greater than 0' });
+    }
+    if (!currentMeta.interestRate || currentMeta.interestRate <= 0) {
+      errors.push({ field: 'interestRate', message: 'Interest Rate is required and must be greater than 0' });
+    }
+    
+    // Check conditional required fields based on loan type
+    const requiredFields = getRequiredFieldsForLoanType(currentMeta.loanType || '');
+    for (const field of requiredFields) {
+      const value = currentMeta[field];
+      if (!value || (typeof value === 'string' && !value.trim()) || (typeof value === 'number' && value <= 0)) {
+        const fieldLabels: Record<string, string> = {
+          propertyAddress: 'Property Address',
+          propertyValue: 'Property Value',
+          downPayment: 'Down Payment',
+          propertyType: 'Property Type',
+          vehicleMake: 'Vehicle Make',
+          vehicleModel: 'Vehicle Model',
+          vehicleYear: 'Vehicle Year',
+          vehicleVIN: 'Vehicle VIN',
+          purchasePrice: 'Purchase Price',
+          businessName: 'Business Name',
+          businessType: 'Business Type',
+          businessRegistrationNumber: 'Business Registration Number',
+          annualRevenue: 'Annual Revenue',
+          schoolName: 'School Name',
+          degreeProgram: 'Degree Program',
+          expectedGraduationDate: 'Expected Graduation Date',
+          currentLoanNumber: 'Current Loan Number',
+          currentLender: 'Current Lender',
+          refinancePurpose: 'Refinance Purpose',
+          currentMortgageBalance: 'Current Mortgage Balance',
+          equityAmount: 'Equity Amount'
+        };
+        errors.push({ 
+          field: field, 
+          message: `${fieldLabels[field] || field} is required` 
+        });
+      }
+    }
 
-  if (!currentMeta.borrowerStreetAddress?.trim()) {
-    errors.push({ field: 'borrowerStreetAddress', message: 'Street address is required' });
-  }
-
-  if (!currentMeta.borrowerCity?.trim()) {
-    errors.push({ field: 'borrowerCity', message: 'City is required' });
-  }
-
-  if (!currentMeta.borrowerState?.trim()) {
-    errors.push({ field: 'borrowerState', message: 'State is required' });
-  }
-
-  if (!currentMeta.borrowerZipCode?.trim()) {
-    errors.push({ field: 'borrowerZipCode', message: 'ZIP code is required' });
-  }
-
-  if (!currentMeta.borrowerSSNLast4?.trim()) {
-    errors.push({ field: 'borrowerSSNLast4', message: 'SSN last 4 digits are required' });
-  } else if (!/^\d{4}$/.test(currentMeta.borrowerSSNLast4)) {
-    errors.push({ field: 'borrowerSSNLast4', message: 'SSN last 4 digits must be exactly 4 numbers' });
-  }
-
-  if (!currentMeta.borrowerAnnualIncome || currentMeta.borrowerAnnualIncome <= 0) {
-    errors.push({ field: 'borrowerAnnualIncome', message: 'Valid annual income is required' });
-  }
+    // Note: Borrower information is now in KYC section and validated via validateKYC()
 
     return errors;
   };
@@ -2676,10 +3187,32 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     if (!kycData.fullLegalName.trim()) errors.fullLegalName = 'Full legal name is required';
     if (!kycData.dateOfBirth) errors.dateOfBirth = 'Date of birth is required';
     if (kycData.dateOfBirth) {
-      const birthDate = new Date(kycData.dateOfBirth);
+      // Handle both YYYY-MM-DD (stored) and MM/DD/YYYY (user input) formats
+      let dateStr = kycData.dateOfBirth;
+      const mmddyyyyRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+      const match = dateStr.match(mmddyyyyRegex);
+      if (match) {
+        // Convert MM/DD/YYYY to YYYY-MM-DD for Date parsing
+        const [, month, day, year] = match;
+        dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+      const birthDate = new Date(dateStr);
       const today = new Date();
-      const age = today.getFullYear() - birthDate.getFullYear();
-      if (age < 18) errors.dateOfBirth = 'Must be 18 years or older';
+      if (isNaN(birthDate.getTime())) {
+        errors.dateOfBirth = 'Please enter a valid date (MM/DD/YYYY)';
+      } else {
+        if (birthDate > today) {
+          errors.dateOfBirth = 'Date of birth cannot be in the future';
+        } else {
+          const age = today.getFullYear() - birthDate.getFullYear();
+          const monthDiff = today.getMonth() - birthDate.getMonth();
+          const dayDiff = today.getDate() - birthDate.getDate();
+          const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+          if (actualAge < 18) {
+            errors.dateOfBirth = 'Must be 18 years or older';
+          }
+        }
+      }
     }
     if (!kycData.phoneNumber.trim()) errors.phoneNumber = 'Phone number is required';
     if (kycData.phoneNumber && !/^\+1-\d{3}-\d{3}-\d{4}$/.test(kycData.phoneNumber)) {
@@ -2699,9 +3232,28 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     
     // Identification Information validation
     if (!kycData.citizenshipCountry) errors.citizenshipCountry = 'Citizenship country is required';
-    if (!kycData.identificationType) errors.identificationType = 'Identification type is required';
-    if (!kycData.identificationNumber.trim()) errors.identificationNumber = 'Identification number is required';
-    if (!kycData.idIssuingCountry) errors.idIssuingCountry = 'ID issuing country is required';
+    if (!kycData.ssnOrItinType) errors.ssnOrItinType = 'SSN or ITIN type is required';
+    if (!kycData.ssnOrItinNumber.trim()) {
+      errors.ssnOrItinNumber = `${kycData.ssnOrItinType || 'SSN/ITIN'} number is required`;
+    } else {
+      // Validate SSN format (XXX-XX-XXXX) or ITIN format (9XX-XX-XXXX)
+      if (kycData.ssnOrItinType === 'SSN') {
+        if (!/^\d{3}-\d{2}-\d{4}$/.test(kycData.ssnOrItinNumber)) {
+          errors.ssnOrItinNumber = 'SSN must be in format XXX-XX-XXXX';
+        }
+      } else if (kycData.ssnOrItinType === 'ITIN') {
+        if (!/^9\d{2}-\d{2}-\d{4}$/.test(kycData.ssnOrItinNumber)) {
+          errors.ssnOrItinNumber = 'ITIN must be in format 9XX-XX-XXXX (starts with 9)';
+        }
+      }
+    }
+    // Only require Identification Type, Number, and ID Issuing Country when ITIN is selected
+    // SSN can serve both identification and SSN criteria, so these fields are not needed for SSN
+    if (kycData.ssnOrItinType === 'ITIN') {
+      if (!kycData.identificationType) errors.identificationType = 'Identification type is required';
+      if (!kycData.identificationNumber.trim()) errors.identificationNumber = 'Identification number is required';
+      if (!kycData.idIssuingCountry) errors.idIssuingCountry = 'ID issuing country is required';
+    }
     
     // Financial Information validation
     if (!kycData.sourceOfFunds) errors.sourceOfFunds = 'Source of funds is required';
@@ -2721,7 +3273,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     }
     
     // Document Upload validation
-    if (!kycData.governmentIdFile) errors.governmentIdFile = 'Government-issued ID upload is required';
+    // governmentIdFile validation removed - collecting from form fields instead
     
     setKycErrors(errors);
     return Object.keys(errors).length === 0;
@@ -2734,12 +3286,20 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     if (typeof value === 'string') {
       switch (field) {
         case 'fullLegalName':
+          // Use sanitizeTextarea to preserve spaces in names (e.g., "John Michael Smith")
+          sanitizedValue = sanitizeTextarea(value);
+          break;
         case 'streetAddress1':
         case 'streetAddress2':
         case 'city':
+        case 'stateProvince':
+          // Use sanitizeTextarea to preserve spaces in address fields
+          sanitizedValue = sanitizeTextarea(value);
+          break;
         case 'purposeOfLoan':
         case 'pepDetails':
-          sanitizedValue = sanitizeText(value);
+          // Use sanitizeTextarea to preserve spaces in textarea fields
+          sanitizedValue = sanitizeTextarea(value);
           break;
         case 'emailAddress':
           sanitizedValue = sanitizeEmail(value);
@@ -2748,13 +3308,57 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           sanitizedValue = sanitizePhone(value);
           break;
         case 'dateOfBirth':
-          sanitizedValue = sanitizeDate(value);
+          // Handle MM/DD/YYYY format - allow user to type it, but convert to YYYY-MM-DD for storage
+          // Allow digits and slashes only
+          let dateValue = value.replace(/[^\d/]/g, '');
+          
+          // Auto-format as user types: MM/DD/YYYY
+          // Remove extra slashes
+          dateValue = dateValue.replace(/\/+/g, '/');
+          
+          // Limit to MM/DD/YYYY format (10 chars: MM/DD/YYYY)
+          if (dateValue.length > 10) {
+            dateValue = dateValue.substring(0, 10);
+          }
+          
+          // If it's a valid MM/DD/YYYY format, convert to YYYY-MM-DD for storage
+          // Otherwise, store as-is (user is still typing)
+          const mmddyyyyRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+          const match = dateValue.match(mmddyyyyRegex);
+          if (match) {
+            const [, month, day, year] = match;
+            const monthNum = parseInt(month, 10);
+            const dayNum = parseInt(day, 10);
+            const yearNum = parseInt(year, 10);
+            
+            // Validate month and day ranges
+            if (monthNum >= 1 && monthNum <= 12 && dayNum >= 1 && dayNum <= 31 && yearNum >= 1900 && yearNum <= new Date().getFullYear()) {
+              // Convert to YYYY-MM-DD for storage
+              const paddedMonth = month.padStart(2, '0');
+              const paddedDay = day.padStart(2, '0');
+              sanitizedValue = `${year}-${paddedMonth}-${paddedDay}`;
+            } else {
+              // Invalid date, keep as-is for now (user might still be typing)
+              sanitizedValue = dateValue;
+            }
+          } else {
+            // Not complete yet, store as-is
+            sanitizedValue = dateValue;
+          }
           break;
         case 'postalZipCode':
           sanitizedValue = sanitizeZipCode(value);
           break;
         case 'identificationNumber':
           sanitizedValue = sanitizeSSNLast4(value);
+          break;
+        case 'ssnOrItinNumber':
+          // Allow digits and dashes only, format XXX-XX-XXXX
+          sanitizedValue = value.replace(/[^\d-]/g, '');
+          break;
+        case 'ssnOrItinType':
+          // No sanitization needed, it's a select value
+          sanitizedValue = value;
           break;
         case 'expectedMonthlyTransactionVolume':
         case 'expectedNumberOfMonthlyTransactions':
@@ -3756,15 +4360,29 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                                 <HelpCircle className="h-3 w-3 text-gray-400" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Must be 18 years or older</p>
+                                <p>Format: MM/DD/YYYY (e.g., 01/15/1990)</p>
                               </TooltipContent>
                             </Tooltip>
                           </Label>
                           <Input
                             id="dateOfBirth"
-                            type="date"
-                            value={kycData.dateOfBirth}
+                            type="text"
+                            value={(() => {
+                              // Display as MM/DD/YYYY if stored as YYYY-MM-DD, otherwise show as-is
+                              if (kycData.dateOfBirth) {
+                                const yyyymmddRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
+                                const match = kycData.dateOfBirth.match(yyyymmddRegex);
+                                if (match) {
+                                  const [, year, month, day] = match;
+                                  return `${month}/${day}/${year}`;
+                                }
+                                // If it's already in MM/DD/YYYY format, show as-is
+                                return kycData.dateOfBirth;
+                              }
+                              return '';
+                            })()}
                             onChange={(e) => handleKycFieldChange('dateOfBirth', e.target.value)}
+                            placeholder="MM/DD/YYYY (e.g., 01/15/1990)"
                             className={kycErrors.dateOfBirth ? 'border-red-500' : ''}
                           />
                           {kycErrors.dateOfBirth && <p className="text-sm text-red-500">{kycErrors.dateOfBirth}</p>}
@@ -3931,63 +4549,148 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="identificationType" className="flex items-center gap-1">
-                            Identification Type <span className="text-red-500">*</span>
-                          </Label>
-                          <Select value={kycData.identificationType} onValueChange={(value) => handleKycFieldChange('identificationType', value)}>
-                            <SelectTrigger className={kycErrors.identificationType ? 'border-red-500' : ''}>
-                              <SelectValue placeholder="Select ID type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="SSN">SSN</SelectItem>
-                              <SelectItem value="TIN">TIN</SelectItem>
-                              <SelectItem value="Passport">Passport</SelectItem>
-                              <SelectItem value="Driver's License">Driver's License</SelectItem>
-                              <SelectItem value="Alien ID">Alien ID</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {kycErrors.identificationType && <p className="text-sm text-red-500">{kycErrors.identificationType}</p>}
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="identificationNumber" className="flex items-center gap-1">
-                            Identification Number <span className="text-red-500">*</span>
+                          <Label htmlFor="ssnOrItinType" className="flex items-center gap-1">
+                            SSN or ITIN <span className="text-red-500">*</span>
                             <Tooltip>
                               <TooltipTrigger>
                                 <HelpCircle className="h-3 w-3 text-gray-400" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>This will be masked after typing for security</p>
+                                <p>Select whether you have a Social Security Number (SSN) or Individual Taxpayer Identification Number (ITIN)</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </Label>
+                          <Select value={kycData.ssnOrItinType} onValueChange={(value) => {
+                            handleKycFieldChange('ssnOrItinType', value);
+                            // Clear the number when type changes
+                            if (value !== kycData.ssnOrItinType) {
+                              handleKycFieldChange('ssnOrItinNumber', '');
+                            }
+                          }}>
+                            <SelectTrigger className={kycErrors.ssnOrItinType ? 'border-red-500' : ''}>
+                              <SelectValue placeholder="Select SSN or ITIN" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="SSN">SSN (Social Security Number)</SelectItem>
+                              <SelectItem value="ITIN">ITIN (Individual Taxpayer Identification Number)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {kycErrors.ssnOrItinType && <p className="text-sm text-red-500">{kycErrors.ssnOrItinType}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="ssnOrItinNumber" className="flex items-center gap-1">
+                            {kycData.ssnOrItinType ? `${kycData.ssnOrItinType} Number` : 'SSN/ITIN Number'} <span className="text-red-500">*</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  {kycData.ssnOrItinType === 'SSN' 
+                                    ? 'Enter your SSN in format XXX-XX-XXXX'
+                                    : kycData.ssnOrItinType === 'ITIN'
+                                    ? 'Enter your ITIN in format 9XX-XX-XXXX (must start with 9)'
+                                    : 'Enter your SSN or ITIN number'}
+                                </p>
                               </TooltipContent>
                             </Tooltip>
                           </Label>
                           <Input
-                            id="identificationNumber"
-                            type="password"
-                            value={kycData.identificationNumber}
-                            onChange={(e) => handleKycFieldChange('identificationNumber', e.target.value)}
-                            placeholder="Enter ID number"
-                            className={kycErrors.identificationNumber ? 'border-red-500' : ''}
+                            id="ssnOrItinNumber"
+                            type="text"
+                            value={kycData.ssnOrItinNumber}
+                            onChange={(e) => {
+                              let value = e.target.value;
+                              // Auto-format: XXX-XX-XXXX
+                              value = value.replace(/\D/g, ''); // Remove non-digits
+                              if (value.length > 3) {
+                                value = value.slice(0, 3) + '-' + value.slice(3);
+                              }
+                              if (value.length > 6) {
+                                value = value.slice(0, 6) + '-' + value.slice(6, 10);
+                              }
+                              handleKycFieldChange('ssnOrItinNumber', value);
+                            }}
+                            placeholder={kycData.ssnOrItinType === 'SSN' ? 'XXX-XX-XXXX' : kycData.ssnOrItinType === 'ITIN' ? '9XX-XX-XXXX' : 'Enter number'}
+                            maxLength={11}
+                            disabled={!kycData.ssnOrItinType}
+                            className={kycErrors.ssnOrItinNumber ? 'border-red-500' : ''}
                           />
-                          {kycErrors.identificationNumber && <p className="text-sm text-red-500">{kycErrors.identificationNumber}</p>}
+                          {kycErrors.ssnOrItinNumber && <p className="text-sm text-red-500">{kycErrors.ssnOrItinNumber}</p>}
+                          {!kycData.ssnOrItinType && (
+                            <p className="text-xs text-gray-500">Please select SSN or ITIN first</p>
+                          )}
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="idIssuingCountry" className="flex items-center gap-1">
-                            ID Issuing Country <span className="text-red-500">*</span>
-                          </Label>
-                          <Select value={kycData.idIssuingCountry} onValueChange={(value) => handleKycFieldChange('idIssuingCountry', value)}>
-                            <SelectTrigger className={kycErrors.idIssuingCountry ? 'border-red-500' : ''}>
-                              <SelectValue placeholder="Select country" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {countries.map((country) => (
-                                <SelectItem key={country} value={country}>{country}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {kycErrors.idIssuingCountry && <p className="text-sm text-red-500">{kycErrors.idIssuingCountry}</p>}
-                        </div>
+                        {/* Only show Identification Type, Identification Number, and ID Issuing Country when ITIN is selected */}
+                        {kycData.ssnOrItinType === 'ITIN' && (
+                          <>
+                            <div className="space-y-2">
+                              <Label htmlFor="identificationType" className="flex items-center gap-1">
+                                Identification Type <span className="text-red-500">*</span>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <HelpCircle className="h-3 w-3 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Required additional identification when using ITIN</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </Label>
+                              <Select value={kycData.identificationType} onValueChange={(value) => handleKycFieldChange('identificationType', value)}>
+                                <SelectTrigger className={kycErrors.identificationType ? 'border-red-500' : ''}>
+                                  <SelectValue placeholder="Select ID type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Driver's License">Driver's License</SelectItem>
+                                  <SelectItem value="Passport">Passport</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {kycErrors.identificationType && <p className="text-sm text-red-500">{kycErrors.identificationType}</p>}
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="identificationNumber" className="flex items-center gap-1">
+                                Identification Number <span className="text-red-500">*</span>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <HelpCircle className="h-3 w-3 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>This will be masked after typing for security</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </Label>
+                              <Input
+                                id="identificationNumber"
+                                type="password"
+                                value={kycData.identificationNumber}
+                                onChange={(e) => handleKycFieldChange('identificationNumber', e.target.value)}
+                                placeholder="Enter ID number"
+                                className={kycErrors.identificationNumber ? 'border-red-500' : ''}
+                              />
+                              {kycErrors.identificationNumber && <p className="text-sm text-red-500">{kycErrors.identificationNumber}</p>}
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="idIssuingCountry" className="flex items-center gap-1">
+                                ID Issuing Country <span className="text-red-500">*</span>
+                              </Label>
+                              <Select value={kycData.idIssuingCountry} onValueChange={(value) => handleKycFieldChange('idIssuingCountry', value)}>
+                                <SelectTrigger className={kycErrors.idIssuingCountry ? 'border-red-500' : ''}>
+                                  <SelectValue placeholder="Select country" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {countries.map((country) => (
+                                    <SelectItem key={country} value={country}>{country}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {kycErrors.idIssuingCountry && <p className="text-sm text-red-500">{kycErrors.idIssuingCountry}</p>}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -4117,53 +4820,6 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                       </div>
                     </div>
 
-                    {/* Identity Document Upload */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Identity Document Upload</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="governmentIdFile" className="flex items-center gap-1">
-                            Upload Government-Issued ID <span className="text-red-500">*</span>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <HelpCircle className="h-3 w-3 text-gray-400" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Passport, driver's license, or national ID</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </Label>
-                          <Input
-                            id="governmentIdFile"
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => handleKycFieldChange('governmentIdFile', e.target.files?.[0] || null)}
-                            className={kycErrors.governmentIdFile ? 'border-red-500' : ''}
-                          />
-                          {kycErrors.governmentIdFile && <p className="text-sm text-red-500">{kycErrors.governmentIdFile}</p>}
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="proofOfAddressFile">
-                            Upload Proof of Address
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <HelpCircle className="h-3 w-3 text-gray-400" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Utility bill or bank statement (optional)</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </Label>
-                          <Input
-                            id="proofOfAddressFile"
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => handleKycFieldChange('proofOfAddressFile', e.target.files?.[0] || null)}
-                          />
-                        </div>
-                      </div>
-                    </div>
 
                     {/* Save KYC Button */}
                     <div className="flex justify-end pt-4 border-t">
@@ -4203,11 +4859,11 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Row 1: Loan ID and Document Type */}
+                    {/* Row 1: Loan ID and Loan Type */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`loan-info-${forceUpdate}`}>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="loanId">Loan ID</Label>
+                          <Label htmlFor="loanId">Loan ID <span className="text-red-500">*</span></Label>
                           {enhancedMetadata?.loanId && (
                             <ConfidenceBadge
                               confidence={enhancedMetadata.loanId.confidence}
@@ -4223,17 +4879,25 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                           onChange={(e) => {
                             console.log('🔍 Loan ID field changed to:', e.target.value);
                             setFormData(prev => ({ ...prev, loanId: e.target.value }));
-                            const currentMeta = JSON.parse(metadata || '{}')
-                            setMetadata(JSON.stringify({ ...currentMeta, loanId: e.target.value }, null, 2))
+                            try {
+                              const currentMeta = JSON.parse(metadata || '{}')
+                              setMetadata(JSON.stringify({ ...currentMeta, loanId: e.target.value }, null, 2))
+                            } catch (error) {
+                              // If metadata is invalid, create new object
+                              setMetadata(JSON.stringify({ loanId: e.target.value }, null, 2))
+                            }
                           }}
                           placeholder="e.g., LOAN_2024_001"
                           className={
-                            enhancedMetadata?.loanId && enhancedMetadata.loanId.confidence < 60 && enhancedMetadata.loanId.confidence > 0
+                            loanFormErrors.loanId
+                              ? 'border-red-500'
+                              : enhancedMetadata?.loanId && enhancedMetadata.loanId.confidence < 60 && enhancedMetadata.loanId.confidence > 0
                               ? 'border-yellow-400 border-2'
                               : ''
                           }
                         />
-                        {enhancedMetadata?.loanId && enhancedMetadata.loanId.confidence < 60 && enhancedMetadata.loanId.confidence > 0 && (
+                        {loanFormErrors.loanId && <p className="text-sm text-red-500">{loanFormErrors.loanId}</p>}
+                        {enhancedMetadata?.loanId && enhancedMetadata.loanId.confidence < 60 && enhancedMetadata.loanId.confidence > 0 && !loanFormErrors.loanId && (
                           <p className="text-xs text-yellow-600">⚠️ Low confidence - please verify this value</p>
                         )}
                         <p className="text-xs text-muted-foreground">
@@ -4242,8 +4906,45 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                       </div>
 
                       <div className="space-y-2">
+                        <Label htmlFor="loanType">Loan Type <span className="text-red-500">*</span></Label>
+                        <select
+                          id="loanType"
+                          className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                            loanFormErrors.loanType ? 'border-red-500' : 'border-input'
+                          }`}
+                          value={formData.loanType}
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, loanType: e.target.value }));
+                            try {
+                              const currentMeta = JSON.parse(metadata || '{}')
+                              setMetadata(JSON.stringify({ ...currentMeta, loanType: e.target.value }, null, 2))
+                            } catch (error) {
+                              setMetadata(JSON.stringify({ loanType: e.target.value }, null, 2))
+                            }
+                          }}
+                        >
+                          <option value="">Select loan type</option>
+                          <option value="home_loan">Home Loan / Mortgage</option>
+                          <option value="personal_loan">Personal Loan</option>
+                          <option value="auto_loan">Auto Loan</option>
+                          <option value="business_loan">Business Loan</option>
+                          <option value="student_loan">Student Loan</option>
+                          <option value="refinance">Refinance Loan</option>
+                          <option value="home_equity">Home Equity Loan</option>
+                          <option value="other">Other</option>
+                        </select>
+                        {loanFormErrors.loanType && <p className="text-sm text-red-500">{loanFormErrors.loanType}</p>}
+                        <p className="text-xs text-muted-foreground">
+                          Type of loan being applied for
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Row 2: Document Type */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="documentType">Document Type</Label>
+                          <Label htmlFor="documentType">Document Type <span className="text-red-500">*</span></Label>
                           {enhancedMetadata?.documentType && (
                             <ConfidenceBadge
                               confidence={enhancedMetadata.documentType.confidence}
@@ -4254,12 +4955,19 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         </div>
                         <select
                           id="documentType"
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                            loanFormErrors.documentType ? 'border-red-500' : 'border-input'
+                          }`}
                           value={formData.documentType}
                           onChange={(e) => {
                             setFormData(prev => ({ ...prev, documentType: e.target.value }));
-                            const currentMeta = JSON.parse(metadata || '{}')
-                            setMetadata(JSON.stringify({ ...currentMeta, documentType: e.target.value }, null, 2))
+                            try {
+                              const currentMeta = JSON.parse(metadata || '{}')
+                              setMetadata(JSON.stringify({ ...currentMeta, documentType: e.target.value }, null, 2))
+                            } catch (error) {
+                              // If metadata is invalid, create new object
+                              setMetadata(JSON.stringify({ documentType: e.target.value }, null, 2))
+                            }
                           }}
                         >
                           <option value="">Select document type</option>
@@ -4278,6 +4986,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                           <option value="compliance_document">Compliance Document</option>
                           <option value="other">Other</option>
                         </select>
+                        {loanFormErrors.documentType && <p className="text-sm text-red-500">{loanFormErrors.documentType}</p>}
                         <p className="text-xs text-muted-foreground">
                           Type of document being uploaded
                         </p>
@@ -4288,7 +4997,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="loanAmount">Loan Amount</Label>
+                          <Label htmlFor="loanAmount">Loan Amount <span className="text-red-500">*</span></Label>
                           {enhancedMetadata?.loanAmount && (
                             <ConfidenceBadge
                               confidence={enhancedMetadata.loanAmount.confidence}
@@ -4303,16 +5012,24 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                           value={formData.loanAmount}
                           onChange={(e) => {
                             setFormData(prev => ({ ...prev, loanAmount: e.target.value }));
-                            const currentMeta = JSON.parse(metadata || '{}')
-                            setMetadata(JSON.stringify({ ...currentMeta, loanAmount: e.target.value }, null, 2))
+                            try {
+                              const currentMeta = JSON.parse(metadata || '{}')
+                              setMetadata(JSON.stringify({ ...currentMeta, loanAmount: e.target.value }, null, 2))
+                            } catch (error) {
+                              // If metadata is invalid, create new object
+                              setMetadata(JSON.stringify({ loanAmount: e.target.value }, null, 2))
+                            }
                           }}
                           placeholder="e.g., 250000"
                           className={
-                            enhancedMetadata?.loanAmount && enhancedMetadata.loanAmount.confidence < 60 && enhancedMetadata.loanAmount.confidence > 0
+                            loanFormErrors.loanAmount
+                              ? 'border-red-500'
+                              : enhancedMetadata?.loanAmount && enhancedMetadata.loanAmount.confidence < 60 && enhancedMetadata.loanAmount.confidence > 0
                               ? 'border-yellow-400 border-2'
                               : ''
                           }
                         />
+                        {loanFormErrors.loanAmount && <p className="text-sm text-red-500">{loanFormErrors.loanAmount}</p>}
                         <p className="text-xs text-muted-foreground">
                           Loan amount in USD
                         </p>
@@ -4320,7 +5037,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="loanTerm">Loan Term</Label>
+                          <Label htmlFor="loanTerm">Loan Term <span className="text-red-500">*</span></Label>
                           {enhancedMetadata?.loanTerm && (
                             <ConfidenceBadge
                               confidence={enhancedMetadata.loanTerm.confidence}
@@ -4335,16 +5052,24 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                           value={formData.loanTerm}
                           onChange={(e) => {
                             setFormData(prev => ({ ...prev, loanTerm: e.target.value }));
-                            const currentMeta = JSON.parse(metadata || '{}')
-                            setMetadata(JSON.stringify({ ...currentMeta, loanTerm: e.target.value }, null, 2))
+                            try {
+                              const currentMeta = JSON.parse(metadata || '{}')
+                              setMetadata(JSON.stringify({ ...currentMeta, loanTerm: e.target.value }, null, 2))
+                            } catch (error) {
+                              // If metadata is invalid, create new object
+                              setMetadata(JSON.stringify({ loanTerm: e.target.value }, null, 2))
+                            }
                           }}
                           placeholder="e.g., 360"
                           className={
-                            enhancedMetadata?.loanTerm && enhancedMetadata.loanTerm.confidence < 60 && enhancedMetadata.loanTerm.confidence > 0
+                            loanFormErrors.loanTerm
+                              ? 'border-red-500'
+                              : enhancedMetadata?.loanTerm && enhancedMetadata.loanTerm.confidence < 60 && enhancedMetadata.loanTerm.confidence > 0
                               ? 'border-yellow-400 border-2'
                               : ''
                           }
                         />
+                        {loanFormErrors.loanTerm && <p className="text-sm text-red-500">{loanFormErrors.loanTerm}</p>}
                         <p className="text-xs text-muted-foreground">
                           Loan term in months
                         </p>
@@ -4352,7 +5077,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="interestRate">Interest Rate</Label>
+                          <Label htmlFor="interestRate">Interest Rate <span className="text-red-500">*</span></Label>
                           {enhancedMetadata?.interestRate && (
                             <ConfidenceBadge
                               confidence={enhancedMetadata.interestRate.confidence}
@@ -4368,26 +5093,35 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                           value={formData.interestRate}
                           onChange={(e) => {
                             setFormData(prev => ({ ...prev, interestRate: e.target.value }));
-                            const currentMeta = JSON.parse(metadata || '{}')
-                            setMetadata(JSON.stringify({ ...currentMeta, interestRate: e.target.value }, null, 2))
+                            try {
+                              const currentMeta = JSON.parse(metadata || '{}')
+                              setMetadata(JSON.stringify({ ...currentMeta, interestRate: e.target.value }, null, 2))
+                            } catch (error) {
+                              // If metadata is invalid, create new object
+                              setMetadata(JSON.stringify({ interestRate: e.target.value }, null, 2))
+                            }
                           }}
                           placeholder="e.g., 4.5"
                           className={
-                            enhancedMetadata?.interestRate && enhancedMetadata.interestRate.confidence < 60 && enhancedMetadata.interestRate.confidence > 0
+                            loanFormErrors.interestRate
+                              ? 'border-red-500'
+                              : enhancedMetadata?.interestRate && enhancedMetadata.interestRate.confidence < 60 && enhancedMetadata.interestRate.confidence > 0
                               ? 'border-yellow-400 border-2'
                               : ''
                           }
                         />
+                        {loanFormErrors.interestRate && <p className="text-sm text-red-500">{loanFormErrors.interestRate}</p>}
                         <p className="text-xs text-muted-foreground">
                           Annual interest rate (%)
                         </p>
                       </div>
                     </div>
 
-                    {/* Row 3: Property Address (full width) */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="propertyAddress">Property Address</Label>
+                    {/* Row 3: Property Address (conditional - only for home_loan and home_equity) */}
+                    {(formData.loanType === 'home_loan' || formData.loanType === 'home_equity') && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="propertyAddress">Property Address <span className="text-red-500">*</span></Label>
                         {enhancedMetadata?.propertyAddress && (
                           <ConfidenceBadge
                             confidence={enhancedMetadata.propertyAddress.confidence}
@@ -4401,20 +5135,501 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         value={formData.propertyAddress}
                         onChange={(e) => {
                           setFormData(prev => ({ ...prev, propertyAddress: e.target.value }));
-                          const currentMeta = JSON.parse(metadata || '{}')
-                          setMetadata(JSON.stringify({ ...currentMeta, propertyAddress: e.target.value }, null, 2))
+                          try {
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, propertyAddress: e.target.value }, null, 2))
+                          } catch (error) {
+                            // If metadata is invalid, create new object
+                            setMetadata(JSON.stringify({ propertyAddress: e.target.value }, null, 2))
+                          }
                         }}
                         placeholder="e.g., 123 Main St, Anytown, CA 12345"
                         className={
-                          enhancedMetadata?.propertyAddress && enhancedMetadata.propertyAddress.confidence < 60 && enhancedMetadata.propertyAddress.confidence > 0
+                          loanFormErrors.propertyAddress
+                            ? 'border-red-500'
+                            : enhancedMetadata?.propertyAddress && enhancedMetadata.propertyAddress.confidence < 60 && enhancedMetadata.propertyAddress.confidence > 0
                             ? 'border-yellow-400 border-2'
                             : ''
                         }
                       />
+                      {loanFormErrors.propertyAddress && <p className="text-sm text-red-500">{loanFormErrors.propertyAddress}</p>}
                       <p className="text-xs text-muted-foreground">
                         Full address of the property being financed
                       </p>
                     </div>
+                    )}
+
+                    {/* Conditional Fields Based on Loan Type */}
+                    {formData.loanType === 'home_loan' && (
+                      <div className="space-y-4 border-t pt-4">
+                        <h4 className="text-md font-semibold">Home Loan Details</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="propertyValue">Property Value <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="propertyValue"
+                              type="number"
+                              value={formData.propertyValue}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, propertyValue: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, propertyValue: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ propertyValue: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 500000"
+                              className={loanFormErrors.propertyValue ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.propertyValue && <p className="text-sm text-red-500">{loanFormErrors.propertyValue}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="downPayment">Down Payment <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="downPayment"
+                              type="number"
+                              value={formData.downPayment}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, downPayment: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, downPayment: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ downPayment: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 100000"
+                              className={loanFormErrors.downPayment ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.downPayment && <p className="text-sm text-red-500">{loanFormErrors.downPayment}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="propertyType">Property Type <span className="text-red-500">*</span></Label>
+                            <select
+                              id="propertyType"
+                              className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ${loanFormErrors.propertyType ? 'border-red-500' : 'border-input'}`}
+                              value={formData.propertyType}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, propertyType: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, propertyType: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ propertyType: e.target.value }, null, 2))
+                                }
+                              }}
+                            >
+                              <option value="">Select property type</option>
+                              <option value="single_family">Single Family</option>
+                              <option value="condo">Condo</option>
+                              <option value="townhouse">Townhouse</option>
+                              <option value="multi_family">Multi-Family</option>
+                              <option value="commercial">Commercial</option>
+                            </select>
+                            {loanFormErrors.propertyType && <p className="text-sm text-red-500">{loanFormErrors.propertyType}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.loanType === 'auto_loan' && (
+                      <div className="space-y-4 border-t pt-4">
+                        <h4 className="text-md font-semibold">Vehicle Information</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="vehicleMake">Vehicle Make <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="vehicleMake"
+                              value={formData.vehicleMake}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, vehicleMake: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, vehicleMake: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ vehicleMake: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., Toyota"
+                              className={loanFormErrors.vehicleMake ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.vehicleMake && <p className="text-sm text-red-500">{loanFormErrors.vehicleMake}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="vehicleModel">Vehicle Model <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="vehicleModel"
+                              value={formData.vehicleModel}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, vehicleModel: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, vehicleModel: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ vehicleModel: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., Camry"
+                              className={loanFormErrors.vehicleModel ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.vehicleModel && <p className="text-sm text-red-500">{loanFormErrors.vehicleModel}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="vehicleYear">Vehicle Year <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="vehicleYear"
+                              type="number"
+                              value={formData.vehicleYear}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, vehicleYear: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, vehicleYear: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ vehicleYear: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 2024"
+                              className={loanFormErrors.vehicleYear ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.vehicleYear && <p className="text-sm text-red-500">{loanFormErrors.vehicleYear}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="vehicleVIN">Vehicle VIN <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="vehicleVIN"
+                              value={formData.vehicleVIN}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, vehicleVIN: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, vehicleVIN: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ vehicleVIN: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 1HGBH41JXMN109186"
+                              className={loanFormErrors.vehicleVIN ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.vehicleVIN && <p className="text-sm text-red-500">{loanFormErrors.vehicleVIN}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="purchasePrice">Purchase Price <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="purchasePrice"
+                              type="number"
+                              value={formData.purchasePrice}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, purchasePrice: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, purchasePrice: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ purchasePrice: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 35000"
+                              className={loanFormErrors.purchasePrice ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.purchasePrice && <p className="text-sm text-red-500">{loanFormErrors.purchasePrice}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.loanType === 'business_loan' && (
+                      <div className="space-y-4 border-t pt-4">
+                        <h4 className="text-md font-semibold">Business Information</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="businessName">Business Name <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="businessName"
+                              value={formData.businessName}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, businessName: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, businessName: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ businessName: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., ABC Corporation"
+                              className={loanFormErrors.businessName ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.businessName && <p className="text-sm text-red-500">{loanFormErrors.businessName}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="businessType">Business Type <span className="text-red-500">*</span></Label>
+                            <select
+                              id="businessType"
+                              className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ${loanFormErrors.businessType ? 'border-red-500' : 'border-input'}`}
+                              value={formData.businessType}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, businessType: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, businessType: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ businessType: e.target.value }, null, 2))
+                                }
+                              }}
+                            >
+                              <option value="">Select business type</option>
+                              <option value="llc">LLC</option>
+                              <option value="corporation">Corporation</option>
+                              <option value="partnership">Partnership</option>
+                              <option value="sole_proprietorship">Sole Proprietorship</option>
+                            </select>
+                            {loanFormErrors.businessType && <p className="text-sm text-red-500">{loanFormErrors.businessType}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="businessRegistrationNumber">Business Registration Number <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="businessRegistrationNumber"
+                              value={formData.businessRegistrationNumber}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, businessRegistrationNumber: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, businessRegistrationNumber: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ businessRegistrationNumber: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., EIN or Registration Number"
+                              className={loanFormErrors.businessRegistrationNumber ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.businessRegistrationNumber && <p className="text-sm text-red-500">{loanFormErrors.businessRegistrationNumber}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="annualRevenue">Annual Revenue <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="annualRevenue"
+                              type="number"
+                              value={formData.annualRevenue}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, annualRevenue: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, annualRevenue: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ annualRevenue: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 500000"
+                              className={loanFormErrors.annualRevenue ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.annualRevenue && <p className="text-sm text-red-500">{loanFormErrors.annualRevenue}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.loanType === 'student_loan' && (
+                      <div className="space-y-4 border-t pt-4">
+                        <h4 className="text-md font-semibold">Education Information</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="schoolName">School Name <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="schoolName"
+                              value={formData.schoolName}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, schoolName: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, schoolName: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ schoolName: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., State University"
+                              className={loanFormErrors.schoolName ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.schoolName && <p className="text-sm text-red-500">{loanFormErrors.schoolName}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="degreeProgram">Degree Program <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="degreeProgram"
+                              value={formData.degreeProgram}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, degreeProgram: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, degreeProgram: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ degreeProgram: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., Computer Science"
+                              className={loanFormErrors.degreeProgram ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.degreeProgram && <p className="text-sm text-red-500">{loanFormErrors.degreeProgram}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="expectedGraduationDate">Expected Graduation Date <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="expectedGraduationDate"
+                              type="date"
+                              value={formData.expectedGraduationDate}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, expectedGraduationDate: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, expectedGraduationDate: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ expectedGraduationDate: e.target.value }, null, 2))
+                                }
+                              }}
+                              className={loanFormErrors.expectedGraduationDate ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.expectedGraduationDate && <p className="text-sm text-red-500">{loanFormErrors.expectedGraduationDate}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.loanType === 'refinance' && (
+                      <div className="space-y-4 border-t pt-4">
+                        <h4 className="text-md font-semibold">Refinance Information</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="currentLoanNumber">Current Loan Number <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="currentLoanNumber"
+                              value={formData.currentLoanNumber}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, currentLoanNumber: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, currentLoanNumber: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ currentLoanNumber: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., LOAN_2020_001"
+                              className={loanFormErrors.currentLoanNumber ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.currentLoanNumber && <p className="text-sm text-red-500">{loanFormErrors.currentLoanNumber}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="currentLender">Current Lender <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="currentLender"
+                              value={formData.currentLender}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, currentLender: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, currentLender: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ currentLender: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., ABC Bank"
+                              className={loanFormErrors.currentLender ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.currentLender && <p className="text-sm text-red-500">{loanFormErrors.currentLender}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="refinancePurpose">Refinance Purpose <span className="text-red-500">*</span></Label>
+                            <select
+                              id="refinancePurpose"
+                              className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ${loanFormErrors.refinancePurpose ? 'border-red-500' : 'border-input'}`}
+                              value={formData.refinancePurpose}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, refinancePurpose: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, refinancePurpose: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ refinancePurpose: e.target.value }, null, 2))
+                                }
+                              }}
+                            >
+                              <option value="">Select purpose</option>
+                              <option value="lower_rate">Lower Interest Rate</option>
+                              <option value="cash_out">Cash Out</option>
+                              <option value="shorter_term">Shorter Term</option>
+                              <option value="debt_consolidation">Debt Consolidation</option>
+                            </select>
+                            {loanFormErrors.refinancePurpose && <p className="text-sm text-red-500">{loanFormErrors.refinancePurpose}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.loanType === 'home_equity' && (
+                      <div className="space-y-4 border-t pt-4">
+                        <h4 className="text-md font-semibold">Home Equity Details</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="propertyValue">Property Value <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="propertyValue"
+                              type="number"
+                              value={formData.propertyValue}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, propertyValue: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, propertyValue: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ propertyValue: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 500000"
+                              className={loanFormErrors.propertyValue ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.propertyValue && <p className="text-sm text-red-500">{loanFormErrors.propertyValue}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="currentMortgageBalance">Current Mortgage Balance <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="currentMortgageBalance"
+                              type="number"
+                              value={formData.currentMortgageBalance}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, currentMortgageBalance: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, currentMortgageBalance: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ currentMortgageBalance: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 300000"
+                              className={loanFormErrors.currentMortgageBalance ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.currentMortgageBalance && <p className="text-sm text-red-500">{loanFormErrors.currentMortgageBalance}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="equityAmount">Equity Amount <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="equityAmount"
+                              type="number"
+                              value={formData.equityAmount}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, equityAmount: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, equityAmount: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ equityAmount: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 200000"
+                              className={loanFormErrors.equityAmount ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.equityAmount && <p className="text-sm text-red-500">{loanFormErrors.equityAmount}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Row 4: Additional Notes */}
                     <div className="space-y-2">
@@ -4438,8 +5653,13 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         value={formData.additionalNotes}
                         onChange={(e) => {
                           setFormData(prev => ({ ...prev, additionalNotes: e.target.value }));
-                          const currentMeta = JSON.parse(metadata || '{}')
-                          setMetadata(JSON.stringify({ ...currentMeta, additionalNotes: e.target.value }, null, 2))
+                          try {
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, additionalNotes: e.target.value }, null, 2))
+                          } catch (error) {
+                            // If metadata is invalid, create new object
+                            setMetadata(JSON.stringify({ additionalNotes: e.target.value }, null, 2))
+                          }
                         }}
                         placeholder="Any additional information about this loan document..."
                         rows={3}
@@ -4576,10 +5796,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
                   <div className="flex gap-2">
                     <Button asChild>
-                      <a href={`http://localhost:8000/api/artifacts/${uploadResult.artifactId}`} target="_blank" rel="noopener noreferrer">
+                      <Link href={`/documents/${uploadResult.artifactId}`}>
                         <ExternalLink className="h-4 w-4 mr-2" />
-                        View Artifact Details
-                      </a>
+                        View Document Details
+                      </Link>
                     </Button>
                     <Button variant="outline" onClick={handleReset}>
                       Upload Another

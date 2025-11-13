@@ -494,7 +494,7 @@ export default function IntegratedDashboard() {
             
             <div className="space-y-3">
               <h1 className="text-3xl md:text-4xl font-bold leading-tight text-gray-900 dark:text-white font-heading">
-                Welcome to the IntegrityX Vault
+                Welcome to IntegrityX
             </h1>
               <p className="text-base text-gray-600 dark:text-gray-300 max-w-2xl">
                 Monitor blockchain-sealed documents, AI verification outcomes, and security posture in a single collaborative workspace.

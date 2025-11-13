@@ -195,7 +195,7 @@ export default function SecurityPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-6 pb-16">
         {/* Tab Navigation */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-2 mb-8">
           <div className="grid grid-cols-3 gap-2">

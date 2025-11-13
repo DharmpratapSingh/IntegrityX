@@ -1,0 +1,61 @@
+{
+  "loan_id": "TEST_LOAN_SSN_001",
+  "loan_amount": 250000,
+  "loan_type": "home_loan",
+  "loan_term": 30,
+  "interest_rate": 4.5,
+  "property_address": "123 Main Street, Los Angeles, CA 90001",
+  "property_value": 350000,
+  "down_payment": 100000,
+  "property_type": "Single Family Home",
+  "borrower": {
+    "full_name": "John Michael Smith",
+    "date_of_birth": "1985-06-15",
+    "email": "john.smith@email.com",
+    "phone": "+1-555-0123",
+    "address": {
+      "street": "456 Oak Avenue",
+      "city": "Los Angeles",
+      "state": "California",
+      "zip_code": "90001",
+      "country": "United States"
+    },
+    "ssn_last4": "1234",
+    "ssn_or_itin_type": "SSN",
+    "ssn_or_itin_number": "123-45-6789",
+    "id_type": "SSN",
+    "id_last4": "6789",
+    "employment_status": "Employed",
+    "annual_income": 100000,
+    "annual_income_range": "$80,000 - $99,999",
+    "co_borrower_name": "Jane Smith"
+  },
+  "kyc_data": {
+    "fullLegalName": "John Michael Smith",
+    "dateOfBirth": "1985-06-15",
+    "phoneNumber": "+1-555-0123",
+    "emailAddress": "john.smith@email.com",
+    "streetAddress1": "456 Oak Avenue",
+    "streetAddress2": "",
+    "city": "Los Angeles",
+    "stateProvince": "California",
+    "postalZipCode": "90001",
+    "country": "United States",
+    "citizenshipCountry": "United States",
+    "ssnOrItinType": "SSN",
+    "ssnOrItinNumber": "123-45-6789",
+    "identificationType": "",
+    "identificationNumber": "",
+    "idIssuingCountry": "",
+    "sourceOfFunds": "Employment Income",
+    "purposeOfLoan": "Purchase primary residence for family. Planning to live in the property for at least 5 years.",
+    "expectedMonthlyTransactionVolume": 5000,
+    "expectedNumberOfMonthlyTransactions": 12,
+    "isPEP": "No",
+    "pepDetails": ""
+  },
+  "document_type": "loan_application",
+  "created_at": "2025-11-13T12:00:00Z"
+}
+
+

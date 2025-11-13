@@ -4,7 +4,9 @@ import { ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
+import Image from 'next/image'
 import { Home, Upload, FileText, BarChart3, Shield, Brain, CheckCircle } from 'lucide-react'
+import WalacorLogo from '@/assets/walacor-logo.png'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -41,15 +43,27 @@ export function DashboardLayout({ children, rightSidebar }: DashboardLayoutProps
               <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-soft">
                 <span className="text-white font-bold text-xl">I</span>
               </div>
-              <span className="font-bold text-2xl text-gray-900 dark:text-white">IntegrityX</span>
+              <div className="flex flex-col">
+                <span className="font-bold text-3xl text-gray-900 dark:text-white">IntegrityX</span>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                    Powered by
+                  </span>
+                  <div className="relative bg-gray-900 dark:bg-transparent px-2.5 py-1 rounded" style={{ height: '20px', display: 'inline-flex', alignItems: 'center' }}>
+                    <Image 
+                      src={WalacorLogo} 
+                      alt="Walacor" 
+                      width={80}
+                      height={24}
+                      className="h-[16px] w-auto object-contain"
+                      unoptimized
+                    />
+                  </div>
+                </div>
+              </div>
             </Link>
           </div>
 
-          <div className="mb-6">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">
-              The Vault
-            </h2>
-          </div>
 
           <nav className="space-y-1">
             {navigation.map((item) => {

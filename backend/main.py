@@ -179,23 +179,26 @@ async def lifespan(app: FastAPI):
         container_service = ContainerService(db_service=db)
         logger.info("✅ Container service initialized")
 
-        # Initialize optional services only in FULL mode
-        if not DEMO_MODE:
-            # Initialize Advanced Security service
-            try:
-                advanced_security = AdvancedSecurityService()
-                logger.info("✅ Advanced Security service initialized")
-            except Exception as e:
-                logger.error(f"❌ Advanced Security service initialization failed: {e}")
-                advanced_security = None
+        # Initialize security services (available in both demo and full mode)
+        # These services don't require external dependencies and should always be available
+        # Initialize Advanced Security service
+        try:
+            advanced_security = AdvancedSecurityService()
+            logger.info("✅ Advanced Security service initialized")
+        except Exception as e:
+            logger.error(f"❌ Advanced Security service initialization failed: {e}")
+            advanced_security = None
 
-            # Initialize Quantum-Safe Security service
-            try:
-                hybrid_security = HybridSecurityService()
-                logger.info("✅ Quantum-Safe Security service initialized")
-            except Exception as e:
-                logger.error(f"❌ Quantum-Safe Security service initialization failed: {e}")
-                hybrid_security = None
+        # Initialize Quantum-Safe Security service
+        try:
+            hybrid_security = HybridSecurityService()
+            logger.info("✅ Quantum-Safe Security service initialized")
+        except Exception as e:
+            logger.error(f"❌ Quantum-Safe Security service initialization failed: {e}")
+            hybrid_security = None
+
+        # Initialize other optional services only in FULL mode
+        if not DEMO_MODE:
 
             # Initialize AI anomaly detector
             ai_anomaly_detector = AIAnomalyDetector(db_service=db)
@@ -213,9 +216,8 @@ async def lifespan(app: FastAPI):
             document_intelligence = DocumentIntelligenceService()
             logger.info("✅ Document intelligence service initialized")
         else:
-            # Set optional services to None in demo mode
-            advanced_security = None
-            hybrid_security = None
+            # Set optional services to None in demo mode (except security services which are always available)
+            # Note: advanced_security and hybrid_security are initialized above and should NOT be set to None
             ai_anomaly_detector = None
             smart_contracts = None
             predictive_analytics = None
@@ -2213,17 +2215,46 @@ async def get_artifacts(
 
             # Check if artifact has borrower information (either in borrower_info field or in local_metadata)
             borrower: Dict[str, Any] = {}
+            # Check borrower_info field - handle both None and empty dict cases
             if artifact.borrower_info:
-                borrower = artifact.borrower_info or {}
-            elif (artifact.local_metadata and 
-                  artifact.local_metadata.get('comprehensive_document') and 
-                  artifact.local_metadata['comprehensive_document'].get('borrower')):
-                borrower = artifact.local_metadata['comprehensive_document']['borrower'] or {}
-            elif parent_artifact and parent_artifact.borrower_info:
-                borrower = parent_artifact.borrower_info or {}
+                if isinstance(artifact.borrower_info, dict):
+                    borrower = artifact.borrower_info
+                else:
+                    # If it's not a dict, try to parse it
+                    try:
+                        if isinstance(artifact.borrower_info, str):
+                            borrower = json.loads(artifact.borrower_info) if artifact.borrower_info else {}
+                        else:
+                            borrower = artifact.borrower_info or {}
+                    except:
+                        borrower = {}
             
-            if not borrower and artifact.artifact_container_type not in ('directory_container', 'batch_container'):
+            # If borrower_info is empty or missing, try local_metadata
+            if not borrower or (isinstance(borrower, dict) and len(borrower) == 0):
+                if (artifact.local_metadata and 
+                    artifact.local_metadata.get('comprehensive_document') and 
+                    artifact.local_metadata['comprehensive_document'].get('borrower')):
+                    borrower = artifact.local_metadata['comprehensive_document']['borrower'] or {}
+            
+            # If still empty, try parent
+            if not borrower or (isinstance(borrower, dict) and len(borrower) == 0):
+                if parent_artifact and parent_artifact.borrower_info:
+                    if isinstance(parent_artifact.borrower_info, dict):
+                        borrower = parent_artifact.borrower_info
+                    else:
+                        try:
+                            if isinstance(parent_artifact.borrower_info, str):
+                                borrower = json.loads(parent_artifact.borrower_info) if parent_artifact.borrower_info else {}
+                            else:
+                                borrower = parent_artifact.borrower_info or {}
+                        except:
+                            borrower = {}
+            
+            # Check if borrower dict is actually populated (not just an empty dict)
+            has_borrower_data = borrower and isinstance(borrower, dict) and len(borrower) > 0
+            if not has_borrower_data and artifact.artifact_container_type not in ('directory_container', 'batch_container'):
                 # Skip artifacts without borrower information unless it's a container we still want to surface
+                # This ensures we only show documents that have been properly sealed with borrower data
                 continue
             
             # Apply filters
@@ -2290,11 +2321,12 @@ async def get_artifacts(
             
             if matches:
                 # Extract security level from local_metadata
-                security_level = "standard"  # Default to standard
+                # Use a different variable name to avoid shadowing the filter parameter
+                artifact_security_level = "standard"  # Default to standard
                 if artifact.local_metadata:
-                    security_level = artifact.local_metadata.get('security_level', 'standard')
+                    artifact_security_level = artifact.local_metadata.get('security_level', 'standard')
                 if parent_artifact and parent_artifact.local_metadata:
-                    security_level = parent_artifact.local_metadata.get('security_level', security_level)
+                    artifact_security_level = parent_artifact.local_metadata.get('security_level', artifact_security_level)
 
                 walacor_tx_id = artifact.walacor_tx_id
                 sealed_status = "Sealed" if walacor_tx_id else "Not Sealed"
@@ -2366,7 +2398,8 @@ async def get_artifacts(
                     "artifact_type": artifact.artifact_type,
                     "created_by": artifact.created_by,
                     "sealed_status": sealed_status,
-                    "security_level": security_level,
+                    "security_level": artifact_security_level,  # Use the extracted artifact security level
+                    "local_metadata": artifact.local_metadata,  # Include local_metadata so frontend can access security_level
                     "parent_id": artifact.parent_id,
                     "artifact_container_type": artifact.artifact_container_type or 'file',
                     "directory_name": artifact.directory_name,
@@ -2375,9 +2408,23 @@ async def get_artifacts(
                 }
                 filtered_artifacts.append(artifact_data)
         
-        # Apply pagination
-        total_count = len(filtered_artifacts)
-        paginated_artifacts = filtered_artifacts[offset:offset + limit]
+        # Filter to only top-level documents (no parent_id) for pagination
+        # This ensures we show the expected number of documents per page
+        top_level_artifacts = [a for a in filtered_artifacts if not a.get('parent_id')]
+        
+        # Sort by created_at descending to show newest first, but ensure we get a mix of security levels
+        # This helps ensure pagination shows a variety of documents
+        top_level_artifacts.sort(key=lambda x: (
+            x.get('upload_date') or x.get('created_at') or ''
+        ), reverse=True)
+        
+        # Apply pagination to top-level artifacts only
+        total_count = len(top_level_artifacts)
+        paginated_artifacts = top_level_artifacts[offset:offset + limit]
+        
+        # Note: We do NOT include children here. The frontend will fetch children
+        # separately when directories are expanded, or we can add a separate endpoint.
+        # This ensures each page shows exactly 'limit' number of top-level documents.
         
         response_data = {
             "artifacts": paginated_artifacts,
@@ -5535,6 +5582,32 @@ class LoanDocumentSealRequest(BaseModel):
     additional_notes: Optional[str] = Field(None, description="Additional notes")
     borrower: BorrowerInfo = Field(..., description="Borrower information")
     created_by: str = Field(..., description="User who created the document")
+    # New fields for loan type and conditional fields
+    loan_type: Optional[str] = Field(None, description="Type of loan (home_loan, auto_loan, etc.)")
+    loan_term: Optional[int] = Field(None, description="Loan term in months")
+    interest_rate: Optional[float] = Field(None, description="Annual interest rate (%)")
+    property_address: Optional[str] = Field(None, description="Property address")
+    # Conditional fields (optional, based on loan_type)
+    property_value: Optional[float] = Field(None, description="Property value (for home loans)")
+    down_payment: Optional[float] = Field(None, description="Down payment (for home loans)")
+    property_type: Optional[str] = Field(None, description="Property type (for home loans)")
+    vehicle_make: Optional[str] = Field(None, description="Vehicle make (for auto loans)")
+    vehicle_model: Optional[str] = Field(None, description="Vehicle model (for auto loans)")
+    vehicle_year: Optional[int] = Field(None, description="Vehicle year (for auto loans)")
+    vehicle_vin: Optional[str] = Field(None, description="Vehicle VIN (for auto loans)")
+    purchase_price: Optional[float] = Field(None, description="Purchase price (for auto loans)")
+    business_name: Optional[str] = Field(None, description="Business name (for business loans)")
+    business_type: Optional[str] = Field(None, description="Business type (for business loans)")
+    business_registration_number: Optional[str] = Field(None, description="Business registration number (for business loans)")
+    annual_revenue: Optional[float] = Field(None, description="Annual revenue (for business loans)")
+    school_name: Optional[str] = Field(None, description="School name (for student loans)")
+    degree_program: Optional[str] = Field(None, description="Degree program (for student loans)")
+    expected_graduation_date: Optional[str] = Field(None, description="Expected graduation date (for student loans)")
+    current_loan_number: Optional[str] = Field(None, description="Current loan number (for refinance)")
+    current_lender: Optional[str] = Field(None, description="Current lender (for refinance)")
+    refinance_purpose: Optional[str] = Field(None, description="Refinance purpose (for refinance)")
+    current_mortgage_balance: Optional[float] = Field(None, description="Current mortgage balance (for home equity)")
+    equity_amount: Optional[float] = Field(None, description="Equity amount (for home equity)")
 
 
 class LoanDocumentSealResponse(BaseModel):
@@ -5583,6 +5656,9 @@ class MaskedBorrowerInfo(BaseModel):
     employment_status: str = Field(..., description="Employment status")
     annual_income_range: str = Field(..., description="Annual income range")
     co_borrower_name: Optional[str] = Field(None, description="Co-borrower name (optional)")
+    # New SSN/ITIN fields
+    ssn_or_itin_type: Optional[str] = Field(None, description="SSN or ITIN type")
+    ssn_or_itin_number: Optional[str] = Field(None, description="Full SSN or ITIN number (encrypted, not displayed)")
 
 
 class LoanSearchRequest(BaseModel):
@@ -5908,15 +5984,67 @@ async def seal_loan_document(
         encrypted_borrower_data = encryption_service.encrypt_borrower_data(request.borrower.dict())
         
         # Create comprehensive document JSON with encrypted borrower data
+        # Include loan_type and conditional fields
         comprehensive_document = {
             "loan_id": request.loan_id,
+            "loan_type": request.loan_type,
             "document_type": request.document_type,
             "loan_amount": request.loan_amount,
+            "loan_term": request.loan_term,
+            "interest_rate": request.interest_rate,
+            "property_address": request.property_address,
             "additional_notes": request.additional_notes,
             "borrower": encrypted_borrower_data,
             "created_by": request.created_by,
             "created_at": get_eastern_now_iso()
         }
+        
+        # Add conditional fields based on loan_type
+        if request.loan_type in ['home_loan', 'home_equity']:
+            if request.property_value is not None:
+                comprehensive_document["property_value"] = request.property_value
+            if request.down_payment is not None:
+                comprehensive_document["down_payment"] = request.down_payment
+            if request.property_type:
+                comprehensive_document["property_type"] = request.property_type
+            if request.current_mortgage_balance is not None:
+                comprehensive_document["current_mortgage_balance"] = request.current_mortgage_balance
+            if request.equity_amount is not None:
+                comprehensive_document["equity_amount"] = request.equity_amount
+        elif request.loan_type == 'auto_loan':
+            if request.vehicle_make:
+                comprehensive_document["vehicle_make"] = request.vehicle_make
+            if request.vehicle_model:
+                comprehensive_document["vehicle_model"] = request.vehicle_model
+            if request.vehicle_year is not None:
+                comprehensive_document["vehicle_year"] = request.vehicle_year
+            if request.vehicle_vin:
+                comprehensive_document["vehicle_vin"] = request.vehicle_vin
+            if request.purchase_price is not None:
+                comprehensive_document["purchase_price"] = request.purchase_price
+        elif request.loan_type == 'business_loan':
+            if request.business_name:
+                comprehensive_document["business_name"] = request.business_name
+            if request.business_type:
+                comprehensive_document["business_type"] = request.business_type
+            if request.business_registration_number:
+                comprehensive_document["business_registration_number"] = request.business_registration_number
+            if request.annual_revenue is not None:
+                comprehensive_document["annual_revenue"] = request.annual_revenue
+        elif request.loan_type == 'student_loan':
+            if request.school_name:
+                comprehensive_document["school_name"] = request.school_name
+            if request.degree_program:
+                comprehensive_document["degree_program"] = request.degree_program
+            if request.expected_graduation_date:
+                comprehensive_document["expected_graduation_date"] = request.expected_graduation_date
+        elif request.loan_type == 'refinance':
+            if request.current_loan_number:
+                comprehensive_document["current_loan_number"] = request.current_loan_number
+            if request.current_lender:
+                comprehensive_document["current_lender"] = request.current_lender
+            if request.refinance_purpose:
+                comprehensive_document["refinance_purpose"] = request.refinance_purpose
         
         # Calculate SHA-256 hash of the comprehensive document
         import hashlib
@@ -6186,7 +6314,10 @@ async def seal_loan_document_maximum_security(
     try:
         log_endpoint_start("seal_loan_document_maximum_security", request.dict())
         if not services.get("advanced_security"):
-            logger.warning("Advanced security service unavailable; using standard sealing workflow instead.")
+            logger.error("❌ Advanced security service unavailable! Cannot seal with maximum security mode.")
+            logger.error("   Falling back to standard sealing workflow. This document will have security_level='standard'.")
+            logger.error("   To enable maximum security mode, ensure AdvancedSecurityService is properly initialized.")
+            # Still use standard endpoint but log the issue clearly
             return await seal_loan_document(request, services)
 
         # Generate key pair for this document
@@ -6198,16 +6329,68 @@ async def seal_loan_document_maximum_security(
         encrypted_borrower_data = encryption_service.encrypt_borrower_data(request.borrower.dict())
         
         # Create comprehensive document JSON with encrypted borrower data
+        # Include loan_type and conditional fields
         comprehensive_document = {
             "loan_id": request.loan_id,
+            "loan_type": request.loan_type,
             "document_type": request.document_type,
             "loan_amount": request.loan_amount,
+            "loan_term": request.loan_term,
+            "interest_rate": request.interest_rate,
+            "property_address": request.property_address,
             "additional_notes": request.additional_notes,
             "borrower": encrypted_borrower_data,
             "created_by": request.created_by,
             "created_at": get_eastern_now_iso(),
             "security_level": "maximum"
         }
+        
+        # Add conditional fields based on loan_type
+        if request.loan_type in ['home_loan', 'home_equity']:
+            if request.property_value is not None:
+                comprehensive_document["property_value"] = request.property_value
+            if request.down_payment is not None:
+                comprehensive_document["down_payment"] = request.down_payment
+            if request.property_type:
+                comprehensive_document["property_type"] = request.property_type
+            if request.current_mortgage_balance is not None:
+                comprehensive_document["current_mortgage_balance"] = request.current_mortgage_balance
+            if request.equity_amount is not None:
+                comprehensive_document["equity_amount"] = request.equity_amount
+        elif request.loan_type == 'auto_loan':
+            if request.vehicle_make:
+                comprehensive_document["vehicle_make"] = request.vehicle_make
+            if request.vehicle_model:
+                comprehensive_document["vehicle_model"] = request.vehicle_model
+            if request.vehicle_year is not None:
+                comprehensive_document["vehicle_year"] = request.vehicle_year
+            if request.vehicle_vin:
+                comprehensive_document["vehicle_vin"] = request.vehicle_vin
+            if request.purchase_price is not None:
+                comprehensive_document["purchase_price"] = request.purchase_price
+        elif request.loan_type == 'business_loan':
+            if request.business_name:
+                comprehensive_document["business_name"] = request.business_name
+            if request.business_type:
+                comprehensive_document["business_type"] = request.business_type
+            if request.business_registration_number:
+                comprehensive_document["business_registration_number"] = request.business_registration_number
+            if request.annual_revenue is not None:
+                comprehensive_document["annual_revenue"] = request.annual_revenue
+        elif request.loan_type == 'student_loan':
+            if request.school_name:
+                comprehensive_document["school_name"] = request.school_name
+            if request.degree_program:
+                comprehensive_document["degree_program"] = request.degree_program
+            if request.expected_graduation_date:
+                comprehensive_document["expected_graduation_date"] = request.expected_graduation_date
+        elif request.loan_type == 'refinance':
+            if request.current_loan_number:
+                comprehensive_document["current_loan_number"] = request.current_loan_number
+            if request.current_lender:
+                comprehensive_document["current_lender"] = request.current_lender
+            if request.refinance_purpose:
+                comprehensive_document["refinance_purpose"] = request.refinance_purpose
         
         # Create comprehensive security seal
         comprehensive_seal = advanced_security.create_comprehensive_seal(
@@ -6401,18 +6584,35 @@ async def get_borrower_info(
                 return "$150,000+"
         
         # Create masked borrower info
+        # Handle address - it might be a dict or already a BorrowerAddress
+        address_data = borrower_info.get('address', {})
+        if isinstance(address_data, dict):
+            # Ensure all required fields are present
+            address_obj = BorrowerAddress(
+                street=address_data.get('street', ''),
+                city=address_data.get('city', ''),
+                state=address_data.get('state', ''),
+                zip_code=address_data.get('zip_code', ''),
+                country=address_data.get('country', 'United States')
+            )
+        else:
+            address_obj = address_data
+        
         masked_borrower = MaskedBorrowerInfo(
             full_name=borrower_info.get('full_name', ''),
             date_of_birth=borrower_info.get('date_of_birth', ''),
             email=mask_email(borrower_info.get('email', '')),
             phone=mask_phone(borrower_info.get('phone', '')),
-            address=BorrowerAddress(**borrower_info.get('address', {})),
+            address=address_obj,
             ssn_last4=borrower_info.get('ssn_last4', ''),
             id_type=borrower_info.get('id_type', ''),
             id_last4=borrower_info.get('id_last4', ''),
             employment_status=borrower_info.get('employment_status', ''),
             annual_income_range=get_income_range(borrower_info.get('annual_income', 0)),
-            co_borrower_name=borrower_info.get('co_borrower_name')
+            co_borrower_name=borrower_info.get('co_borrower_name'),
+            # Include SSN/ITIN fields
+            ssn_or_itin_type=borrower_info.get('ssn_or_itin_type'),
+            ssn_or_itin_number=None  # Never return the full number, even encrypted
         )
         
         logger.info(f"✅ Retrieved masked borrower info for artifact: {artifact_id}")
@@ -6591,7 +6791,10 @@ async def seal_loan_document_quantum_safe(
     try:
         log_endpoint_start("seal_loan_document_quantum_safe", request.dict())
         if not services.get("hybrid_security"):
-            logger.warning("Hybrid quantum-safe security service unavailable; using standard sealing workflow instead.")
+            logger.error("❌ Hybrid quantum-safe security service unavailable! Cannot seal with quantum-safe mode.")
+            logger.error("   Falling back to standard sealing workflow. This document will have security_level='standard'.")
+            logger.error("   To enable quantum-safe mode, ensure HybridSecurityService is properly initialized.")
+            # Still use standard endpoint but log the issue clearly
             return await seal_loan_document(request, services)
         
         # Get quantum-safe security service
@@ -6602,16 +6805,68 @@ async def seal_loan_document_quantum_safe(
         encrypted_borrower_data = encryption_service.encrypt_borrower_data(request.borrower.dict())
         
         # Create comprehensive document JSON with encrypted borrower data
+        # Include loan_type and conditional fields
         comprehensive_document = {
             "loan_id": request.loan_id,
+            "loan_type": request.loan_type,
             "document_type": request.document_type,
             "loan_amount": request.loan_amount,
+            "loan_term": request.loan_term,
+            "interest_rate": request.interest_rate,
+            "property_address": request.property_address,
             "additional_notes": request.additional_notes,
             "borrower": encrypted_borrower_data,
             "created_by": request.created_by,
             "created_at": get_eastern_now_iso(),
             "security_level": "quantum_safe"
         }
+        
+        # Add conditional fields based on loan_type
+        if request.loan_type in ['home_loan', 'home_equity']:
+            if request.property_value is not None:
+                comprehensive_document["property_value"] = request.property_value
+            if request.down_payment is not None:
+                comprehensive_document["down_payment"] = request.down_payment
+            if request.property_type:
+                comprehensive_document["property_type"] = request.property_type
+            if request.current_mortgage_balance is not None:
+                comprehensive_document["current_mortgage_balance"] = request.current_mortgage_balance
+            if request.equity_amount is not None:
+                comprehensive_document["equity_amount"] = request.equity_amount
+        elif request.loan_type == 'auto_loan':
+            if request.vehicle_make:
+                comprehensive_document["vehicle_make"] = request.vehicle_make
+            if request.vehicle_model:
+                comprehensive_document["vehicle_model"] = request.vehicle_model
+            if request.vehicle_year is not None:
+                comprehensive_document["vehicle_year"] = request.vehicle_year
+            if request.vehicle_vin:
+                comprehensive_document["vehicle_vin"] = request.vehicle_vin
+            if request.purchase_price is not None:
+                comprehensive_document["purchase_price"] = request.purchase_price
+        elif request.loan_type == 'business_loan':
+            if request.business_name:
+                comprehensive_document["business_name"] = request.business_name
+            if request.business_type:
+                comprehensive_document["business_type"] = request.business_type
+            if request.business_registration_number:
+                comprehensive_document["business_registration_number"] = request.business_registration_number
+            if request.annual_revenue is not None:
+                comprehensive_document["annual_revenue"] = request.annual_revenue
+        elif request.loan_type == 'student_loan':
+            if request.school_name:
+                comprehensive_document["school_name"] = request.school_name
+            if request.degree_program:
+                comprehensive_document["degree_program"] = request.degree_program
+            if request.expected_graduation_date:
+                comprehensive_document["expected_graduation_date"] = request.expected_graduation_date
+        elif request.loan_type == 'refinance':
+            if request.current_loan_number:
+                comprehensive_document["current_loan_number"] = request.current_loan_number
+            if request.current_lender:
+                comprehensive_document["current_lender"] = request.current_lender
+            if request.refinance_purpose:
+                comprehensive_document["refinance_purpose"] = request.refinance_purpose
         
         # Create quantum-safe hybrid seal
         quantum_safe_seal = hybrid_security_service.create_hybrid_seal(

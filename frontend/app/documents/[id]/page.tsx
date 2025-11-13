@@ -12,7 +12,9 @@ import {
   AlertCircle,
   Clock,
   User,
-  RefreshCw
+  RefreshCw,
+  Zap,
+  Lock
 } from 'lucide-react'
 import { toast } from '@/components/ui/toast'
 import { json as fetchJson } from '@/utils/api'
@@ -407,6 +409,18 @@ export default function DocumentDetailPage() {
                 </div>
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Loan Type</label>
+                <div className="p-2 bg-gray-50 rounded border text-sm">
+                  {document.local_metadata?.comprehensive_document?.loan_type 
+                    ? document.local_metadata.comprehensive_document.loan_type
+                        .split('_')
+                        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(' ')
+                    : 'Not provided'
+                  }
+                </div>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Loan Amount</label>
                 <div className="p-2 bg-gray-50 rounded border text-sm">
                   {document.local_metadata?.comprehensive_document?.loan_amount 
@@ -415,6 +429,105 @@ export default function DocumentDetailPage() {
                   }
                 </div>
               </div>
+              {/* Conditional Loan Fields - Display based on loan_type */}
+              {document.local_metadata?.comprehensive_document?.loan_type && (
+                <>
+                  {document.local_metadata.comprehensive_document.loan_type === 'home_loan' || 
+                   document.local_metadata.comprehensive_document.loan_type === 'home_equity' ? (
+                    <>
+                      {document.local_metadata.comprehensive_document.property_value && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Property Value</label>
+                          <div className="p-2 bg-gray-50 rounded border text-sm">
+                            ${document.local_metadata.comprehensive_document.property_value.toLocaleString()}
+                          </div>
+                        </div>
+                      )}
+                      {document.local_metadata.comprehensive_document.down_payment && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Down Payment</label>
+                          <div className="p-2 bg-gray-50 rounded border text-sm">
+                            ${document.local_metadata.comprehensive_document.down_payment.toLocaleString()}
+                          </div>
+                        </div>
+                      )}
+                      {document.local_metadata.comprehensive_document.property_type && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Property Type</label>
+                          <div className="p-2 bg-gray-50 rounded border text-sm">
+                            {document.local_metadata.comprehensive_document.property_type}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : document.local_metadata.comprehensive_document.loan_type === 'auto_loan' ? (
+                    <>
+                      {document.local_metadata.comprehensive_document.vehicle_make && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Make</label>
+                          <div className="p-2 bg-gray-50 rounded border text-sm">
+                            {document.local_metadata.comprehensive_document.vehicle_make}
+                          </div>
+                        </div>
+                      )}
+                      {document.local_metadata.comprehensive_document.vehicle_model && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Model</label>
+                          <div className="p-2 bg-gray-50 rounded border text-sm">
+                            {document.local_metadata.comprehensive_document.vehicle_model}
+                          </div>
+                        </div>
+                      )}
+                      {document.local_metadata.comprehensive_document.vehicle_year && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Year</label>
+                          <div className="p-2 bg-gray-50 rounded border text-sm">
+                            {document.local_metadata.comprehensive_document.vehicle_year}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : document.local_metadata.comprehensive_document.loan_type === 'business_loan' ? (
+                    <>
+                      {document.local_metadata.comprehensive_document.business_name && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+                          <div className="p-2 bg-gray-50 rounded border text-sm">
+                            {document.local_metadata.comprehensive_document.business_name}
+                          </div>
+                        </div>
+                      )}
+                      {document.local_metadata.comprehensive_document.business_type && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Business Type</label>
+                          <div className="p-2 bg-gray-50 rounded border text-sm">
+                            {document.local_metadata.comprehensive_document.business_type}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : document.local_metadata.comprehensive_document.loan_type === 'student_loan' ? (
+                    <>
+                      {document.local_metadata.comprehensive_document.school_name && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">School Name</label>
+                          <div className="p-2 bg-gray-50 rounded border text-sm">
+                            {document.local_metadata.comprehensive_document.school_name}
+                          </div>
+                        </div>
+                      )}
+                      {document.local_metadata.comprehensive_document.degree_program && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Degree Program</label>
+                          <div className="p-2 bg-gray-50 rounded border text-sm">
+                            {document.local_metadata.comprehensive_document.degree_program}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : null}
+                </>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Upload Date</label>
                 <div className="flex items-center text-sm text-gray-900">
@@ -447,48 +560,70 @@ export default function DocumentDetailPage() {
           </div>
 
           {/* Borrower Information (From Sealed Record) */}
-          {borrower && (
+          {(borrower || document.local_metadata?.comprehensive_document?.borrower) && (
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Borrower Information (From Sealed Record)</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                   <div className="p-2 bg-gray-50 rounded border text-sm">
-                    {borrower.full_name}
+                    {borrower?.full_name || document.local_metadata?.comprehensive_document?.borrower?.full_name || 'Not provided'}
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
                   <div className="p-2 bg-gray-50 rounded border text-sm">
-                    {borrower.date_of_birth}
+                    {borrower?.date_of_birth || document.local_metadata?.comprehensive_document?.borrower?.date_of_birth || 'Not provided'}
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                   <div className="p-2 bg-gray-50 rounded border text-sm">
-                    {borrower.email}
+                    {borrower?.email || document.local_metadata?.comprehensive_document?.borrower?.email || 'Not provided'}
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                   <div className="p-2 bg-gray-50 rounded border text-sm">
-                    {borrower.phone}
+                    {borrower?.phone || document.local_metadata?.comprehensive_document?.borrower?.phone || 'Not provided'}
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
                   <div className="p-2 bg-gray-50 rounded border text-sm">
-                    {borrower.address?.city && borrower.address?.state 
+                    {borrower?.address?.city && borrower?.address?.state 
                       ? `${borrower.address.city}, ${borrower.address.state}`
+                      : document.local_metadata?.comprehensive_document?.borrower?.address?.city && document.local_metadata?.comprehensive_document?.borrower?.address?.state
+                      ? `${document.local_metadata.comprehensive_document.borrower.address.city}, ${document.local_metadata.comprehensive_document.borrower.address.state}`
+                      : document.local_metadata?.comprehensive_document?.borrower?.address?.street
+                      ? document.local_metadata.comprehensive_document.borrower.address.street
                       : 'Not provided'
                     }
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">SSN</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">SSN/ITIN</label>
                   <div className="p-2 bg-gray-50 rounded border text-sm">
-                    {borrower.ssn_last4 ? (
-                      // Check if it's a long encoded string (base64) and truncate it
+                    {borrower?.ssn_or_itin_type || document.local_metadata?.comprehensive_document?.borrower?.ssn_or_itin_type ? (
+                      <div className="space-y-1">
+                        <div className="text-xs text-gray-600">
+                          Type: {borrower?.ssn_or_itin_type || document.local_metadata?.comprehensive_document?.borrower?.ssn_or_itin_type}
+                        </div>
+                        <div>
+                          {borrower?.ssn_last4 ? (
+                            borrower.ssn_last4.length > 20 ? (
+                              <div className="truncate" title={`Encrypted: ${borrower.ssn_last4}`}>
+                                ****-**-**** (Encrypted)
+                              </div>
+                            ) : (
+                              `****-**-${borrower.ssn_last4}`
+                            )
+                          ) : document.local_metadata?.comprehensive_document?.borrower?.ssn_last4 ? (
+                            `****-**-${document.local_metadata.comprehensive_document.borrower.ssn_last4}`
+                          ) : 'Not provided'}
+                        </div>
+                      </div>
+                    ) : borrower?.ssn_last4 ? (
                       borrower.ssn_last4.length > 20 ? (
                         <div className="truncate" title={`Encrypted SSN: ${borrower.ssn_last4}`}>
                           ****-**-**** (Encrypted)
@@ -496,24 +631,315 @@ export default function DocumentDetailPage() {
                       ) : (
                         `****-**-${borrower.ssn_last4}`
                       )
+                    ) : document.local_metadata?.comprehensive_document?.borrower?.ssn_last4 ? (
+                      `****-**-${document.local_metadata.comprehensive_document.borrower.ssn_last4}`
                     ) : 'Not provided'}
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Employment Status</label>
                   <div className="p-2 bg-gray-50 rounded border text-sm">
-                    {borrower.employment_status || 'Not provided'}
+                    {borrower?.employment_status || document.local_metadata?.comprehensive_document?.borrower?.employment_status || 'Not provided'}
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Annual Income Range</label>
                   <div className="p-2 bg-gray-50 rounded border text-sm">
-                    {borrower.annual_income_range || 'Not provided'}
+                    {borrower?.annual_income_range || document.local_metadata?.comprehensive_document?.borrower?.annual_income_range || 'Not provided'}
                   </div>
                 </div>
               </div>
             </div>
           )}
+
+          {/* Security Layers Breakdown */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6">Security Protection Layers</h2>
+            
+            {/* Walacor Blockchain Security */}
+            <div className="mb-6 pb-6 border-b border-gray-200">
+              <div className="flex items-center space-x-2 mb-4">
+                <Shield className="h-5 w-5 text-purple-600" />
+                <h3 className="text-md font-semibold text-gray-900">Walacor Blockchain Security</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                This document is secured on the Walacor blockchain, providing immutable proof of existence and tamper detection.
+              </p>
+              <div className="space-y-3">
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-900">Blockchain Transaction</span>
+                    <div className="text-xs text-gray-600 mt-1 font-mono break-all">
+                      {document.walacor_tx_id || 'Not available'}
+                    </div>
+                  </div>
+                </div>
+                {document.local_metadata?.blockchain_proof && (
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-gray-900">Blockchain Proof</span>
+                      <div className="text-xs text-gray-600 mt-1">
+                        Transaction verified and recorded on blockchain
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-900">Immutable Record</span>
+                    <div className="text-xs text-gray-600 mt-1">
+                      Document hash permanently stored on blockchain
+                    </div>
+                  </div>
+                </div>
+                {document.local_metadata?.walacor_envelope && (
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-gray-900">Envelope Metadata</span>
+                      <div className="text-xs text-gray-600 mt-1">
+                        Additional security metadata from Walacor
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Our Algorithm Security */}
+            <div>
+              <div className="flex items-center space-x-2 mb-4">
+                {(() => {
+                  const securityLevel = document.local_metadata?.security_level || 'standard';
+                  if (securityLevel === 'quantum_safe') {
+                    return <Zap className="h-5 w-5 text-indigo-600" />;
+                  } else if (securityLevel === 'maximum') {
+                    return <Lock className="h-5 w-5 text-red-600" />;
+                  } else {
+                    return <Shield className="h-5 w-5 text-blue-600" />;
+                  }
+                })()}
+                <h3 className="text-md font-semibold text-gray-900">Our Algorithm Security</h3>
+                <span className={`ml-2 px-2 py-1 rounded text-xs font-semibold ${
+                  document.local_metadata?.security_level === 'quantum_safe' 
+                    ? 'bg-indigo-100 text-indigo-800'
+                    : document.local_metadata?.security_level === 'maximum'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {document.local_metadata?.security_level === 'quantum_safe' 
+                    ? 'Quantum Safe'
+                    : document.local_metadata?.security_level === 'maximum'
+                    ? 'Maximum Security'
+                    : 'Standard Security'}
+                </span>
+              </div>
+              
+              {(() => {
+                const securityLevel = document.local_metadata?.security_level || 'standard';
+                
+                if (securityLevel === 'quantum_safe') {
+                  const quantumSeal = document.local_metadata?.quantum_safe_seal;
+                  const algorithms = document.local_metadata?.algorithms_used || quantumSeal?.metadata?.algorithms_used || [];
+                  const hashes = quantumSeal?.document_hash?.all_hashes || {};
+                  
+                  return (
+                    <>
+                      <p className="text-sm text-gray-600 mb-4">
+                        This document uses quantum-resistant cryptographic algorithms, protecting against future quantum computing threats.
+                      </p>
+                      <div className="space-y-4">
+                        <div>
+                          <span className="text-sm font-medium text-gray-900 mb-2 block">Quantum-Resistant Hashing Algorithms:</span>
+                          <div className="grid grid-cols-1 gap-2">
+                            {hashes.shake256 && (
+                              <div className="flex items-center space-x-2 p-2 bg-indigo-50 rounded border border-indigo-200">
+                                <CheckCircle className="h-4 w-4 text-indigo-600 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <span className="text-sm font-medium text-gray-900">SHAKE256</span>
+                                  <div className="text-xs text-gray-600 font-mono truncate">
+                                    {hashes.shake256.substring(0, 32)}...
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            {hashes.blake3 && (
+                              <div className="flex items-center space-x-2 p-2 bg-indigo-50 rounded border border-indigo-200">
+                                <CheckCircle className="h-4 w-4 text-indigo-600 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <span className="text-sm font-medium text-gray-900">BLAKE3</span>
+                                  <div className="text-xs text-gray-600 font-mono truncate">
+                                    {hashes.blake3.substring(0, 32)}...
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            {hashes.sha3_512 && (
+                              <div className="flex items-center space-x-2 p-2 bg-indigo-50 rounded border border-indigo-200">
+                                <CheckCircle className="h-4 w-4 text-indigo-600 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <span className="text-sm font-medium text-gray-900">SHA3-512</span>
+                                  <div className="text-xs text-gray-600 font-mono truncate">
+                                    {hashes.sha3_512.substring(0, 32)}...
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {quantumSeal?.signatures?.dilithium2 && (
+                          <div>
+                            <span className="text-sm font-medium text-gray-900 mb-2 block">Quantum-Safe Digital Signature:</span>
+                            <div className="flex items-center space-x-2 p-2 bg-indigo-50 rounded border border-indigo-200">
+                              <CheckCircle className="h-4 w-4 text-indigo-600 flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="text-sm font-medium text-gray-900">Dilithium2 (NIST PQC Standard)</span>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  Post-quantum cryptographic signature algorithm
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        <div className="p-3 bg-indigo-50 rounded border border-indigo-200">
+                          <div className="text-xs font-medium text-indigo-900 mb-1">Quantum Resistance: High</div>
+                          <div className="text-xs text-indigo-700">
+                            This document is protected against quantum computing attacks using NIST-approved post-quantum algorithms.
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                } else if (securityLevel === 'maximum') {
+                  const comprehensiveSeal = document.local_metadata?.comprehensive_seal;
+                  const securityMetadata = comprehensiveSeal?.security_metadata || {};
+                  const algorithms = securityMetadata.algorithms_used || [];
+                  const contentHash = comprehensiveSeal?.content_signature?.content_hash || {};
+                  
+                  return (
+                    <>
+                      <p className="text-sm text-gray-600 mb-4">
+                        This document uses maximum security with multi-algorithm hashing, PKI signatures, and advanced tamper detection.
+                      </p>
+                      <div className="space-y-4">
+                        <div>
+                          <span className="text-sm font-medium text-gray-900 mb-2 block">Multi-Algorithm Hashing:</span>
+                          <div className="grid grid-cols-1 gap-2">
+                            {contentHash.sha256 && (
+                              <div className="flex items-center space-x-2 p-2 bg-red-50 rounded border border-red-200">
+                                <CheckCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <span className="text-sm font-medium text-gray-900">SHA-256</span>
+                                  <div className="text-xs text-gray-600 font-mono truncate">
+                                    {contentHash.sha256.substring(0, 32)}...
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            {contentHash.sha512 && (
+                              <div className="flex items-center space-x-2 p-2 bg-red-50 rounded border border-red-200">
+                                <CheckCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <span className="text-sm font-medium text-gray-900">SHA-512</span>
+                                  <div className="text-xs text-gray-600 font-mono truncate">
+                                    {contentHash.sha512.substring(0, 32)}...
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            {contentHash.blake2b && (
+                              <div className="flex items-center space-x-2 p-2 bg-red-50 rounded border border-red-200">
+                                <CheckCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <span className="text-sm font-medium text-gray-900">BLAKE2b</span>
+                                  <div className="text-xs text-gray-600 font-mono truncate">
+                                    {contentHash.blake2b.substring(0, 32)}...
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            {contentHash.sha3_256 && (
+                              <div className="flex items-center space-x-2 p-2 bg-red-50 rounded border border-red-200">
+                                <CheckCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <span className="text-sm font-medium text-gray-900">SHA3-256</span>
+                                  <div className="text-xs text-gray-600 font-mono truncate">
+                                    {contentHash.sha3_256.substring(0, 32)}...
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {comprehensiveSeal?.pki_signature && (
+                          <div>
+                            <span className="text-sm font-medium text-gray-900 mb-2 block">PKI Digital Signature:</span>
+                            <div className="flex items-center space-x-2 p-2 bg-red-50 rounded border border-red-200">
+                              <CheckCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="text-sm font-medium text-gray-900">RSA-PSS (2048-bit)</span>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  Public Key Infrastructure signature for tamper detection
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {securityMetadata.verification_methods && (
+                          <div>
+                            <span className="text-sm font-medium text-gray-900 mb-2 block">Verification Methods:</span>
+                            <div className="space-y-2">
+                              {securityMetadata.verification_methods.map((method: string, idx: number) => (
+                                <div key={idx} className="flex items-center space-x-2 text-sm text-gray-700">
+                                  <CheckCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                                  <span>{method.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="p-3 bg-red-50 rounded border border-red-200">
+                          <div className="text-xs font-medium text-red-900 mb-1">Tamper Resistance: {securityMetadata.tamper_resistance || 'High'}</div>
+                          <div className="text-xs text-red-700">
+                            Multiple verification layers ensure maximum protection against tampering.
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                } else {
+                  // Standard security
+                  return (
+                    <>
+                      <p className="text-sm text-gray-600 mb-4">
+                        This document uses standard security with SHA-256 hashing for integrity verification.
+                      </p>
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2 p-2 bg-blue-50 rounded border border-blue-200">
+                          <CheckCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                          <div className="flex-1">
+                            <span className="text-sm font-medium text-gray-900">SHA-256 Hash</span>
+                            <div className="text-xs text-gray-600 font-mono truncate mt-1">
+                              {document.payload_sha256 || document.hash || 'Not available'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-3 bg-blue-50 rounded border border-blue-200">
+                          <div className="text-xs font-medium text-blue-900 mb-1">Standard Protection</div>
+                          <div className="text-xs text-blue-700">
+                            Basic cryptographic protection suitable for standard document integrity.
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                }
+              })()}
+            </div>
+          </div>
 
           {/* Verification Status */}
           <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -531,12 +957,6 @@ export default function DocumentDetailPage() {
                 <Clock className="h-5 w-5 text-blue-600" />
                 <span className="text-sm text-gray-900">
                   Sealed on: {formatDate(document.created_at)}
-                </span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Shield className="h-5 w-5 text-purple-600" />
-                <span className="text-sm text-gray-900">
-                  Walacor TX ID: {document.walacor_tx_id}
                 </span>
               </div>
             </div>

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { json as fetchJson } from '@/utils/api'
 import { BarChart3, TrendingUp, Shield, FileText, Users, ArrowRight, AlertCircle, RefreshCw, Calendar, Activity, Zap, Brain, Clock, CheckCircle2, XCircle } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Button } from '@/components/ui/button'
 import { DashboardLayout } from '@/components/DashboardLayout'
 
@@ -65,7 +65,8 @@ export default function AnalyticsPage() {
       // Use live endpoints and derive metrics locally
       const [dailyRes, artifactsRes] = await Promise.all([
         fetchJson<any>('http://localhost:8000/api/analytics/daily-activity', { timeoutMs: 8000 }),
-        fetchJson<any>('http://localhost:8000/api/artifacts', { timeoutMs: 8000 })
+        // Fetch all documents for analytics by using a high limit
+        fetchJson<any>('http://localhost:8000/api/artifacts?limit=10000', { timeoutMs: 15000 })
       ])
 
       const dailyPayload = (dailyRes.data as any)?.data ?? dailyRes.data ?? {}
@@ -73,6 +74,7 @@ export default function AnalyticsPage() {
 
       const artifactsEnvelope = (artifactsRes.data as any)?.data ?? artifactsRes.data ?? {}
       const artifacts: any[] = artifactsEnvelope?.artifacts || []
+      const totalCount = artifactsEnvelope?.total_count || artifacts.length
 
       // Filter by date range
       const filteredArtifacts = filterByDateRange(artifacts, dateRange)
@@ -98,7 +100,7 @@ export default function AnalyticsPage() {
         financial_documents: {
           documents_sealed_today: verifiedToday,
           documents_sealed_this_month: totalDocs,
-          total_documents_sealed: artifacts.length, // Use all-time for this metric
+          total_documents_sealed: totalCount, // Use total_count from API for accurate total
           total_loan_value_sealed: totalValue,
           average_loan_amount: avgLoan,
           sealing_success_rate: sealingSuccessRate,
@@ -229,13 +231,41 @@ export default function AnalyticsPage() {
       const metadata = artifact.local_metadata?.comprehensive_document
       const hasExtraction = metadata && Object.keys(metadata).length > 0
 
+      // Calculate confidence based on field completeness (same logic as calculateAIMetrics)
+      let confidence: number | undefined = undefined
+      if (hasExtraction || artifact.borrower_name || artifact.loan_id) {
+        // Check key fields that indicate data quality
+        const fields = [
+          artifact.loan_id,
+          artifact.loan_amount,
+          artifact.borrower_name,
+          artifact.borrower_email,
+          artifact.borrower_phone
+        ]
+
+        const filledFields = fields.filter(f => f && f !== '').length
+        const fieldConfidence = (filledFields / fields.length) * 100
+
+        // Add bonus for having comprehensive document metadata
+        if (metadata && Object.keys(metadata).length > 5) {
+          confidence = Math.min(100, Math.round(fieldConfidence + 10))
+        } else {
+          confidence = Math.round(fieldConfidence)
+        }
+
+        // Ensure confidence is at least 40% if we have some data
+        if (filledFields > 0 && confidence < 40) {
+          confidence = 40
+        }
+      }
+
       return {
         id: artifact.artifact_id || `activity-${idx}`,
         type: isSealed ? 'seal' : (hasExtraction ? 'extract' : 'upload'),
         document_name: artifact.filename || artifact.name || `Document ${idx + 1}`,
         timestamp: artifact.created_at || artifact.timestamp || new Date().toISOString(),
         status: isSealed ? 'success' : 'pending',
-        confidence: hasExtraction ? Math.round(Math.random() * 30 + 70) : undefined
+        confidence: confidence
       }
     })
   }
@@ -246,8 +276,7 @@ export default function AnalyticsPage() {
   }
 
   const tabs = [
-    { id: 'overview', name: 'Overview', icon: BarChart3 },
-    { id: 'ai-performance', name: 'AI Performance', icon: Brain }
+    { id: 'overview', name: 'Overview', icon: BarChart3 }
   ]
 
   // Generate trend data (last 7 days)
@@ -283,21 +312,61 @@ export default function AnalyticsPage() {
     { name: 'Frontend Fallback', value: aiMetrics.frontend_fallback_usage, color: '#8b5cf6' }
   ] : []
 
-  // Calculate time savings
-  const calculateTimeSavings = () => {
-    if (!aiMetrics) return { manual: 0, automated: 0, saved: 0 }
+  // Calculate time savings based on actual documents processed
+  const calculateTimeSavings = (): { 
+    manual: number; 
+    automated: number; 
+    saved: number; 
+    docsProcessed: number; 
+    manualPerDoc: number; 
+    automatedPerDoc: number 
+  } => {
+    // Use actual documents processed, not just AI extractions
+    const totalDocs = analytics?.financial_documents?.documents_sealed_this_month || 0
+    
+    if (totalDocs === 0) {
+      return { 
+        manual: 0, 
+        automated: 0, 
+        saved: 0, 
+        docsProcessed: 0, 
+        manualPerDoc: 0, 
+        automatedPerDoc: 0 
+      }
+    }
 
-    const manualTimePerDoc = 5 * 60 * 1000 // 5 minutes per document manually
-    const automatedTime = aiMetrics.extraction_time_avg_ms
+    // Realistic time estimates per document
+    // Manual processing: 8-12 minutes per document (data entry, verification, review, sealing)
+    const manualTimePerDocMinutes = 10 // Average 10 minutes per document manually
+    
+    // Automated processing: 30 seconds to 2 minutes per document (AI extraction + automated sealing)
+    // Use actual AI extraction time if available, otherwise use realistic estimate
+    let automatedTimePerDocSeconds = 45 // Default: 45 seconds if no AI metrics
+    
+    if (aiMetrics?.extraction_time_avg_ms) {
+      // Convert milliseconds to seconds and clamp between 30s and 2min for realism
+      const extractedSeconds = aiMetrics.extraction_time_avg_ms / 1000
+      automatedTimePerDocSeconds = Math.max(30, Math.min(120, extractedSeconds))
+    }
+    
+    // Add sealing time (blockchain operation takes additional time)
+    const sealingTimeSeconds = 15 // 15 seconds for blockchain sealing
+    automatedTimePerDocSeconds += sealingTimeSeconds
+    
+    const automatedTimePerDocMinutes = automatedTimePerDocSeconds / 60
 
-    const totalManual = (aiMetrics.total_extractions * manualTimePerDoc) / 1000 / 60 // minutes
-    const totalAutomated = (aiMetrics.total_extractions * automatedTime) / 1000 / 60 // minutes
+    // Calculate total times
+    const totalManual = totalDocs * manualTimePerDocMinutes
+    const totalAutomated = totalDocs * automatedTimePerDocMinutes
     const saved = totalManual - totalAutomated
 
     return {
       manual: Math.round(totalManual),
-      automated: Math.round(totalAutomated),
-      saved: Math.round(saved)
+      automated: Math.max(1, Math.round(totalAutomated)), // At least 1 minute
+      saved: Math.round(saved),
+      docsProcessed: totalDocs,
+      manualPerDoc: manualTimePerDocMinutes,
+      automatedPerDoc: automatedTimePerDocMinutes
     }
   }
 
@@ -457,17 +526,6 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          <div className="rounded-lg bg-purple-50 p-4 dark:bg-purple-950">
-            <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-2">
-              Export Report
-            </h3>
-            <p className="text-xs text-purple-700 dark:text-purple-300 mb-3">
-              Download analytics data
-            </p>
-            <a href="#" className="text-xs text-purple-600 hover:text-purple-700 dark:text-purple-400">
-              📊 Download CSV
-            </a>
-          </div>
         </div>
       }
     >
@@ -476,7 +534,7 @@ export default function AnalyticsPage() {
       <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white border-b border-gray-200 dark:border-gray-800">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
 
-        <div className="relative max-w-7xl mx-auto px-6 py-16">
+        <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="space-y-3">
@@ -588,7 +646,7 @@ export default function AnalyticsPage() {
               {/* Trend Chart */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Document Processing Trends (Last 7 Days)</h3>
-                <div className="bg-white border rounded-lg p-4">
+                <div className="bg-white border rounded-lg p-6">
                   <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={trendData}>
                       <defs>
@@ -677,158 +735,56 @@ export default function AnalyticsPage() {
                     <h3 className="text-lg font-semibold text-gray-900">AI Automation Impact</h3>
                   </div>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg">
-                      <span className="text-sm font-medium text-gray-700">Manual Processing Time</span>
+                    {timeSavings.docsProcessed > 0 && (
+                      <p className="text-sm text-gray-600 mb-2 text-center">
+                        Based on {timeSavings.docsProcessed} document{timeSavings.docsProcessed !== 1 ? 's' : ''} processed
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 block">Manual Processing Time</span>
+                        <span className="text-xs text-gray-500 mt-1">
+                          ~{timeSavings.manualPerDoc?.toFixed(1) || 10} min per document
+                        </span>
+                      </div>
                       <span className="text-xl font-bold text-gray-900">{timeSavings.manual} min</span>
                     </div>
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg">
-                      <span className="text-sm font-medium text-gray-700">AI Automated Time</span>
+                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 block">AI Automated Time</span>
+                        <span className="text-xs text-gray-500 mt-1">
+                          ~{timeSavings.automatedPerDoc ? (timeSavings.automatedPerDoc * 60).toFixed(0) : 60} sec per document
+                        </span>
+                      </div>
                       <span className="text-xl font-bold text-blue-600">{timeSavings.automated} min</span>
                     </div>
                     <div className="flex items-center justify-between p-4 bg-elite-green text-white rounded-lg">
-                      <span className="text-sm font-semibold">Total Time Saved</span>
+                      <div>
+                        <span className="text-sm font-semibold block">Total Time Saved</span>
+                        {timeSavings.saved > 60 && (
+                          <span className="text-xs text-green-100 mt-1">
+                            ({Math.round(timeSavings.saved / 60)} hours)
+                          </span>
+                        )}
+                      </div>
                       <span className="text-2xl font-bold">{timeSavings.saved} min</span>
                     </div>
-                    <p className="text-xs text-gray-600 text-center pt-2">
-                      ⚡ {Math.round((timeSavings.saved / timeSavings.manual) * 100)}% faster with AI automation
-                    </p>
+                    {timeSavings.manual > 0 && timeSavings.automated > 0 && (
+                      <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                        <p className="text-sm font-medium text-green-900 text-center">
+                          ⚡ {((timeSavings.manual / timeSavings.automated)).toFixed(1)}x faster with AI automation
+                        </p>
+                        <p className="text-xs text-green-700 text-center mt-1">
+                          {Math.round(((timeSavings.saved / timeSavings.manual) * 100))}% time reduction
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {activeTab === 'ai-performance' && aiMetrics && (
-            <div className="space-y-6">
-              {/* AI Extraction Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <Brain className="h-8 w-8 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-600">Total</span>
-                  </div>
-                  <p className="text-3xl font-bold text-gray-900">{aiMetrics.total_extractions}</p>
-                  <p className="text-sm text-gray-600 mt-1">Total Extractions</p>
-                </div>
-
-                <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <CheckCircle2 className="h-8 w-8 text-green-600" />
-                    <span className="text-sm font-medium text-green-600">Success</span>
-                  </div>
-                  <p className="text-3xl font-bold text-gray-900">{aiMetrics.successful_extractions}</p>
-                  <p className="text-sm text-gray-600 mt-1">Successful ({Math.round((aiMetrics.successful_extractions / aiMetrics.total_extractions) * 100) || 0}%)</p>
-                </div>
-
-                <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900 rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <Clock className="h-8 w-8 text-purple-600" />
-                    <span className="text-sm font-medium text-purple-600">Speed</span>
-                  </div>
-                  <p className="text-3xl font-bold text-gray-900">{(aiMetrics.extraction_time_avg_ms / 1000).toFixed(2)}s</p>
-                  <p className="text-sm text-gray-600 mt-1">Avg Extraction Time</p>
-                </div>
-              </div>
-
-              {/* Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Confidence Distribution */}
-                <div className="bg-white border rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Confidence Distribution</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={confidenceDistribution}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={(entry) => `${entry.name}: ${entry.value}`}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {confidenceDistribution.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                        <span>High Confidence (80-100%)</span>
-                      </div>
-                      <span className="font-semibold">{aiMetrics.high_confidence_count}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                        <span>Medium Confidence (60-79%)</span>
-                      </div>
-                      <span className="font-semibold">{aiMetrics.medium_confidence_count}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                        <span>Low Confidence (&lt;60%)</span>
-                      </div>
-                      <span className="font-semibold">{aiMetrics.low_confidence_count}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* AI Source Distribution */}
-                <div className="bg-white border rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Extraction Sources</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={aiSourceDistribution}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="value" name="Count">
-                        {aiSourceDistribution.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Brain className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium">AI Backend</span>
-                      </div>
-                      <span className="text-sm font-bold text-blue-600">{aiMetrics.ai_backend_usage}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Zap className="h-4 w-4 text-purple-600" />
-                        <span className="text-sm font-medium">Frontend Fallback</span>
-                      </div>
-                      <span className="text-sm font-bold text-purple-600">{aiMetrics.frontend_fallback_usage}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Average Confidence Indicator */}
-              <div className="bg-elite-blue dark:bg-elite-blue/90 text-white rounded-lg p-8">
-                <div className="text-center">
-                  <Brain className="h-12 w-12 mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold mb-2">Average AI Confidence</h3>
-                  <p className="text-6xl font-bold mb-2">{aiMetrics.average_confidence}%</p>
-                  <p className="text-blue-100">
-                    {aiMetrics.average_confidence >= 80 ? '🎉 Excellent extraction quality!' :
-                     aiMetrics.average_confidence >= 60 ? '✅ Good extraction quality' :
-                     '⚠️ Review recommended for low-confidence extractions'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
         </div>
       </div>
