@@ -273,12 +273,15 @@ class WalacorIntegrityService:
             if len(document_hash) != 64:
                 raise ValueError("document_hash must be a 64-character SHA-256 hash")
             
-            # HYBRID APPROACH: Only essential blockchain data goes to Walacor
+            # HYBRID APPROACH: Match Walacor schema fields exactly
             blockchain_data = {
+                "loan_id": loan_id,
+                "document_type": document_type,
                 "document_hash": document_hash,
-                "seal_timestamp": datetime.now().isoformat(),
-                "etid": self.LOAN_DOCUMENTS_ETID,
-                "integrity_seal": f"SEAL_{document_hash[:16]}_{int(datetime.now().timestamp())}"
+                "file_size": file_size,
+                "upload_timestamp": int(datetime.now().timestamp()),  # DATETIME_EPOCH format
+                "uploaded_by": uploaded_by,
+                "file_path": file_path
             }
             
             # Store in Walacor or local blockchain (only essential data)
@@ -500,16 +503,20 @@ class WalacorIntegrityService:
             envelope_json = json.dumps(envelope, sort_keys=True, separators=(',', ':'))
             document_hash = hashlib.sha256(envelope_json.encode('utf-8')).hexdigest()
             
-            # Create blockchain data for Walacor
+            # Create blockchain data matching loan_documents schema
+            # Extract uploaded_by from borrower data or use default
+            uploaded_by = loan_data.get("created_by", "system")
+            if borrower_data and "full_name" in borrower_data:
+                uploaded_by = borrower_data["full_name"]
+
             blockchain_data = {
-                "document_hash": document_hash,
                 "loan_id": loan_id,
-                "seal_timestamp": envelope["sealed_timestamp"],
-                "etid": self.LOAN_DOCUMENTS_ETID,
-                "integrity_seal": f"LOAN_SEAL_{document_hash[:16]}_{int(datetime.now().timestamp())}",
-                "envelope_size": len(envelope_json),
-                "borrower_data_included": True,
-                "file_count": len(files)
+                "document_type": "loan_packet",
+                "document_hash": document_hash,
+                "file_size": len(envelope_json),
+                "upload_timestamp": int(datetime.now().timestamp()),  # DATETIME_EPOCH format
+                "uploaded_by": uploaded_by,
+                "file_path": f"/loans/{loan_id}/packet.json"
             }
             
             # Store hash in Walacor blockchain or local simulation
@@ -627,12 +634,14 @@ class WalacorIntegrityService:
             if not all([document_id, event_type, user]):
                 raise ValueError("document_id, event_type, and user are required")
             
-            # HYBRID APPROACH: Only essential audit data goes to blockchain
+            # Match audit_logs schema fields exactly
             blockchain_audit_data = {
                 "document_id": document_id,
                 "event_type": event_type,
-                "audit_timestamp": datetime.now().isoformat(),
-                "audit_hash": f"AUDIT_{document_id}_{event_type}_{int(datetime.now().timestamp())}"
+                "user": user,
+                "timestamp": int(datetime.now().timestamp()),  # DATETIME_EPOCH format
+                "ip_address": ip_address if ip_address else "",
+                "details": details if details else ""
             }
             
             # Store in Walacor or local blockchain (only essential audit data)
@@ -774,13 +783,13 @@ class WalacorIntegrityService:
             if parent_doc_id == child_doc_id:
                 raise ValueError("parent_doc_id and child_doc_id must be different")
             
-            # Prepare provenance data
+            # Match document_provenance schema fields exactly
             provenance_data = {
                 "parent_doc_id": parent_doc_id,
                 "child_doc_id": child_doc_id,
                 "relationship_type": relationship_type,
-                "timestamp": datetime.now().isoformat(),
-                "description": description
+                "timestamp": int(datetime.now().timestamp()),  # DATETIME_EPOCH format
+                "description": description if description else ""
             }
             
             # Store in Walacor
@@ -821,23 +830,23 @@ class WalacorIntegrityService:
             RuntimeError: If Walacor operation fails
         """
         try:
-            # Validate inputs
-            if not all([document_id, attestor_name, attestation_type, status, signature]):
-                raise ValueError("document_id, attestor_name, attestation_type, status, and signature are required")
-            
+            # Validate required inputs (signature and notes are optional per schema)
+            if not all([document_id, attestor_name, attestation_type, status]):
+                raise ValueError("document_id, attestor_name, attestation_type, and status are required")
+
             valid_statuses = ["pending", "approved", "rejected"]
             if status not in valid_statuses:
                 raise ValueError(f"status must be one of: {', '.join(valid_statuses)}")
-            
-            # Prepare attestation data
+
+            # Match attestations schema fields exactly
             attestation_data = {
                 "document_id": document_id,
                 "attestor_name": attestor_name,
                 "attestation_type": attestation_type,
                 "status": status,
-                "timestamp": datetime.now().isoformat(),
-                "signature": signature,
-                "notes": notes
+                "timestamp": int(datetime.now().timestamp()),  # DATETIME_EPOCH format
+                "signature": signature if signature else "",
+                "notes": notes if notes else ""
             }
             
             # Store in Walacor

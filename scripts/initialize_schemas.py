@@ -45,7 +45,7 @@ try:
     from schemas import LoanSchemas
 except ImportError as e:
     print(f"❌ Import Error: {e}")
-    print("Please ensure walacor-python-sdk is installed and src/schemas.py exists")
+    print("Please ensure walacor-python-sdk is installed and backend/src/schemas.py exists")
     sys.exit(1)
 
 
