@@ -124,7 +124,7 @@ docker-compose up -d
 
 ### **🎬 Demo & Presentation**
 - **[Presentation Template](./CHALLENGE%20X%20-%20final%20presentation%20template.pptx)** - Ready for your content
-- **Demo Video**: *(Coming soon - 15 min walkthrough)*
+- **Demo Video**: Available upon request (10-12 min comprehensive walkthrough)
 
 ### **⚡ Quick Facts**
 - **89 API Endpoints** | **49 Backend Modules** | **100+ React Components**
@@ -2250,9 +2250,9 @@ This project was made possible with invaluable guidance and feedback from our me
 
 ### **Our Team**
 
-**Built with dedication by**: [Team members - please add your names here]
+**Built with dedication by**: Dharmratap Singh
 
-**Project Duration**: [Start date] - [End date]
+**Project Duration**: October 2025 - November 2025
 
 **Hours Invested**: 200+ hours of development, testing, and documentation
 
