@@ -103,6 +103,10 @@ test_results_e2e.json
 test_run_output.log
 test_loan_document_*.json
 verify_integrityx.sh
+.github/README.md
+Diagrams_Walacor/
+test_uploads/
+tests/
 
 # Documentation & presentation artifacts
 *.md
