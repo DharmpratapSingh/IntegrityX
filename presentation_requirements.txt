@@ -1,4 +1,0 @@
-# Requirements for IntegrityX Presentation Generator
-# Install with: pip install -r presentation_requirements.txt
-
-python-pptx>=0.6.21
