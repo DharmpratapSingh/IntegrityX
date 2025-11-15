@@ -1,122 +1,5 @@
 # IntegrityX - Financial Document Integrity System
 
-<div align="center">
-
-![IntegrityX Logo](https://img.shields.io/badge/IntegrityX-Financial%20Document%20Integrity-blue?style=for-the-badge&logo=shield-check)
-![Python](https://img.shields.io/badge/Python-3.12+-green?style=for-the-badge&logo=python)
-![Next.js](https://img.shields.io/badge/Next.js-14+-black?style=for-the-badge&logo=next.js)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green?style=for-the-badge&logo=fastapi)
-![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker)
-![Prometheus](https://img.shields.io/badge/Prometheus-Monitoring-red?style=for-the-badge&logo=prometheus)
-![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-blue?style=for-the-badge&logo=github-actions)
-![License](https://img.shields.io/badge/License-Walacor%20Challenge-orange?style=for-the-badge)
-
-**A comprehensive financial document integrity and verification system with quantum-safe encryption, real-time monitoring, and advanced analytics.**
-
-[🚀 Quick Start](#-quick-start) • [📋 Features](#-features) • [🏗️ Architecture](#️-architecture) • [🔧 Setup](#-setup) • [📚 Documentation](#-documentation) • [🧪 Testing](#-testing) • [🔒 Security](#-security)
-
-## 🎨 **Recent UX/Security Improvements** ⭐ **NEW**
-
-### **Enhanced User Experience** (Latest Updates)
-
-#### **📤 Intelligent Upload Flow**
-- ✅ **Complete Loan Application**: Full 7 loan fields + 25 KYC fields implementation
-  - Loan Amount, Interest Rate (%), Loan Term (months), Property Address
-  - Employment details, income verification, credit score tracking
-  - Property type, appraisal value, down payment calculation
-- ✅ **Smart Text Handling**: Fixed space character support in all text inputs
-- ✅ **Sticky Sidebar Dashboard**: Professional 3-card layout
-  - **Quick Actions**: Fast access to common operations (Clear Form, Fill Demo Data, View History)
-  - **Upload Statistics**: Real-time metrics (24 uploads today, 99.8% success rate, <2s avg time)
-  - **Tips & Help**: AI Auto-fill, Demo Mode, Blockchain verification guides
-- ✅ **Enhanced Validation**: Real-time field validation with confidence badges
-
-#### **🔒 Bank-Level Security**
-- ✅ **SessionManager Component**: No persistent sessions across browser closes
-  - Automatic sign-out on browser/tab close
-  - Session validation on page load (forces re-auth after browser restart)
-  - SessionStorage-based session tracking (cleared on browser close)
-- ✅ **Strengthened Middleware**: Strict route protection
-  - Explicit userId checking before route access
-  - Automatic redirect to sign-in with saved redirect URL
-  - Protection for all non-public routes (blocks direct URL access)
-- ✅ **Three-Layer Security**: Middleware → Client Auth → Session Management
-
-#### **🎨 Premium Authentication Experience**
-- ✅ **Gradient Sign-In/Sign-Up Pages**: Matches dashboard aesthetic
-  - Animated gradient backgrounds (blue → purple → pink)
-  - Floating orbs with blob animation effect
-  - Glassmorphism cards with backdrop blur
-  - Custom Clerk theming with gradient buttons
-  - Smooth fade-in and slide-up animations
-- ✅ **Branded First Impression**: Professional logo animation and welcome text
-
-#### **🔍 Enhanced Security Tools**
-- ✅ **Simplified Security Page**: Reduced from 460 to 222 lines
-  - Removed gimmicky gradients and excessive bullet points
-  - Clean 3-card dashboard layout (Fraud Detection, Blockchain Sealing, ZKP)
-  - Actionable features with clear metric displays
-  - Easy-to-use interface focused on functionality
-- ✅ **Document Selector Integration**: Zero copy-paste workflow
-  - **ZKP Verify Page**: Dropdown selector for artifact IDs (fetches 50 recent documents)
-  - **Verification Page**: 3-way input (file upload, document selector, manual hash)
-  - Document cards with loan ID, borrower name, and document type
-  - Eliminates manual ID/hash copying hassle
-
-#### **📊 Technical Implementation**
-- **Frontend**: Next.js 14 App Router with TypeScript
-- **Authentication**: Clerk with custom theming and session management
-- **State Management**: React Hooks (useState, useEffect, useRouter, useClerk)
-- **Security**: Three-layer protection (middleware, client-side auth, session lifecycle)
-- **Styling**: Tailwind CSS with glassmorphism and gradient designs
-
-**See Commits**:
-- `frontend/app/(private)/upload/page.tsx` - Complete loan form + sticky sidebar
-- `frontend/app/security/page.tsx` - Simplified security dashboard
-- `frontend/app/zkp-verify/page.tsx` - Document selector for ZKP
-- `frontend/app/(public)/verify/page.tsx` - 3-way verification input
-- `frontend/app/sign-in/[[...sign-in]]/page.tsx` - Premium theming
-- `frontend/app/sign-up/[[...sign-up]]/page.tsx` - Premium theming
-- `frontend/components/SessionManager.tsx` - Session lifecycle management (NEW)
-- `frontend/components/LayoutContent.tsx` - SessionManager integration
-- `frontend/middleware.ts` - Enhanced route protection
-
----
-
-### **🚀 Quick Start (2 Minutes)**
-```bash
-# Start entire system
-docker-compose up -d
-
-# Visit http://localhost:3000
-# Upload a document → See blockchain sealing in action
-# Verify it → See forensic analysis (if tampered)
-```
-
-### **📚 Essential Documentation**
-- 📊 **[Complete Implementation Report](./COMPLETE_IMPLEMENTATION_REPORT.md)** - Scoring alignment & project statistics
-- 🔗 **[Walacor Integration Deep Dive](./WALACOR_INTEGRATION_DEEP_DIVE.md)** - All 5 primitives with code proof
-- 🎨 **[Architecture Diagrams Guide](./ARCHITECTURE_DIAGRAMS_GUIDE.md)** - 6 detailed diagram templates
-- 🔬 **[Forensic Features Guide](./FORENSIC_FEATURES.md)** - CSI-grade analysis (our differentiator)
-- 📈 **[Project Analysis 2025](./COMPREHENSIVE_PROJECT_ANALYSIS_2025.md)** - Complete feature inventory
-- 📖 **[Judge's Review Guide](./JUDGES_REVIEW_GUIDE.md)** - Verification checklist
-- 🐳 **[Docker Guide](./DOCKER_GUIDE.md)** - Production deployment
-- 📊 **[Monitoring Guide](./MONITORING_GUIDE.md)** - Prometheus + Grafana setup
-
-### **🎬 Demo & Presentation**
-- **[Presentation Template](./CHALLENGE%20X%20-%20final%20presentation%20template.pptx)** - Ready for your content
-- **Demo Video**: *(Coming soon - 15 min walkthrough)*
-
-### **⚡ Quick Facts**
-- **89 API Endpoints** | **49 Backend Modules** | **100+ React Components**
-- **268 Test Files** (95%+ coverage) | **107+ Documentation Files**
-- **All 5 Walacor Primitives** | **4 Forensic Analysis Modules**
-- **Production CI/CD** | **4 Grafana Dashboards** | **20+ Alert Rules**
-
-</div>
-
----
-
 ### 📷 Platform Highlights
 
 > All screenshots live in `Platform_SS/` (local-only folder) and can be embedded in slides or docs.
@@ -130,36 +13,36 @@ docker-compose up -d
     </td>
     <td align="center" width="33%">
       <strong>Analytics</strong><br/>
-      <img src="Platform_SS/analytics.png" alt="Analytics Dashboard"/><br/>
+      <img src="Platform_SS/walacor-proof.png" alt="Analytics Dashboard"/><br/>
       <em>Accurate document counts, confidence scoring, automation savings.</em>
     </td>
     <td align="center" width="33%">
       <strong>Security</strong><br/>
-      <img src="Platform_SS/security.png" alt="Security Pattern Detection"/><br/>
+      <img src="Platform_SS/verification.png" alt="Security Pattern Detection"/><br/>
       <em>Full-library pattern detection (duplicate signatures, template fraud).</em>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
       <strong>Upload Flow</strong><br/>
-      <img src="Platform_SS/upload.png" alt="Upload Wizard"/><br/>
+      <img src="Platform_SS/analytics.png" alt="Upload Wizard"/><br/>
       <em>Guided upload flow with conditional KYC + blockchain sealing.</em>
     </td>
     <td align="center" width="33%">
       <strong>Document Library</strong><br/>
-      <img src="Platform_SS/documents.png" alt="Document Library"/><br/>
+      <img src="Platform_SS/security.png" alt="Document Library"/><br/>
       <em>Searchable, filterable table with Walacor badges & exports.</em>
     </td>
     <td align="center" width="33%">
       <strong>Verification Desk</strong><br/>
-      <img src="Platform_SS/verification.png" alt="Verification Dashboard"/><br/>
+      <img src="Platform_SS/documents.png" alt="Verification Dashboard"/><br/>
       <em>Three-way verification (file upload, selector, manual hash) with live proof.</em>
     </td>
   </tr>
   <tr>
     <td align="center" colspan="3">
       <strong>Walacor Proof</strong><br/>
-      <img src="Platform_SS/walacor-proof.png" alt="Walacor Proof Badge"/><br/>
+      <img src="Platform_SS/upload.png" alt="Walacor Proof Badge"/><br/>
       <em>Quantum-safe hash proof with blockchain transaction metadata + copyable TX IDs.</em>
     </td>
   </tr>
