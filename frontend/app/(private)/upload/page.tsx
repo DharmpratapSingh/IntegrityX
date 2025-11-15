@@ -3022,22 +3022,22 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     }
 
     // Loan Information validation (required fields with red stars)
-    if (!currentMeta.loanId?.trim()) {
-      errors.push({ field: 'loanId', message: 'Loan ID is required' });
-    }
+  if (!currentMeta.loanId?.trim()) {
+    errors.push({ field: 'loanId', message: 'Loan ID is required' });
+  }
     if (!currentMeta.documentType?.trim()) {
       errors.push({ field: 'documentType', message: 'Document Type is required' });
     }
-    if (!currentMeta.loanAmount || currentMeta.loanAmount <= 0) {
-      errors.push({ field: 'loanAmount', message: 'Valid loan amount is required' });
-    }
+  if (!currentMeta.loanAmount || currentMeta.loanAmount <= 0) {
+    errors.push({ field: 'loanAmount', message: 'Valid loan amount is required' });
+  }
     if (!currentMeta.loanTerm || currentMeta.loanTerm <= 0) {
       errors.push({ field: 'loanTerm', message: 'Loan Term is required and must be greater than 0' });
     }
     if (!currentMeta.interestRate || currentMeta.interestRate <= 0) {
       errors.push({ field: 'interestRate', message: 'Interest Rate is required and must be greater than 0' });
-    }
-    
+  }
+
     // Check conditional required fields based on loan type
     const requiredFields = getRequiredFieldsForLoanType(currentMeta.loanType || '');
     for (const field of requiredFields) {
@@ -3070,7 +3070,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           field: field, 
           message: `${fieldLabels[field] || field} is required` 
         });
-      }
+  }
     }
 
     // Note: Borrower information is now in KYC section and validated via validateKYC()
@@ -3204,7 +3204,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         if (birthDate > today) {
           errors.dateOfBirth = 'Date of birth cannot be in the future';
         } else {
-          const age = today.getFullYear() - birthDate.getFullYear();
+      const age = today.getFullYear() - birthDate.getFullYear();
           const monthDiff = today.getMonth() - birthDate.getMonth();
           const dayDiff = today.getDate() - birthDate.getDate();
           const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
@@ -3250,9 +3250,9 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     // Only require Identification Type, Number, and ID Issuing Country when ITIN is selected
     // SSN can serve both identification and SSN criteria, so these fields are not needed for SSN
     if (kycData.ssnOrItinType === 'ITIN') {
-      if (!kycData.identificationType) errors.identificationType = 'Identification type is required';
-      if (!kycData.identificationNumber.trim()) errors.identificationNumber = 'Identification number is required';
-      if (!kycData.idIssuingCountry) errors.idIssuingCountry = 'ID issuing country is required';
+    if (!kycData.identificationType) errors.identificationType = 'Identification type is required';
+    if (!kycData.identificationNumber.trim()) errors.identificationNumber = 'Identification number is required';
+    if (!kycData.idIssuingCountry) errors.idIssuingCountry = 'ID issuing country is required';
     }
     
     // Financial Information validation
@@ -4626,9 +4626,9 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         {/* Only show Identification Type, Identification Number, and ID Issuing Country when ITIN is selected */}
                         {kycData.ssnOrItinType === 'ITIN' && (
                           <>
-                            <div className="space-y-2">
-                              <Label htmlFor="identificationType" className="flex items-center gap-1">
-                                Identification Type <span className="text-red-500">*</span>
+                        <div className="space-y-2">
+                          <Label htmlFor="identificationType" className="flex items-center gap-1">
+                            Identification Type <span className="text-red-500">*</span>
                                 <Tooltip>
                                   <TooltipTrigger>
                                     <HelpCircle className="h-3 w-3 text-gray-400" />
@@ -4637,58 +4637,58 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                                     <p>Required additional identification when using ITIN</p>
                                   </TooltipContent>
                                 </Tooltip>
-                              </Label>
-                              <Select value={kycData.identificationType} onValueChange={(value) => handleKycFieldChange('identificationType', value)}>
-                                <SelectTrigger className={kycErrors.identificationType ? 'border-red-500' : ''}>
-                                  <SelectValue placeholder="Select ID type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Driver's License">Driver's License</SelectItem>
+                          </Label>
+                          <Select value={kycData.identificationType} onValueChange={(value) => handleKycFieldChange('identificationType', value)}>
+                            <SelectTrigger className={kycErrors.identificationType ? 'border-red-500' : ''}>
+                              <SelectValue placeholder="Select ID type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Driver's License">Driver's License</SelectItem>
                                   <SelectItem value="Passport">Passport</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              {kycErrors.identificationType && <p className="text-sm text-red-500">{kycErrors.identificationType}</p>}
-                            </div>
+                            </SelectContent>
+                          </Select>
+                          {kycErrors.identificationType && <p className="text-sm text-red-500">{kycErrors.identificationType}</p>}
+                        </div>
 
-                            <div className="space-y-2">
-                              <Label htmlFor="identificationNumber" className="flex items-center gap-1">
-                                Identification Number <span className="text-red-500">*</span>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <HelpCircle className="h-3 w-3 text-gray-400" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>This will be masked after typing for security</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </Label>
-                              <Input
-                                id="identificationNumber"
-                                type="password"
-                                value={kycData.identificationNumber}
-                                onChange={(e) => handleKycFieldChange('identificationNumber', e.target.value)}
-                                placeholder="Enter ID number"
-                                className={kycErrors.identificationNumber ? 'border-red-500' : ''}
-                              />
-                              {kycErrors.identificationNumber && <p className="text-sm text-red-500">{kycErrors.identificationNumber}</p>}
-                            </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="identificationNumber" className="flex items-center gap-1">
+                            Identification Number <span className="text-red-500">*</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>This will be masked after typing for security</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </Label>
+                          <Input
+                            id="identificationNumber"
+                            type="password"
+                            value={kycData.identificationNumber}
+                            onChange={(e) => handleKycFieldChange('identificationNumber', e.target.value)}
+                            placeholder="Enter ID number"
+                            className={kycErrors.identificationNumber ? 'border-red-500' : ''}
+                          />
+                          {kycErrors.identificationNumber && <p className="text-sm text-red-500">{kycErrors.identificationNumber}</p>}
+                        </div>
 
-                            <div className="space-y-2">
-                              <Label htmlFor="idIssuingCountry" className="flex items-center gap-1">
-                                ID Issuing Country <span className="text-red-500">*</span>
-                              </Label>
-                              <Select value={kycData.idIssuingCountry} onValueChange={(value) => handleKycFieldChange('idIssuingCountry', value)}>
-                                <SelectTrigger className={kycErrors.idIssuingCountry ? 'border-red-500' : ''}>
-                                  <SelectValue placeholder="Select country" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {countries.map((country) => (
-                                    <SelectItem key={country} value={country}>{country}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              {kycErrors.idIssuingCountry && <p className="text-sm text-red-500">{kycErrors.idIssuingCountry}</p>}
-                            </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="idIssuingCountry" className="flex items-center gap-1">
+                            ID Issuing Country <span className="text-red-500">*</span>
+                          </Label>
+                          <Select value={kycData.idIssuingCountry} onValueChange={(value) => handleKycFieldChange('idIssuingCountry', value)}>
+                            <SelectTrigger className={kycErrors.idIssuingCountry ? 'border-red-500' : ''}>
+                              <SelectValue placeholder="Select country" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {countries.map((country) => (
+                                <SelectItem key={country} value={country}>{country}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {kycErrors.idIssuingCountry && <p className="text-sm text-red-500">{kycErrors.idIssuingCountry}</p>}
+                        </div>
                           </>
                         )}
                       </div>
@@ -4880,8 +4880,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                             console.log('🔍 Loan ID field changed to:', e.target.value);
                             setFormData(prev => ({ ...prev, loanId: e.target.value }));
                             try {
-                              const currentMeta = JSON.parse(metadata || '{}')
-                              setMetadata(JSON.stringify({ ...currentMeta, loanId: e.target.value }, null, 2))
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, loanId: e.target.value }, null, 2))
                             } catch (error) {
                               // If metadata is invalid, create new object
                               setMetadata(JSON.stringify({ loanId: e.target.value }, null, 2))
@@ -4962,8 +4962,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                           onChange={(e) => {
                             setFormData(prev => ({ ...prev, documentType: e.target.value }));
                             try {
-                              const currentMeta = JSON.parse(metadata || '{}')
-                              setMetadata(JSON.stringify({ ...currentMeta, documentType: e.target.value }, null, 2))
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, documentType: e.target.value }, null, 2))
                             } catch (error) {
                               // If metadata is invalid, create new object
                               setMetadata(JSON.stringify({ documentType: e.target.value }, null, 2))
@@ -5013,8 +5013,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                           onChange={(e) => {
                             setFormData(prev => ({ ...prev, loanAmount: e.target.value }));
                             try {
-                              const currentMeta = JSON.parse(metadata || '{}')
-                              setMetadata(JSON.stringify({ ...currentMeta, loanAmount: e.target.value }, null, 2))
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, loanAmount: e.target.value }, null, 2))
                             } catch (error) {
                               // If metadata is invalid, create new object
                               setMetadata(JSON.stringify({ loanAmount: e.target.value }, null, 2))
@@ -5053,8 +5053,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                           onChange={(e) => {
                             setFormData(prev => ({ ...prev, loanTerm: e.target.value }));
                             try {
-                              const currentMeta = JSON.parse(metadata || '{}')
-                              setMetadata(JSON.stringify({ ...currentMeta, loanTerm: e.target.value }, null, 2))
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, loanTerm: e.target.value }, null, 2))
                             } catch (error) {
                               // If metadata is invalid, create new object
                               setMetadata(JSON.stringify({ loanTerm: e.target.value }, null, 2))
@@ -5094,8 +5094,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                           onChange={(e) => {
                             setFormData(prev => ({ ...prev, interestRate: e.target.value }));
                             try {
-                              const currentMeta = JSON.parse(metadata || '{}')
-                              setMetadata(JSON.stringify({ ...currentMeta, interestRate: e.target.value }, null, 2))
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, interestRate: e.target.value }, null, 2))
                             } catch (error) {
                               // If metadata is invalid, create new object
                               setMetadata(JSON.stringify({ interestRate: e.target.value }, null, 2))
@@ -5119,8 +5119,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
                     {/* Row 3: Property Address (conditional - only for home_loan and home_equity) */}
                     {(formData.loanType === 'home_loan' || formData.loanType === 'home_equity') && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
                           <Label htmlFor="propertyAddress">Property Address <span className="text-red-500">*</span></Label>
                         {enhancedMetadata?.propertyAddress && (
                           <ConfidenceBadge
@@ -5136,8 +5136,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         onChange={(e) => {
                           setFormData(prev => ({ ...prev, propertyAddress: e.target.value }));
                           try {
-                            const currentMeta = JSON.parse(metadata || '{}')
-                            setMetadata(JSON.stringify({ ...currentMeta, propertyAddress: e.target.value }, null, 2))
+                          const currentMeta = JSON.parse(metadata || '{}')
+                          setMetadata(JSON.stringify({ ...currentMeta, propertyAddress: e.target.value }, null, 2))
                           } catch (error) {
                             // If metadata is invalid, create new object
                             setMetadata(JSON.stringify({ propertyAddress: e.target.value }, null, 2))
@@ -5654,8 +5654,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         onChange={(e) => {
                           setFormData(prev => ({ ...prev, additionalNotes: e.target.value }));
                           try {
-                            const currentMeta = JSON.parse(metadata || '{}')
-                            setMetadata(JSON.stringify({ ...currentMeta, additionalNotes: e.target.value }, null, 2))
+                          const currentMeta = JSON.parse(metadata || '{}')
+                          setMetadata(JSON.stringify({ ...currentMeta, additionalNotes: e.target.value }, null, 2))
                           } catch (error) {
                             // If metadata is invalid, create new object
                             setMetadata(JSON.stringify({ additionalNotes: e.target.value }, null, 2))

@@ -1329,9 +1329,9 @@ export default function DocumentsPage() {
                           </button>
                         </div>
                       ) : (
-                        <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold ${sealedBadgeClass} shadow-sm`}>
-                          {sealedLabel}
-                        </span>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold ${sealedBadgeClass} shadow-sm`}>
+                        {sealedLabel}
+                      </span>
                       )}
                     </td>
                     <td className="px-6 py-4 w-32">

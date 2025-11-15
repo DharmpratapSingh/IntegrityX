@@ -2226,14 +2226,16 @@ async def get_artifacts(
                             borrower = json.loads(artifact.borrower_info) if artifact.borrower_info else {}
                         else:
                             borrower = artifact.borrower_info or {}
-                    except:
+                    except Exception:
                         borrower = {}
             
             # If borrower_info is empty or missing, try local_metadata
             if not borrower or (isinstance(borrower, dict) and len(borrower) == 0):
-                if (artifact.local_metadata and 
-                    artifact.local_metadata.get('comprehensive_document') and 
-                    artifact.local_metadata['comprehensive_document'].get('borrower')):
+                if (
+                    artifact.local_metadata
+                    and artifact.local_metadata.get('comprehensive_document')
+                    and artifact.local_metadata['comprehensive_document'].get('borrower')
+                ):
                     borrower = artifact.local_metadata['comprehensive_document']['borrower'] or {}
             
             # If still empty, try parent
@@ -2244,10 +2246,14 @@ async def get_artifacts(
                     else:
                         try:
                             if isinstance(parent_artifact.borrower_info, str):
-                                borrower = json.loads(parent_artifact.borrower_info) if parent_artifact.borrower_info else {}
+                                borrower = (
+                                    json.loads(parent_artifact.borrower_info)
+                                    if parent_artifact.borrower_info
+                                    else {}
+                                )
                             else:
                                 borrower = parent_artifact.borrower_info or {}
-                        except:
+                        except Exception:
                             borrower = {}
             
             # Check if borrower dict is actually populated (not just an empty dict)

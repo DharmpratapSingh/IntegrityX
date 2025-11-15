@@ -179,6 +179,19 @@ A **forensic investigation platform** that transforms document integrity verific
   - **Research-Backed**: Based on 2025 academic research on ZKP compliance frameworks
   - **Use Cases**: Tax compliance proof, loan repayment verification, reserve demonstration (all without exposing amounts)
 - **Interactive Analytics Dashboards**: Multi-tab charts, AI confidence insights, and time-savings calculators
+  - Realistic AI Automation Impact calculations (manual vs. automated processing times)
+  - Accurate document metrics (fetches all documents for comprehensive analytics)
+  - Field completeness-based confidence scoring
+- **Smart Upload Form** ✅ **ENHANCED JANUARY 2025**:
+  - Conditional field validation based on loan type (e.g., Property Address only for home loans)
+  - Manual Date of Birth input with MM/DD/YYYY format and validation
+  - Address and name fields accept spaces (improved user experience)
+  - Conditional KYC fields (ITIN vs. SSN identification requirements)
+  - Streamlined form (removed redundant document upload fields)
+- **Enhanced Walacor Branding** ✅ **NEW**:
+  - "Powered by Walacor" branding in sidebar with logo
+  - Walacor transaction ID badges on document list
+  - Enhanced blockchain proof display on verification page
 - **Public Verification**: Anyone can verify document integrity (transparency)
 
 ### Tools, technologies, or methods used
@@ -768,10 +781,12 @@ quality_score += integrity × 0.1
 
 **Main Functionalities Demonstrated**
 
-**1. Document Upload & Blockchain Sealing ⛓️**
+**1. Document Upload & Blockchain Sealing ⛓️** ✅ **ENHANCED JANUARY 2025**
 
 **What it does:**
 - User uploads financial document (JSON, PDF, etc.)
+- **Smart form validation**: Conditional fields based on loan type (e.g., Property Address only for home loans)
+- **Enhanced UX**: Manual DOB input (MM/DD/YYYY), address fields accept spaces, conditional KYC fields
 - System calculates hash (SHA-256)
 - Seals hash to Walacor blockchain
 - Stores full document in PostgreSQL
@@ -2040,7 +2055,7 @@ LexisNexis Compliance Study Feb 2024, FinCEN Alert 2024, Signicat 2024, TransUni
 
 **END OF PRESENTATION CONTENT**
 
-**Last Updated**: January 11, 2025 (with latest 2025 features and 41 research citations)
+**Last Updated**: January 15, 2025 (with latest 2025 features and 41 research citations)
 **Status**: ✅ Ready for Copy-Paste into Presentation
 **Research Level**: Comprehensive - backed by government agencies, industry leaders, academic sources, and cutting-edge 2025 research
 
@@ -2053,6 +2068,25 @@ LexisNexis Compliance Study Feb 2024, FinCEN Alert 2024, Signicat 2024, TransUni
 - ✅ Walacor ETID validation on service startup
 - ✅ Hybrid storage model with privacy guarantees (hash-only on blockchain)
 - ✅ ZKP verification bug fix (timestamp validation issue resolved)
+- ✅ **Enhanced Upload Page UX** (January 2025):
+  - Smart conditional validation (Property Address only required for home loans, not personal loans)
+  - Manual Date of Birth input with MM/DD/YYYY format and auto-formatting
+  - Address and name fields now accept spaces (improved data entry)
+  - Conditional KYC fields (ITIN requires ID type/number, SSN does not)
+  - Removed redundant document upload fields (data collected from form fields)
+- ✅ **Enhanced Walacor Branding**:
+  - "Powered by Walacor" prominently displayed in sidebar with logo
+  - Walacor badges on document list showing blockchain sealing status
+  - Enhanced verification page with Walacor proof display and copy functionality
+- ✅ **Analytics Improvements**:
+  - Fixed AI Automation Impact calculations (realistic time savings)
+  - Removed AI Performance tab (streamlined dashboard)
+  - Accurate document count (fetches all documents, not just partial)
+  - Improved confidence calculation based on field completeness
+- ✅ **Security Level Display Fixes**:
+  - Correctly displays Standard, Quantum Safe, and Maximum Security levels
+  - Reads from local_metadata for accurate security classification
+  - Visual differentiation between Walacor blockchain security and algorithm security
 
 **Key Data Sources Summary:**
 - 📊 5 Government Sources (FTC, FinCEN, FDIC, IRS, NIST)

@@ -1292,7 +1292,7 @@ export default function VerificationPage() {
                   </div>
 
                   {/* Transaction ID with Copy Button */}
-                  <div>
+                <div>
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
                       Blockchain Transaction ID
                       <button
@@ -1306,13 +1306,13 @@ export default function VerificationPage() {
                         Copy
                       </button>
                     </label>
-                    <code className="block p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg text-xs break-all font-mono mt-1 text-blue-900 dark:text-blue-300">
-                      {zkpProof.blockchainProof}
-                    </code>
+                  <code className="block p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg text-xs break-all font-mono mt-1 text-blue-900 dark:text-blue-300">
+                    {zkpProof.blockchainProof}
+                  </code>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 flex items-center gap-1">
                       <Shield className="h-3 w-3" />
                       Publicly verifiable on Walacor network • Tamper-proof guarantee
-                    </p>
+                  </p>
                   </div>
                 </div>
               )}

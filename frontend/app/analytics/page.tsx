@@ -776,7 +776,7 @@ export default function AnalyticsPage() {
                         </p>
                         <p className="text-xs text-green-700 text-center mt-1">
                           {Math.round(((timeSavings.saved / timeSavings.manual) * 100))}% time reduction
-                        </p>
+                    </p>
                       </div>
                     )}
                   </div>

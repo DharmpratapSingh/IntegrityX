@@ -84,3 +84,66 @@ htmlcov/
 *.bak
 *.tmp
 .temp/
+
+# Documentation & presentation artifacts
+*.md
+!README.md
+*.rst
+*.pptx
+*.key
+*.odp
+*.pdf
+*.drawio
+*.dia
+*.uxf
+*.sxi
+
+# Generated transcripts / notes / exports
+*.txt
+*.rtf
+notes/
+transcripts/
+
+# Data dumps & fixtures
+data/
+tmp/
+temp/
+*.csv
+*.tsv
+*.jsonl
+*.parquet
+*.feather
+*.pickle
+*.pkl
+
+# Test artifacts
+test_results_*/
+test_results_*.json
+test_run_output.log
+coverage.xml
+pytestdebug.log
+playwright-report/
+playwright/.cache/
+
+# Build / cache outputs
+.turbo/
+.swc/
+.sass-cache/
+.parcel-cache/
+.cache/
+.eslintcache
+coverage-final.json
+
+# IDE / tooling extras
+.idea/
+.history/
+.fleet/
+*.code-workspace
+.cursor/
+
+# OS metadata
+Icon?
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
