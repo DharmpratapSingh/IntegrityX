@@ -140,15 +140,49 @@ docker-compose up -d
 
 > All screenshots live in `Platform_SS/` (local-only folder) and can be embedded in slides or docs.
 
-| Dashboard | Analytics | Security |
-| --- | --- | --- |
-| ![Dashboard Overview](Platform_SS/dashboard.png) | ![Analytics Dashboard](Platform_SS/analytics.png) | ![Security Pattern Detection](Platform_SS/security.png) |
-| Real-time Walacor status, total sealed docs, AI impact metrics. | Accurate document counts, confidence scoring, automation savings. | Full-library pattern detection (duplicate signatures, template fraud). |
-
-| Upload & Verification | Document Library | Walacor Proof |
-| --- | --- | --- |
-| ![Upload Wizard](Platform_SS/upload.png) | ![Document Library](Platform_SS/documents.png) | ![Verification Proof](Platform_SS/walacor-proof.png) |
-| Guided upload flow with conditional KYC + blockchain sealing. | Searchable, filterable table with Walacor badges & exports. | Quantum-safe hash proof with blockchain transaction metadata. |
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <strong>Dashboard</strong><br/>
+      <img src="Platform_SS/dashboard.png" alt="Dashboard Overview"/><br/>
+      <em>Real-time Walacor status, total sealed docs, AI impact metrics.</em>
+    </td>
+    <td align="center" width="33%">
+      <strong>Analytics</strong><br/>
+      <img src="Platform_SS/analytics.png" alt="Analytics Dashboard"/><br/>
+      <em>Accurate document counts, confidence scoring, automation savings.</em>
+    </td>
+    <td align="center" width="33%">
+      <strong>Security</strong><br/>
+      <img src="Platform_SS/security.png" alt="Security Pattern Detection"/><br/>
+      <em>Full-library pattern detection (duplicate signatures, template fraud).</em>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <strong>Upload Flow</strong><br/>
+      <img src="Platform_SS/upload.png" alt="Upload Wizard"/><br/>
+      <em>Guided upload flow with conditional KYC + blockchain sealing.</em>
+    </td>
+    <td align="center" width="33%">
+      <strong>Document Library</strong><br/>
+      <img src="Platform_SS/documents.png" alt="Document Library"/><br/>
+      <em>Searchable, filterable table with Walacor badges & exports.</em>
+    </td>
+    <td align="center" width="33%">
+      <strong>Verification Desk</strong><br/>
+      <img src="Platform_SS/verification.png" alt="Verification Dashboard"/><br/>
+      <em>Three-way verification (file upload, selector, manual hash) with live proof.</em>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="3">
+      <strong>Walacor Proof</strong><br/>
+      <img src="Platform_SS/walacor-proof.png" alt="Walacor Proof Badge"/><br/>
+      <em>Quantum-safe hash proof with blockchain transaction metadata + copyable TX IDs.</em>
+    </td>
+  </tr>
+</table>
 
 </div>
 
