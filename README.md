@@ -295,39 +295,161 @@ While competitors can only tell you "Document tampered: YES/NO", IntegrityX prov
    - 3-tier architecture (Frontend → Backend → Storage)
    - 89 API endpoints, 49 modules, 100+ components
    - Monitoring stack (Prometheus + Grafana)
-   - *📄 [View Diagram Guide →](./ARCHITECTURE_DIAGRAMS_GUIDE.md#diagram-1-end-to-end-system-architecture)*
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    SYSTEM ARCHITECTURE                      │
+│                                                             │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │                    USER LAYER                        │   │
+│  │                  ┌──────────────┐                    │   │
+│  │                  │ Web Browser  │                    │   │ 
+│  │                  └──────────────┘                    │   │  
+│  └───────────────────────┬──────────────────────────────┘   │
+│                          │ HTTPS/TLS 1.3                    │
+│                          ▼                                  │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │         PRESENTATION LAYER                           │   │
+│  │    Next.js 14 Frontend (TypeScript + React)          │   │
+│  │    • 100+ Components | 22 Pages | Clerk Auth         │   │
+│  └───────────────────────┬──────────────────────────────┘   │
+│                          │ REST API (JSON)                  │
+│                          ▼                                  │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │         APPLICATION LAYER                            │   │
+│  │    FastAPI Backend (Python 3.11+)                    │   │
+│  │    • 89 API Endpoints | 49 Python Modules            │   │
+│  │                                                      │   │
+│  │    🔬 FORENSIC SERVICES                              │   │
+│  │    ✓ Visual Diff    ✓ Document DNA                   │   │
+│  │    ✓ Timeline       ✓ Pattern Detection              │   │
+│  │                                                      │   │
+│  │    📊 CORE SERVICES                                  │   │
+│  │    ✓ AI Processing  ✓ Walacor Integration            │   │
+│  │    ✓ Verification  ✓ Bulk Operations                 │   │
+│  └───────────┬───────────────────────┬──────────────────┘   │
+│              │                       │                      │
+│              ▼                       ▼                      │
+│  ┌──────────────────┐    ┌──────────────────────────────┐   │
+│  │   DATA LAYER     │    │   BLOCKCHAIN LAYER           │   │
+│  │ PostgreSQL 16    │    │ Walacor EC2 (13.220.225.175) │   │
+│  │ • artifacts      │    │ ⛓️ 5 Primitives:             │   │
+│  │ • events         │    │ 1. HASH  2. LOG              │   │
+│  │ • attestations   │    │ 3. PROVENANCE 4. ATTEST      │   │
+│  │ Redis 7          │    │ 5. VERIFY                    │   │
+│  └──────────────────┘    └──────────────────────────────┘   │
+│                                                             │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │       OBSERVABILITY LAYER                            │   │  
+│  │  Prometheus + Grafana | 4 Dashboards | 20+ Alerts    │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
 
 2. **🔗 Walacor Integration & Data Flow** (`Diagrams_Walacor/D2.png`) ⭐ **CRITICAL**
    - Shows all 5 Walacor primitives (HASH, LOG, PROVENANCE, ATTEST, VERIFY)
    - Complete data flow from upload → blockchain → verification
    - Hybrid storage model (blockchain + local DB)
-   - *📄 [View Diagram Guide →](./ARCHITECTURE_DIAGRAMS_GUIDE.md#diagram-2-walacor-integration--data-flow)*
+
+```
+┌────────────────────────────────────────────┐
+│  WALACOR INTEGRATION DATA FLOW             │
+│                                            │
+│  USER UPLOADS DOCUMENT                     │
+│         │                                  │
+│         ▼                                  │
+│  1. Frontend validation                    │
+│  2. Backend hashing, AI analysis, encrypt  │
+│         ┌───────┬───────┐                  │
+│         │       │       │                  │
+│         ▼       ▼       │                  │
+│  WALACOR BLOCKCHAIN    PostgreSQL          │
+│  • hash/etid/timestamp • full doc metadata │
+│  Returns tx_id + seal_time  + audit log    │
+│         └───────┬───────┘                  │
+│                 ▼                          │
+│  4. Response → ETID, Walacor TX, hash      │
+│                                            │
+│  Time: 300ms incl. blockchain sealing      │
+└────────────────────────────────────────────┘
+```
 
 3. **🔬 Forensic Analysis Engine** (`Diagrams_Walacor/D3.png`) (Our Differentiator)
    - 4 forensic modules with algorithms
    - Visual diff, DNA fingerprinting, timeline, pattern detection
    - Frontend visualization components
-   - *📄 [View Diagram Guide →](./ARCHITECTURE_DIAGRAMS_GUIDE.md#diagram-3-forensic-analysis-engine-architecture)*
+
+```
+┌───────────────────────────────────────────────────┐
+│      FORENSIC DIFF ENGINE - SIDE-BY-SIDE VIEW     │
+│                                                   │
+│ ORIGINAL vs MODIFIED panels with risk annotations │
+│ Change Detected → +800% loan amount, risk 0.95    │
+│ Recommendation → 🚨 BLOCK DOCUMENT                │
+└───────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────┐
+│         PATTERN DETECTION RESULTS                        │
+│  - Duplicate signatures (23 docs)                        │
+│  - Identity reuse (8 apps)                               │
+│  - Amount manipulation (user anomaly)                    │
+│  Total: 7 patterns | 2 critical | 3 high                 │
+└──────────────────────────────────────────────────────────┘
+```
 
 4. **📜 Document Lifecycle & Provenance** (`Diagrams_Walacor/D4.png`)
    - Complete document journey from creation to deletion
    - Provenance relationships (derived_from, supersedes, contains)
    - Attestations and blockchain sealing
-   - *📄 [View Diagram Guide →](./ARCHITECTURE_DIAGRAMS_GUIDE.md#diagram-4-document-lifecycle--provenance-flow)*
+
+```
+┌───────────────────────────────────────────┐
+│    DOCUMENT UPLOAD & SEALING WORKFLOW     │
+│  User Upload → Smart Form Validation      │
+│  → AI Auto-Population → Backend hashing   │
+│     ┌──────┬──────┐                       │
+│     ▼      ▼      ▼                       │
+│  Walacor  PostgreSQL (full doc + metadata)│
+│  Returns TX ID + ETID + SEALED status     │
+└───────────────────────────────────────────┘
+```
 
 5. **🔒 Security & Cryptography Layers** (`Diagrams_Walacor/D5.png`)
    - 10-layer security architecture
    - Quantum-safe cryptography
    - Multi-algorithm hashing and encryption
-   - *📄 [View Diagram Guide →](./ARCHITECTURE_DIAGRAMS_GUIDE.md#diagram-5-security--cryptography-layers)*
+
+```
+┌──────────────────────────────────────────────────────────┐
+│         WALACOR INTEGRATION STATUS                       │
+│  Primitive   Status   Code Location      Endpoint        │
+│  HASH        ✅       walacor_service.py POST /ingest    │
+│  LOG         ✅       repositories.py    GET /logs       │
+│  PROVENANCE  ✅       repositories.py    GET /prov       │
+│  ATTEST      ✅       repositories.py    POST /attest    │
+│  VERIFY      ✅       verification.py    POST /verify    │
+│  Visual bars show 100% readiness for all primitives.     │
+│  Additional: ETID validation, circuit breaker, hybrid    │
+│  storage model, privacy guarantees.                      │
+└──────────────────────────────────────────────────────────┘
+```
 
 6. **🚀 Deployment & Infrastructure** (`Diagrams_Walacor/D6.png`)
    - Docker multi-container setup
    - CI/CD pipeline (GitHub Actions)
    - Horizontal scaling and high availability
-   - *📄 [View Diagram Guide →](./ARCHITECTURE_DIAGRAMS_GUIDE.md#diagram-6-deployment--infrastructure)*
 
-**📚 Complete Guide**: [Architecture Diagrams Guide](./ARCHITECTURE_DIAGRAMS_GUIDE.md) - Detailed templates for creating all diagrams
+```
+┌──────────────────────────────────────────────────────────┐
+│              TECHNOLOGY STACK COMPONENTS                 │
+│  Frontend: Next.js 14, Tailwind, Recharts                │
+│  Backend: FastAPI, PostgreSQL 16, Redis 7                │
+│  Security: Quantum-safe SHA3-512, AES-256, Fernet        │
+│  Infrastructure: Docker Compose, GitHub Actions,         │
+│  Prometheus + Grafana                                    │
+│  Hybrid Storage: Walacor hash-only + PostgreSQL content  │
+└──────────────────────────────────────────────────────────┘
+```
 
 ---
 
