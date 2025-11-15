@@ -85,6 +85,25 @@ htmlcov/
 *.tmp
 .temp/
 
+# Submission cleanup (keep repo lean)
+app_streamlit_demo.py
+clear_cache_and_restart.sh
+example_loan_document.json
+fix_code_quality.sh
+fix_tabs_ui.sh
+generate_presentation.py
+generate_presentation_from_content.py
+integrityx_flow_diagrams.html
+QUICK_TEST.sh
+test_actual_file.py
+test_extraction.py
+test_full_flow.py
+test_sanitizer.py
+test_results_e2e.json
+test_run_output.log
+test_loan_document_*.json
+verify_integrityx.sh
+
 # Documentation & presentation artifacts
 *.md
 !README.md
