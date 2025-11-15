@@ -1229,13 +1229,13 @@ class WalacorIntegrityService:
 
 **2. Immutability Properties**
 
-| Property | Implementation | Guarantee |
-|----------|---------------|-----------|
-| **Append-Only** | Walacor blockchain | Cannot delete/modify past records |
-| **Cryptographic Linking** | Hash chains | Tampering detected immediately |
-| **Distributed Consensus** | Walacor network | No single point of failure |
-| **Time-Stamping** | Blockchain timestamps | Provable creation time |
-| **Provenance Tracking** | Merkle trees | Complete document lineage |
+| Property                  | Implementation        | Guarantee                         |
+|---------------------------|-----------------------|-----------------------------------|
+| **Append-Only**           | Walacor blockchain    | Cannot delete/modify past records |
+| **Cryptographic Linking** | Hash chains           | Tampering detected immediately    |
+| **Distributed Consensus** | Walacor network       | No single point of failure        |
+| **Time-Stamping**         | Blockchain timestamps | Provable creation time            |
+| **Provenance Tracking**   | Merkle trees          | Complete document lineage         |
 
 **3. Tamper Detection**
 
@@ -1284,11 +1284,11 @@ Every action logged to blockchain:
 │         ZERO TRUST + BLOCKCHAIN ARCHITECTURE            │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────┐ │
-│  │ Every Request│ → │Verify Explicit│ → │Blockchain│ │
-│  │ Authenticated│    │at Every Layer│    │Immutable │ │
-│  └──────────────┘    └──────────────┘    └──────────┘ │
-│         ↓                    ↓                  ↓      │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────┐   │
+│  │ Every Request│ →  │Verify Explicit│ → │Blockchain│   │
+│  │ Authenticated│    │at Every Layer│    │Immutable │   │
+│  └──────────────┘    └──────────────┘    └──────────┘   │
+│         ↓                    ↓                  ↓       │
 │  Never Trust JWT      Check User + Role    Cannot Delete│
 │  Re-verify at API     Database RLS         Cannot Modify│
 │  Session timeout      Audit all actions    Cryptographic│
@@ -1912,16 +1912,16 @@ IntegrityX addresses **critical pain points** in multiple industries where docum
 
 ### **Competitive Advantage Matrix**
 
-| Feature | IntegrityX | DocuSign | Blockchain Platforms | Traditional Audit Tools |
-|---------|-----------|----------|---------------------|------------------------|
-| **Blockchain Immutability** | ✅ Walacor | ❌ No | ✅ Yes | ❌ No |
-| **Forensic Analysis** | ✅ CSI-grade | ❌ No | ❌ No | ⚠️ Basic |
-| **AI Fraud Detection** | ✅ 6 algorithms | ❌ No | ❌ No | ⚠️ Limited |
-| **Visual Diff Engine** | ✅ Pixel-level | ❌ No | ❌ No | ❌ No |
-| **Cross-Doc Patterns** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Legal Admissibility** | ✅ Court-ready | ⚠️ Limited | ⚠️ Limited | ⚠️ Limited |
-| **Real-Time Monitoring** | ✅ Prometheus | ❌ No | ❌ No | ⚠️ Basic |
-| **Quantum-Safe** | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| Feature                     | IntegrityX      | DocuSign    | Blockchain Platforms | Traditional Audit Tools |
+|-----------------------------|-----------------|-------------|----------------------|-------------------------|
+| **Blockchain Immutability** | ✅ Walacor      | ❌ No      | ✅ Yes               | ❌ No                   |
+| **Forensic Analysis**       | ✅ CSI-grade    | ❌ No      | ❌ No                | ⚠️ Bas                  |
+| **AI Fraud Detection**      | ✅ 6 algorithms | ❌ No      | ❌ No                | ⚠️ Limited              |
+| **Visual Diff Engine**      | ✅ Pixel-level  | ❌ No      | ❌ No                | ❌ No                   |
+| **Cross-Doc Patterns**      | ✅ Yes          | ❌ No      | ❌ No                | ❌ No                   |
+| **Legal Admissibility**     | ✅ Court-ready  | ⚠️ Limited | ⚠️ Limited           | ⚠️ Limited              |
+| **Real-Time Monitoring**    | ✅ Prometheus   | ❌ No      | ❌ No                | ⚠️ Basic                |
+| **Quantum-Safe**            | ✅ Yes          | ❌ No      | ❌ No                | ❌ No                   |
 
 ### **Market Opportunity**
 
