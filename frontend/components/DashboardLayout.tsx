@@ -40,11 +40,10 @@ export function DashboardLayout({ children, rightSidebar }: DashboardLayoutProps
           {/* Logo */}
           <div className="mb-8">
             <Link href="/integrated-dashboard" className="flex items-center space-x-3 transition-smooth hover:opacity-80">
-              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-soft">
-                <span className="text-white font-bold text-xl">I</span>
-              </div>
               <div className="flex flex-col">
-                <span className="font-bold text-3xl text-gray-900 dark:text-white">IntegrityX</span>
+                <span className="font-heading text-3xl font-bold leading-tight text-gray-900 dark:text-white">
+                  IntegrityX
+                </span>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">
                     Powered by

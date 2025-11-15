@@ -181,7 +181,6 @@ async def lifespan(app: FastAPI):
 
         # Initialize security services (available in both demo and full mode)
         # These services don't require external dependencies and should always be available
-        # Initialize Advanced Security service
         try:
             advanced_security = AdvancedSecurityService()
             logger.info("✅ Advanced Security service initialized")
@@ -189,7 +188,6 @@ async def lifespan(app: FastAPI):
             logger.error(f"❌ Advanced Security service initialization failed: {e}")
             advanced_security = None
 
-        # Initialize Quantum-Safe Security service
         try:
             hybrid_security = HybridSecurityService()
             logger.info("✅ Quantum-Safe Security service initialized")
@@ -2246,11 +2244,7 @@ async def get_artifacts(
                     else:
                         try:
                             if isinstance(parent_artifact.borrower_info, str):
-                                borrower = (
-                                    json.loads(parent_artifact.borrower_info)
-                                    if parent_artifact.borrower_info
-                                    else {}
-                                )
+                                borrower = json.loads(parent_artifact.borrower_info) if parent_artifact.borrower_info else {}
                             else:
                                 borrower = parent_artifact.borrower_info or {}
                         except Exception:

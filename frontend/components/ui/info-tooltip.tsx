@@ -81,8 +81,9 @@ export function InfoTooltip({
     <TooltipProvider>
       <Tooltip delayDuration={200}>
         <TooltipTrigger asChild>
-          <button
-            type="button"
+          <span
+            role="button"
+            tabIndex={0}
             className={cn(
               'inline-flex items-center justify-center ml-1',
               'text-gray-400 hover:text-blue-600 transition-colors',
@@ -91,9 +92,9 @@ export function InfoTooltip({
             )}
             aria-label={`Learn more about ${term}`}
           >
-            <Info className="w-4 h-4" />
+            <Info className="w-4 h-4" aria-hidden="true" />
             <span className="sr-only">Learn more about {term}</span>
-          </button>
+          </span>
         </TooltipTrigger>
         <TooltipContent side={side} className="max-w-md">
           {tooltipContent}

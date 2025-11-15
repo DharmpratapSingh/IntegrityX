@@ -117,8 +117,24 @@ export default function IntegratedDashboard() {
         if (documentsRes?.ok) {
           const docsEnvelope = (documentsRes as any).data
           const docsData = docsEnvelope?.data ?? docsEnvelope
-          documentsList = docsData?.artifacts || []
-          totalDocs = Array.isArray(documentsList) ? documentsList.length : 0
+
+          const extractedArtifacts =
+            docsData?.artifacts ??
+            docsData?.items ??
+            (Array.isArray(docsData) ? docsData : [])
+
+          documentsList = Array.isArray(extractedArtifacts) ? extractedArtifacts : []
+
+          const reportedTotal =
+            docsEnvelope?.total_count ??
+            docsEnvelope?.count ??
+            docsData?.total_count ??
+            docsData?.count
+
+          totalDocs =
+            typeof reportedTotal === 'number' && !Number.isNaN(reportedTotal)
+              ? reportedTotal
+              : documentsList.length
         }
 
         let systemMetrics = null

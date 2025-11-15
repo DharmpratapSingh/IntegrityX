@@ -136,6 +136,24 @@ docker-compose up -d
 
 ---
 
+### 📷 Platform Highlights
+
+> All screenshots live in `Platform_SS/` (local-only folder) and can be embedded in slides or docs.
+
+| Dashboard | Analytics | Security |
+| --- | --- | --- |
+| ![Dashboard Overview](Platform_SS/dashboard.png) | ![Analytics Dashboard](Platform_SS/analytics.png) | ![Security Pattern Detection](Platform_SS/security-patterns.png) |
+| Real-time Walacor status, total sealed docs, AI impact metrics. | Accurate document counts, confidence scoring, automation savings. | Full-library pattern detection (duplicate signatures, template fraud). |
+
+| Upload & Verification | Document Library | Walacor Proof |
+| --- | --- | --- |
+| ![Upload Wizard](Platform_SS/upload.png) | ![Document Library](Platform_SS/documents.png) | ![Verification Proof](Platform_SS/verification.png) |
+| Guided upload flow with conditional KYC + blockchain sealing. | Searchable, filterable table with Walacor badges & exports. | Quantum-safe hash proof with blockchain transaction metadata. |
+
+</div>
+
+---
+
 ## 📖 Table of Contents
 
 - [Overview](#-overview)
@@ -349,6 +367,35 @@ sequenceDiagram
     Backend-->>Frontend: Return ETID + blockchain proof
     Frontend->>Frontend: Display success + blockchain seal
     Frontend-->>User: Show document card with seal status
+```
+
+**Security & Zero-Trust Layers**
+
+```
+┌──────────────────────────────────────────────┐
+│              ZERO TRUST STACK                │
+├─────────────────────────────┬────────────────┤
+│  Client Controls            │  Backend Guard │
+│  • SessionManager.tsx       │  • FastAPI middleware │
+│  • Clerk-only routes        │  • JWT validation     │
+│  • Browser close sign-out   │  • Rate limiting      │
+│                             │  • Circuit breaker    │
+├─────────────────────────────┴────────────────┤
+│  Security Services                             │
+│  • AdvancedSecurityService (AI risk scoring)   │
+│  • HybridSecurityService (quantum-safe crypto) │
+│  • Attestations + audit logs                   │
+└──────────────────────────────────────────────┘
+```
+
+**Forensic Workflow**
+
+```
+UPLOAD → HASH + ENCRYPT → SEAL (Walacor/local fallback)
+      ↓                           ↓
+  PostgreSQL storage        Walacor TX / local block
+      ↓                           ↓
+VERIFICATION → Visual Diff / DNA / Timeline / Patterns
 ```
 
 #### **2. Document Verification Flow**
@@ -1225,7 +1272,6 @@ Every action logged to blockchain:
 - **Key Management**: Secure key generation and storage with PBKDF2
 - **Digital Signatures**: Multi-algorithm signature support with blockchain attestation
 - **Hash Verification**: Cryptographic integrity checking against immutable blockchain records
-
 ### Access Control ⭐ **ENHANCED**
 - **Three-Layer Security Architecture**:
   1. **Middleware Protection** (`middleware.ts`): Server-side route protection

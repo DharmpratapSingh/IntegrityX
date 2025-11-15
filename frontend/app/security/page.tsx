@@ -12,6 +12,7 @@ import { toast } from '@/components/ui/toast';
 import type { DiffResult, PatternDetectionResult } from '@/types/forensics';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { GLOSSARY } from '@/lib/glossary';
+import apiConfig from '@/lib/api-config';
 
 export default function SecurityPage() {
   const [activeTab, setActiveTab] = useState<'comparison' | 'patterns' | 'tools'>('comparison');
@@ -22,6 +23,7 @@ export default function SecurityPage() {
   const [comparingDocs, setComparingDocs] = useState(false);
   const [diffResult, setDiffResult] = useState<DiffResult | null>(null);
   const [documents, setDocuments] = useState<any[]>([]);
+  const [documentCount, setDocumentCount] = useState(0);
   const [loadingDocs, setLoadingDocs] = useState(true);
 
   // Pattern Detection State
@@ -32,15 +34,35 @@ export default function SecurityPage() {
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/artifacts?limit=50');
-        const data = await response.json();
+        const response = await fetch(apiConfig.artifacts.list());
+        const payload = await response.json();
 
-        if (response.ok && data.ok) {
-          const artifacts = data.data?.artifacts || [];
-          setDocuments(artifacts);
+        if (response.ok && payload.ok) {
+          const envelope = payload.data ?? {};
+          const artifacts =
+            envelope.artifacts ??
+            envelope.items ??
+            (Array.isArray(envelope) ? envelope : []);
+
+          const parsedArtifacts = Array.isArray(artifacts) ? artifacts : [];
+          const reportedTotal =
+            envelope.total_count ??
+            payload.total_count ??
+            envelope.count ??
+            parsedArtifacts.length;
+
+          setDocuments(parsedArtifacts);
+          setDocumentCount(
+            typeof reportedTotal === 'number' && !Number.isNaN(reportedTotal)
+              ? reportedTotal
+              : parsedArtifacts.length
+          );
+        } else {
+          setDocumentCount(0);
         }
       } catch (error) {
         console.error('Failed to fetch documents:', error);
+        setDocumentCount(0);
       } finally {
         setLoadingDocs(false);
       }
@@ -95,7 +117,8 @@ export default function SecurityPage() {
     setPatternResult(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/patterns/detect', {
+      const totalDocs = documentCount || documents.length || 100;
+      const response = await fetch(`${apiConfig.patterns.detect}?limit=${totalDocs}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -335,7 +358,7 @@ export default function SecurityPage() {
                 </Button>
 
                 <p className="text-xs text-gray-600 dark:text-gray-400">
-                  💡 {documents.length} documents available for comparison
+                  💡 {(documentCount || documents.length)} documents available for comparison
                 </p>
               </CardContent>
             </Card>
@@ -378,7 +401,7 @@ export default function SecurityPage() {
                 </Button>
 
                 <p className="text-xs text-gray-600 dark:text-gray-400">
-                  ⚠️ This will analyze all {documents.length} documents for fraud patterns
+                  ⚠️ This will analyze all {documentCount || documents.length} documents for fraud patterns
                 </p>
               </CardContent>
             </Card>
