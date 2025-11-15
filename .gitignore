@@ -107,7 +107,6 @@ verify_integrityx.sh
 Diagrams_Walacor/
 test_uploads/
 tests/
-Platform_SS/
 
 # Documentation & presentation artifacts
 *.md

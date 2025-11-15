@@ -142,12 +142,12 @@ docker-compose up -d
 
 | Dashboard | Analytics | Security |
 | --- | --- | --- |
-| ![Dashboard Overview](Platform_SS/dashboard.png) | ![Analytics Dashboard](Platform_SS/analytics.png) | ![Security Pattern Detection](Platform_SS/security-patterns.png) |
+| ![Dashboard Overview](Platform_SS/dashboard.png) | ![Analytics Dashboard](Platform_SS/analytics.png) | ![Security Pattern Detection](Platform_SS/security.png) |
 | Real-time Walacor status, total sealed docs, AI impact metrics. | Accurate document counts, confidence scoring, automation savings. | Full-library pattern detection (duplicate signatures, template fraud). |
 
 | Upload & Verification | Document Library | Walacor Proof |
 | --- | --- | --- |
-| ![Upload Wizard](Platform_SS/upload.png) | ![Document Library](Platform_SS/documents.png) | ![Verification Proof](Platform_SS/verification.png) |
+| ![Upload Wizard](Platform_SS/upload.png) | ![Document Library](Platform_SS/documents.png) | ![Verification Proof](Platform_SS/walacor-proof.png) |
 | Guided upload flow with conditional KYC + blockchain sealing. | Searchable, filterable table with Walacor badges & exports. | Quantum-safe hash proof with blockchain transaction metadata. |
 
 </div>
