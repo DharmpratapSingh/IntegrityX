@@ -79,7 +79,7 @@ jobs:
         run: |
           echo "Checking for dependency changes..."
           
-          if git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E "package.json|requirements.txt"; then
+          if git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E "package.json|requirements.txt|package-lock.json"; then
             echo "⚠️ Dependencies changed in this PR!" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Please ensure:" >> $GITHUB_STEP_SUMMARY

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { ForensicDiffViewer } from '@/components/forensics/ForensicDiffViewer';
 import { PatternAnalysisDashboard } from '@/components/forensics/PatternAnalysisDashboard';
-import { toast } from '@/components/ui/toast';
+import toast from 'react-hot-toast';
 import type { DiffResult, PatternDetectionResult } from '@/types/forensics';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { GLOSSARY } from '@/lib/glossary';
@@ -86,7 +86,7 @@ export default function SecurityPage() {
     setDiffResult(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/forensics/diff', {
+      const response = await fetch(apiConfig.forensics.diff, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -96,17 +96,22 @@ export default function SecurityPage() {
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const data = await response.json();
 
-      if (response.ok && data.ok) {
-        setDiffResult(data.data.diff_result);
+      if (data.ok) {
+        setDiffResult(data.data?.diff_result || data.data);
         toast.success('Documents compared successfully!');
       } else {
         toast.error(data.error?.message || 'Comparison failed');
       }
     } catch (error) {
       console.error('Error comparing documents:', error);
-      toast.error('Failed to compare documents');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to compare documents';
+      toast.error(errorMessage);
     } finally {
       setComparingDocs(false);
     }
@@ -123,17 +128,23 @@ export default function SecurityPage() {
         headers: { 'Content-Type': 'application/json' }
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const data = await response.json();
 
-      if (response.ok && data.ok) {
+      if (data.ok) {
         setPatternResult(data.data);
-        toast.success(`Found ${data.data.total_patterns} patterns!`);
+        const patternCount = data.data?.total_patterns || 0;
+        toast.success(`Found ${patternCount} patterns!`);
       } else {
         toast.error(data.error?.message || 'Pattern detection failed');
       }
     } catch (error) {
       console.error('Error detecting patterns:', error);
-      toast.error('Failed to detect patterns');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to detect patterns';
+      toast.error(errorMessage);
     } finally {
       setDetectingPatterns(false);
     }

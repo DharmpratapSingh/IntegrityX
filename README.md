@@ -618,80 +618,98 @@ IntegrityX demonstrates how blockchain + AI forensics can modernize government o
 
 ## 🚀 Quick Start
 
-### 🐳 **Docker Quick Start** (Recommended)
+### ⚡ **Fastest Way to Start** (Windows PowerShell)
 
-The fastest way to get IntegrityX running:
-
-```bash
-# 1. Clone repository
-git clone https://github.com/DharmpratapSingh/IntegrityX.git
-cd IntegrityX
-
-# 2. Copy environment file
-cp .env.example .env
-
-# 3. Start all services with Docker
-docker-compose up -d
-
-# 4. Access services
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8000
-# API Docs: http://localhost:8000/docs
+**One-Command Start:**
+```powershell
+.\start_all.ps1
 ```
 
-**That's it!** IntegrityX is now running with:
-- ✅ Backend (FastAPI)
-- ✅ Frontend (Next.js)
-- ✅ PostgreSQL Database
-- ✅ Redis (Rate Limiting)
-- ✅ Monitoring Stack (optional)
+This automatically:
+- ✅ Creates `.env` file if missing
+- ✅ Starts Backend (FastAPI) on port 8000
+- ✅ Starts Frontend (Next.js) on port 3000
+- ✅ Opens services in separate windows
 
-**See**: [Docker Guide](./DOCKER_GUIDE.md) for production deployment, scaling, and troubleshooting.
+**Access the application:**
+- 🌐 Frontend: http://localhost:3000
+- 🔧 Backend API: http://localhost:8000
+- 📚 API Docs: http://localhost:8000/docs
 
 ---
 
-### 📦 **Manual Setup** (Alternative)
+### 🎯 **Alternative Startup Methods**
 
-#### Prerequisites
-- **Python**: 3.12 or higher
-- **Node.js**: 20 or higher
-- **Git**: For version control
-- **Database**: PostgreSQL
-- **Redis**: For rate limiting (optional)
-
-#### 1. Clone Repository
-```bash
-git clone https://github.com/DharmpratapSingh/IntegrityX.git
-cd IntegrityX
+#### Option 1: Start Backend Only
+```powershell
+.\START_BACKEND.ps1
 ```
 
-#### 2. Backend Setup
-```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+#### Option 2: Manual Start (Step by Step)
 
-# Install dependencies
-pip install -r config/requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your credentials
-
-# Start backend server
-uvicorn backend.main:app --reload --port 8000
+**Backend:**
+```powershell
+cd backend
+python start_server.py
 ```
 
-#### 3. Frontend Setup
-```bash
-# Navigate to frontend
+**Frontend (in another terminal):**
+```powershell
 cd frontend
-
-# Install dependencies
-npm install
-
-# Start development server
 npm run dev
+```
+
+#### Option 3: Docker (Recommended for Production)
+```bash
+# Copy environment file
+cp .env.example .env
+
+# Start all services
+docker-compose up -d
+
+# Access services
+# Frontend: http://localhost:3000
+# Backend: http://localhost:8000
+# API Docs: http://localhost:8000/docs
+```
+
+---
+
+### 📋 **Prerequisites**
+
+- **Python**: 3.11 or higher (3.12+ recommended)
+- **Node.js**: 18 or higher (20+ recommended)
+- **FastAPI & Dependencies**: Auto-installed on first run
+- **Next.js & Dependencies**: Auto-installed via `npm install`
+
+### 🔧 **First-Time Setup**
+
+If running for the first time:
+
+1. **Install Python dependencies:**
+   ```powershell
+   python -m pip install fastapi uvicorn python-dotenv pydantic sqlalchemy
+   ```
+
+2. **Install Node.js dependencies:**
+   ```powershell
+   cd frontend
+   npm install
+   cd ..
+   ```
+
+3. **Create `.env` file** (auto-created by startup scripts, or manually):
+   ```powershell
+   # Copy from example
+   Copy-Item .env.example .env
+   ```
+
+4. **Start the application:**
+   ```powershell
+   .\start_all.ps1
+   ```
+
+**That's it!** IntegrityX is now running! 🎉
 ```
 
 ### 4. Access Application

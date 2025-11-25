@@ -58,7 +58,11 @@ jobs:
       - name: 🔨 Build backend
         run: |
           cd backend
-          pip install -r requirements.txt
+          # Install core dependencies (requirements.txt was removed, install directly)
+          pip install fastapi uvicorn[standard] python-dotenv pydantic sqlalchemy alembic psycopg2-binary
+          pip install aiohttp httpx cryptography argon2-cffi pytz
+          pip install scikit-learn numpy pandas joblib
+          pip install prometheus-client redis
           echo "Backend build complete!"
 
       - name: 🔨 Build frontend
@@ -77,7 +81,10 @@ jobs:
           cp -r backend deploy/
           cp -r frontend/.next deploy/frontend-build
           cp -r frontend/public deploy/frontend-public
-          cp verify_integrityx.sh deploy/
+          # verify_integrityx.sh was removed, skip if it doesn't exist
+          if [ -f verify_integrityx.sh ]; then
+            cp verify_integrityx.sh deploy/
+          fi
           tar -czf integrityx-${{ steps.version.outputs.version }}.tar.gz deploy/
           echo "✅ Deployment artifact created"
 

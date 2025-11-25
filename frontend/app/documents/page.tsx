@@ -170,6 +170,13 @@ export default function DocumentsPage() {
         setDocuments([])
         setTotalCount(0)
         setHasMore(false)
+      } else if (response && (response.status === 500 || response.status === 503)) {
+        // Server error - show empty state with error message
+        const errorMsg = response.data?.error?.message || `Server error (${response.status})`
+        setError(`Server error: ${errorMsg}. Please try again or check backend logs.`)
+        setDocuments([])
+        setTotalCount(0)
+        setHasMore(false)
       } else if (response) {
         throw new Error(`Failed to fetch documents: ${response.status}`)
       } else {
