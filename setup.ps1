@@ -85,3 +85,6 @@ Write-Host "  1. Backend:  cd backend && ..\venv\Scripts\python.exe start_server
 Write-Host "  2. Frontend: cd frontend && npm run dev" -ForegroundColor White
 Write-Host ""
 
+
+
+
