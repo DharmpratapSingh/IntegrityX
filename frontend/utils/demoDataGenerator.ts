@@ -5,6 +5,7 @@
 
 export interface DemoLoanDocument {
   loan_id: string;
+  loan_type: string; // New field: home_loan, personal_loan, auto_loan, etc.
   loan_amount: number;
   loan_term_months: number;
   interest_rate: number;
@@ -36,6 +37,27 @@ export interface DemoLoanDocument {
   };
   document_type: string;
   security_level?: 'standard' | 'quantum-safe' | 'maximum';
+  // Conditional fields based on loan type
+  property_value?: number;
+  down_payment?: number;
+  property_type?: string;
+  vehicle_make?: string;
+  vehicle_model?: string;
+  vehicle_year?: number;
+  vehicle_vin?: string;
+  purchase_price?: number;
+  business_name?: string;
+  business_type?: string;
+  business_registration_number?: string;
+  annual_revenue?: number;
+  school_name?: string;
+  degree_program?: string;
+  expected_graduation_date?: string;
+  current_loan_number?: string;
+  current_lender?: string;
+  refinance_purpose?: string;
+  current_mortgage_balance?: number;
+  equity_amount?: number;
 }
 
 const sampleNames = [
@@ -92,17 +114,37 @@ function randomNumber(min: number, max: number): number {
 }
 
 function generatePhone(): string {
-  return `+1-${randomNumber(200, 999)}-${randomNumber(100, 999)}-${randomNumber(1000, 9999)}`;
+  // Add more randomness with timestamp component
+  const timestamp = Date.now().toString().slice(-4);
+  return `+1-${randomNumber(200, 999)}-${randomNumber(100, 999)}-${timestamp}`;
 }
 
 function generateEmail(name: string): string {
   const username = name.toLowerCase().replace(/\s+/g, '.');
-  const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'icloud.com'];
-  return `${username}${randomNumber(1, 99)}@${randomItem(domains)}`;
+  const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'icloud.com', 'hotmail.com', 'protonmail.com'];
+  // Add timestamp to ensure uniqueness
+  const timestamp = Date.now().toString().slice(-6);
+  return `${username}${randomNumber(1, 99)}${timestamp}@${randomItem(domains)}`;
 }
 
 function generateSSNLast4(): string {
   return randomNumber(1000, 9999).toString();
+}
+
+function generateSSN(): string {
+  // Generate SSN in format XXX-XX-XXXX
+  const part1 = randomNumber(100, 999);
+  const part2 = randomNumber(10, 99);
+  const part3 = randomNumber(1000, 9999);
+  return `${part1}-${part2}-${part3}`;
+}
+
+function generateITIN(): string {
+  // Generate ITIN in format 9XX-XX-XXXX (must start with 9)
+  const part1 = 900 + randomNumber(0, 99); // 900-999
+  const part2 = randomNumber(10, 99);
+  const part3 = randomNumber(1000, 9999);
+  return `${part1}-${part2}-${part3}`;
 }
 
 function generateDateOfBirth(): string {
@@ -118,17 +160,30 @@ function generateDateOfBirth(): string {
 export function generateDemoLoanDocument(
   securityLevel: 'standard' | 'quantum-safe' | 'maximum' = 'standard'
 ): DemoLoanDocument {
-  const loanId = generateUUID();
+  // Generate unique loan ID with timestamp to ensure uniqueness
+  const timestamp = Date.now();
+  const randomSuffix = Math.random().toString(36).substring(2, 9);
+  const loanId = `DEMO_${timestamp}_${randomSuffix}`;
   const name = randomItem(sampleNames);
   const location = randomItem(sampleCities);
   const street = randomItem(sampleStreets);
-  const loanAmount = randomNumber(100000, 1000000);
+
+  // DEMO MODE: Generate random loan amounts for variety
+  const loanAmount = randomNumber(100000, 2000000); // $100k - $2M
   const interestRate = Number((Math.random() * 5 + 3).toFixed(2)); // 3% - 8%
   const loanTerm = randomItem([180, 240, 300, 360]); // 15, 20, 25, 30 years
-  const annualIncome = randomNumber(50000, 250000);
 
-  return {
+  // DEMO MODE: Generate varied income (sometimes triggers fraud detection)
+  const annualIncome = randomNumber(30000, 200000); // $30k - $200k
+
+  // Randomly select a loan type for variety
+  const loanTypes = ['home_loan', 'personal_loan', 'auto_loan', 'business_loan', 'student_loan', 'refinance', 'home_equity'];
+  const loanType = randomItem(loanTypes);
+
+  // Generate conditional fields based on loan type
+  const baseDoc: any = {
     loan_id: loanId,
+    loan_type: loanType,
     loan_amount: loanAmount,
     loan_term_months: loanTerm,
     interest_rate: interestRate,
@@ -161,6 +216,46 @@ export function generateDemoLoanDocument(
     document_type: 'loan_application',
     security_level: securityLevel
   };
+
+  // Add conditional fields based on loan type
+  if (loanType === 'home_loan' || loanType === 'home_equity') {
+    baseDoc.property_value = randomNumber(200000, 1000000);
+    baseDoc.down_payment = loanType === 'home_loan' ? randomNumber(20000, 200000) : undefined;
+    baseDoc.property_type = randomItem(['single_family', 'condo', 'townhouse', 'multi_family']);
+    if (loanType === 'home_equity') {
+      baseDoc.current_mortgage_balance = randomNumber(100000, 500000);
+      baseDoc.equity_amount = baseDoc.property_value - baseDoc.current_mortgage_balance;
+    }
+  } else if (loanType === 'auto_loan') {
+    const makes = ['Toyota', 'Honda', 'Ford', 'Chevrolet', 'BMW', 'Mercedes-Benz', 'Tesla'];
+    const models = ['Camry', 'Accord', 'F-150', 'Silverado', '3 Series', 'C-Class', 'Model 3'];
+    baseDoc.vehicle_make = randomItem(makes);
+    baseDoc.vehicle_model = randomItem(models);
+    baseDoc.vehicle_year = randomNumber(2020, 2024);
+    baseDoc.vehicle_vin = `1HGBH41JXMN${randomNumber(100000, 999999)}`;
+    baseDoc.purchase_price = randomNumber(15000, 60000);
+  } else if (loanType === 'business_loan') {
+    const businessNames = ['ABC Corporation', 'XYZ LLC', 'Tech Solutions Inc', 'Global Services LLC'];
+    baseDoc.business_name = randomItem(businessNames);
+    baseDoc.business_type = randomItem(['llc', 'corporation', 'partnership', 'sole_proprietorship']);
+    baseDoc.business_registration_number = `EIN-${randomNumber(100000000, 999999999)}`;
+    baseDoc.annual_revenue = randomNumber(100000, 5000000);
+  } else if (loanType === 'student_loan') {
+    const schools = ['State University', 'Tech Institute', 'Business School', 'Liberal Arts College'];
+    const programs = ['Computer Science', 'Business Administration', 'Engineering', 'Medicine', 'Law'];
+    baseDoc.school_name = randomItem(schools);
+    baseDoc.degree_program = randomItem(programs);
+    const gradYear = new Date().getFullYear() + randomNumber(1, 4);
+    const gradMonth = String(randomNumber(1, 12)).padStart(2, '0');
+    baseDoc.expected_graduation_date = `${gradYear}-${gradMonth}-01`;
+  } else if (loanType === 'refinance') {
+    baseDoc.current_loan_number = `LOAN_${randomNumber(2020, 2023)}_${randomNumber(100, 999)}`;
+    const lenders = ['ABC Bank', 'XYZ Mortgage', 'First National', 'Community Bank'];
+    baseDoc.current_lender = randomItem(lenders);
+    baseDoc.refinance_purpose = randomItem(['lower_rate', 'cash_out', 'shorter_term', 'debt_consolidation']);
+  }
+
+  return baseDoc as DemoLoanDocument;
 }
 
 /**
@@ -199,6 +294,8 @@ export interface DemoKYCData {
   postalZipCode: string;
   country: string;
   citizenshipCountry: string;
+  ssnOrItinType: string;
+  ssnOrItinNumber: string;
   identificationType: string;
   identificationNumber: string;
   idIssuingCountry: string;
@@ -214,6 +311,11 @@ export function generateDemoKYCData(): DemoKYCData {
   const location = randomItem(sampleCities);
   const street = randomItem(sampleStreets);
 
+  // Randomly choose SSN or ITIN (80% SSN, 20% ITIN for demo)
+  const useSSN = Math.random() > 0.2;
+  const ssnOrItinType = useSSN ? 'SSN' : 'ITIN';
+  const ssnOrItinNumber = useSSN ? generateSSN() : generateITIN();
+
   return {
     fullLegalName: name,
     dateOfBirth: generateDateOfBirth(),
@@ -226,6 +328,8 @@ export function generateDemoKYCData(): DemoKYCData {
     postalZipCode: location.zip,
     country: 'United States',
     citizenshipCountry: 'United States',
+    ssnOrItinType: ssnOrItinType,
+    ssnOrItinNumber: ssnOrItinNumber,
     identificationType: randomItem(['Drivers License', 'Passport', 'State ID']),
     identificationNumber: `DL${randomNumber(1000000, 9999999)}`,
     idIssuingCountry: 'United States',

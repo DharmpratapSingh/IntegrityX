@@ -47,33 +47,28 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Osmo-inspired warm colors
+        'elite-blue': '#6366F1',
+        'elite-purple': '#8B5CF6',
+        'elite-dark': '#2D2D33',
+        'elite-gray': '#6B7280',
+        'elite-light': '#F8F7F4',
+        'elite-green': '#10b981',
+        'warm-bg': '#F8F7F4',
       },
       backgroundImage: {
-        // Trust & Security gradients
-        'gradient-trust': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        'gradient-secure': 'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
-        'gradient-verified': 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-        
-        // Status gradients  
-        'gradient-success': 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-        'gradient-warning': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-        'gradient-info': 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-        
-        // Hero gradients (more sophisticated)
-        'gradient-hero-financial': 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #8b5cf6 100%)',
-        'gradient-hero-premium': 'linear-gradient(135deg, #0f172a 0%, #1e40af 50%, #7c3aed 100%)',
-        
-        // Dashboard gradients
-        'gradient-dashboard': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        'gradient-stats': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-        
-        // Mesh gradients (trendy)
-        'gradient-mesh': 'radial-gradient(at 40% 20%, hsla(28,100%,74%,1) 0px, transparent 50%), radial-gradient(at 80% 0%, hsla(189,100%,56%,1) 0px, transparent 50%), radial-gradient(at 0% 50%, hsla(355,100%,93%,1) 0px, transparent 50%)',
+        // Osmo-style purple gradient
+        'gradient-primary': 'linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)',
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        heading: ['var(--font-heading)', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'SF Mono', 'Courier New', 'monospace'],
       },
       keyframes: {
         "accordion-down": {
@@ -84,33 +79,15 @@ const config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        blob: {
-          '0%': { transform: 'translate(0px, 0px) scale(1)' },
-          '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
-          '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
-          '100%': { transform: 'translate(0px, 0px) scale(1)' },
-        },
-        shimmer: {
-          '0%': { transform: 'translateX(-100%)' },
-          '100%': { transform: 'translateX(100%)' },
-        },
-        scan: {
-          '0%': { top: '0%', opacity: '0' },
-          '50%': { opacity: '1' },
-          '100%': { top: '100%', opacity: '0' },
-        },
-        'gradient-shift': {
-          '0%, 100%': { backgroundPosition: '0% 50%' },
-          '50%': { backgroundPosition: '100% 50%' },
+        "fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        blob: "blob 7s infinite",
-        shimmer: "shimmer 2s infinite",
-        scan: "scan 2s ease-in-out infinite",
-        'gradient-shift': 'gradient-shift 3s ease infinite',
+        "fade-in": "fade-in 0.2s ease-out",
       },
     },
   },

@@ -14,7 +14,7 @@ Models:
 
 from sqlalchemy import create_engine, Column, String, Integer, DateTime, Text, ForeignKey, Index, JSON, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, mapped_column
+from sqlalchemy.orm import relationship, mapped_column, backref
 from datetime import datetime, timezone
 import uuid
 from typing import List, Optional
@@ -66,10 +66,18 @@ class Artifact(Base):
     blockchain_seal = Column(String(255), nullable=True)  # Blockchain seal information
     local_metadata = Column(JSON, nullable=True)  # All local metadata (file_size, file_path, etc.)
     borrower_info = Column(JSON, nullable=True)  # Borrower information for loan documents
-    
+
+    # Container/hierarchy fields (for directory uploads)
+    parent_id = Column(String(36), ForeignKey('artifacts.id'), nullable=True, index=True)  # Parent artifact for children
+    artifact_container_type = Column(String(50), default='file')  # 'file', 'directory_container', 'batch_container'
+    directory_name = Column(String(255), nullable=True)  # Directory name if this is a container
+    directory_hash = Column(String(64), nullable=True)  # ObjectValidator hash for directories
+    file_count = Column(Integer, nullable=True)  # Number of files in directory container
+
     # Relationships
     files = relationship("ArtifactFile", back_populates="artifact", cascade="all, delete-orphan")
     events = relationship("ArtifactEvent", back_populates="artifact", cascade="all, delete-orphan")
+    children = relationship("Artifact", backref=backref("parent", remote_side=[id]), cascade="all, delete-orphan")  # Self-referential for hierarchy
     
     # Indexes
     __table_args__ = (
@@ -77,6 +85,7 @@ class Artifact(Base):
         Index('idx_artifact_created_at', 'created_at'),
         Index('idx_artifact_walacor_tx', 'walacor_tx_id'),
         Index('idx_artifact_etid_payload', 'etid', 'payload_sha256', unique=True),
+        Index('idx_artifact_parent_id', 'parent_id'),
     )
     
     def __repr__(self) -> str:
@@ -99,7 +108,14 @@ class Artifact(Base):
             'local_metadata': self.local_metadata,
             'borrower_info': self.borrower_info,
             'files_count': len(self.files) if self.files else 0,
-            'events_count': len(self.events) if self.events else 0
+            'events_count': len(self.events) if self.events else 0,
+            # Container fields
+            'parent_id': self.parent_id,
+            'artifact_container_type': self.artifact_container_type,
+            'directory_name': self.directory_name,
+            'directory_hash': self.directory_hash,
+            'file_count': self.file_count,
+            'children_count': len(self.children) if self.children else 0
         }
 
 
@@ -583,7 +599,7 @@ if __name__ == "__main__":
         artifact = Artifact(
             loan_id="LOAN_2024_001",
             artifact_type="loan_packet",
-            etid=100001,  # Entity Type ID for loan packets
+            etid=10000001,  # Entity Type ID for loan documents
             payload_sha256="a1b2c3d4e5f6" * 8,  # 64 character hash
             manifest_sha256="f6e5d4c3b2a1" * 8,
             walacor_tx_id="WAL_TX_123456789",

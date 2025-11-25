@@ -4,49 +4,71 @@
 
 @layer base {
   :root {
-    /* Soft warm background F5EFE6 ≈ hsl(36, 43%, 93%) */
-    --background: 36 43% 93%;
-    --foreground: 222.2 84% 4.9%;
+    /* IntegrityX - Osmo-inspired warm palette */
+    --background: 40 20% 97%; /* Warm off-white #F8F7F4 */
+    --foreground: 220 13% 18%; /* Warm dark gray */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 13% 18%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --popover-foreground: 220 13% 18%;
+
+    /* Purple accent (Osmo style) */
+    --primary: 250 95% 63%; /* #6366F1 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 40 15% 95%; /* Warm light gray */
+    --secondary-foreground: 220 13% 18%;
+
+    --muted: 40 15% 93%; /* Warm muted */
+    --muted-foreground: 220 9% 46%;
+
+    /* Green for verified/sealed states */
+    --accent: 142 76% 36%; /* #10b981 */
+    --accent-foreground: 0 0% 100%;
+
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 12% 88%; /* Warm border */
+    --input: 40 12% 88%;
+    --ring: 250 95% 63%;
     --radius: 0.5rem;
+
+    /* Elite theme custom variables */
+    --elite-blue: 250 95% 63%; /* Purple-blue */
+    --elite-dark: 220 13% 18%;
+    --elite-gray: 220 9% 46%;
+    --elite-green: 142 76% 36%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
+    /* OLED Black Theme */
+    --background: 0 0% 0%; /* True black #000000 */
+    --foreground: 0 0% 98%; /* Near white */
+    --card: 0 0% 3%; /* Very dark gray #080808 */
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3%;
+    --popover-foreground: 0 0% 98%;
+
+    /* Brighter blue for dark mode */
+    --primary: 216 100% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 10%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+
+    --accent: 142 76% 45%; /* Brighter green for dark mode */
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 15%; /* Subtle borders */
+    --input: 0 0% 15%;
+    --ring: 216 100% 60%;
   }
 }
 
@@ -54,56 +76,132 @@
   * {
     border-color: hsl(var(--border));
   }
+
   body {
-    background-color: #F5EFE6; /* soft warm background */
-    color: hsl(var(--foreground));
+    background-color: #F8F7F4; /* Warm off-white (Osmo style) */
+    color: #2D2D33; /* Warm dark gray */
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  .dark body {
+    background-color: #000000; /* OLED black */
+    color: #fafafa; /* Near white */
+  }
+
+  .font-heading {
+    font-family: var(--font-heading), 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: 0.01em;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
 
-/* Custom Animation Utilities */
+/* Osmo-inspired Animation Utilities */
 @layer utilities {
-  .animation-delay-2000 {
-    animation-delay: 2s;
+  /* Smooth fade in */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-  
-  .animation-delay-4000 {
-    animation-delay: 4s;
-  }
-  
-  .bg-size-200 {
-    background-size: 200% 200%;
-  }
-  
-  /* Gradient text utility */
-  .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600;
-  }
-  
-  /* Card gradient backgrounds for dark mode */
-  .dark .card-gradient {
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  
-  /* Shimmer effect container */
-  .shimmer-container {
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .shimmer-container::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    animation: shimmer 2s infinite;
-  }
-}
 
-/* Dark mode gradient background */
-.dark {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out;
+  }
+
+  /* Smooth hover lift effect (Osmo style: 300-500ms) */
+  .hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+  }
+
+  /* Smooth transitions for all interactive elements */
+  .transition-smooth {
+    transition: all 0.3s ease;
+  }
+
+  /* Monospace for technical data */
+  .font-mono-technical {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Courier New', monospace;
+    font-feature-settings: 'liga' 0, 'calt' 0;
+  }
+
+  /* Elite theme utilities */
+  .text-elite-blue {
+    color: #1e52f3;
+  }
+
+  .text-elite-dark {
+    color: #0f172a;
+  }
+
+  .text-elite-gray {
+    color: #64748b;
+  }
+
+  .text-elite-green {
+    color: #10b981;
+  }
+
+  .bg-elite-blue {
+    background-color: #1e52f3;
+  }
+
+  .bg-elite-dark {
+    background-color: #0f172a;
+  }
+
+  .bg-elite-light {
+    background-color: #fafafa;
+  }
+
+  .border-elite-blue {
+    border-color: #1e52f3;
+  }
+
+  /* Osmo-style soft shadows */
+  .shadow-soft {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  .shadow-soft-lg {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
+
+  .shadow-soft-xl {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Dark mode text colors */
+  .dark .text-elite-dark {
+    color: #fafafa;
+  }
+
+  .dark .text-elite-gray {
+    color: #94a3b8;
+  }
+
+  .dark .shadow-soft {
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.04), 0 1px 3px rgba(255, 255, 255, 0.06);
+  }
+
+  .dark .shadow-soft-lg {
+    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.06), 0 2px 6px rgba(255, 255, 255, 0.08);
+  }
+
+  .dark .shadow-soft-xl {
+    box-shadow: 0 8px 32px rgba(255, 255, 255, 0.08), 0 4px 12px rgba(255, 255, 255, 0.1);
+  }
 }

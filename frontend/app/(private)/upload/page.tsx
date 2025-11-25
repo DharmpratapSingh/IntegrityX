@@ -1,21 +1,25 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AccessibleDropzone } from '@/components/ui/accessible-dropzone';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Hash, Shield, ArrowLeft, ChevronDown, ChevronUp, User, HelpCircle, AlertCircle, X, RefreshCw, Mail, Download, UserCheck, FileCheck, AlertTriangle, Info } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Loader2, Upload, FileText, CheckCircle, ExternalLink, Hash, Shield, ArrowLeft, ChevronDown, ChevronUp, User, HelpCircle, AlertCircle, X, RefreshCw, Mail, Download, UserCheck, FileCheck, AlertTriangle, Info, Sparkles, TrendingUp, Lightbulb, Zap, BarChart3, Layers, Calendar as CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
 import { simpleToast as toast } from '@/components/ui/simple-toast';
-import { sealLoanDocument, sealLoanDocumentMaximumSecurity, sealLoanDocumentQuantumSafe, type LoanData, type BorrowerInfo } from '@/lib/api/loanDocuments';
+import { sealLoanDocument, sealLoanDocumentMaximumSecurity, sealLoanDocumentQuantumSafe, sealDirectory, type LoanData, type BorrowerInfo, type DirectoryFileInfo, type DirectorySealResponse } from '@/lib/api/loanDocuments';
 import { DuplicateDetection } from '@/components/DuplicateDetection';
 import { DuplicateCheckResponse } from '@/lib/api/duplicateDetection';
 import { 
@@ -34,7 +38,8 @@ import {
   sanitizeGovernmentIdType, 
   sanitizeDocumentType, 
   sanitizeNotes,
-  sanitizeFormData
+  sanitizeFormData,
+  sanitizeTextarea
 } from '@/utils/dataSanitization';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
@@ -44,6 +49,8 @@ import { buildAutoPopulateMetadata, type AutoPopulateMetadata } from '@/utils/lo
 import { SuccessCelebration } from '@/components/SuccessCelebration'
 import { ProgressSteps, CompactProgressSteps } from '@/components/ui/progress-steps'
 import { HelpTooltip, SecurityLevelTooltips, KYCTooltips, BlockchainTooltips } from '@/components/ui/help-tooltip'
+import { InfoTooltip } from '@/components/ui/info-tooltip'
+import { GLOSSARY } from '@/lib/glossary'
 import {
   smartExtractDocumentData,
   buildEnhancedAutoPopulateMetadata,
@@ -55,12 +62,30 @@ import {
 import { BulkAnalysisDashboard } from '@/components/BulkAnalysisDashboard'
 import { SmartBatchEditor } from '@/components/SmartBatchEditor'
 import { ConfidenceBadge, FieldConfidenceWrapper } from '@/components/ui/confidence-badge'
+import { FraudRiskBadge, FraudRiskInlineBadge } from '@/components/FraudRiskBadge'
+import { generateDemoDocumentSet, generateDemoKYCData } from '@/utils/demoDataGenerator'
 
 interface UploadResult {
   artifactId: string;
   walacorTxId: string;
   sealedAt: string;
   proofBundle: any;
+  quantum_safe_seal?: {
+    algorithm: string;
+    timestamp: string;
+    quantum_resistant_hashes?: string[];
+    quantum_safe_signatures?: string[];
+    algorithms_used?: string[];
+  };
+  comprehensive_seal?: {
+    timestamp: string;
+    algorithm: string;
+    security_level?: string;
+    tamper_resistance?: string;
+    multi_hash_algorithms?: string[];
+    pki_signature?: string;
+    verification_methods?: string[];
+  };
 }
 
 type BulkUploadResult = {
@@ -108,6 +133,8 @@ interface KYCData {
   
   // Identification Information
   citizenshipCountry: string;
+  ssnOrItinType: string; // 'SSN' or 'ITIN'
+  ssnOrItinNumber: string; // The actual SSN or ITIN number
   identificationType: string;
   identificationNumber: string;
   idIssuingCountry: string;
@@ -122,9 +149,7 @@ interface KYCData {
   isPEP: string;
   pepDetails: string;
   
-  // Document Uploads
-  governmentIdFile: File | null;
-  proofOfAddressFile: File | null;
+  // Document Uploads (removed - collecting from form fields instead)
 }
 
 interface KYCErrors {
@@ -162,6 +187,7 @@ export default function UploadPage() {
   const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [metadata, setMetadata] = useState('');
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [etid, setEtid] = useState('100002');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -186,8 +212,12 @@ export default function UploadPage() {
   // Individual form field states for better reactivity
   const [formData, setFormData] = useState({
     loanId: '',
+    loanType: '', // New field: Home Loan, Personal Loan, Auto Loan, etc.
     documentType: 'loan_application',
     loanAmount: '',
+    loanTerm: '',
+    interestRate: '',
+    propertyAddress: '',
     borrowerName: '',
     additionalNotes: '',
     borrowerFullName: '',
@@ -204,13 +234,178 @@ export default function UploadPage() {
     borrowerIdNumberLast4: '',
     borrowerEmploymentStatus: 'employed',
     borrowerAnnualIncome: '',
-    borrowerCoBorrowerName: ''
+    borrowerCoBorrowerName: '',
+    // Conditional fields based on loan type
+    propertyValue: '', // Home Loan
+    downPayment: '', // Home Loan
+    propertyType: '', // Home Loan
+    vehicleMake: '', // Auto Loan
+    vehicleModel: '', // Auto Loan
+    vehicleYear: '', // Auto Loan
+    vehicleVIN: '', // Auto Loan
+    purchasePrice: '', // Auto Loan
+    businessName: '', // Business Loan
+    businessType: '', // Business Loan
+    businessRegistrationNumber: '', // Business Loan
+    annualRevenue: '', // Business Loan
+    schoolName: '', // Student Loan
+    degreeProgram: '', // Student Loan
+    expectedGraduationDate: '', // Student Loan
+    currentLoanNumber: '', // Refinance
+    currentLender: '', // Refinance
+    refinancePurpose: '', // Refinance
+    currentMortgageBalance: '', // Home Equity
+    equityAmount: '' // Home Equity
   });
 
   // Debug: Log formData changes
   useEffect(() => {
     console.log('📊 formData state changed:', formData);
   }, [formData]);
+
+  // Demo Mode: Auto-load demo data if coming from dashboard
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isDemo = params.get('mode') === 'demo';
+
+    if (isDemo && typeof window !== 'undefined') {
+      console.log('🎬 Demo mode detected! Generating demo data...');
+      setIsDemoMode(true);
+
+      try {
+        // Generate demo data on the fly
+        const demoDocuments = generateDemoDocumentSet();
+        const demoKYC = generateDemoKYCData();
+
+        console.log('📄 Generated demo documents:', demoDocuments);
+        console.log('👤 Generated demo KYC:', demoKYC);
+
+        // Convert first demo document to File and auto-upload
+        if (demoDocuments && demoDocuments.length > 0) {
+          const firstDoc = demoDocuments[0];
+          const jsonContent = JSON.stringify(firstDoc, null, 2);
+          const blob = new Blob([jsonContent], { type: 'application/json' });
+          const fileName = `demo_loan_${firstDoc.security_level || 'standard'}_1.json`;
+          const demoFile = new File([blob], fileName, { type: 'application/json' });
+
+          // Simulate file drop
+          setTimeout(async () => {
+            console.log('🚀 Auto-uploading demo file...');
+            setFile(demoFile);
+            setCurrentStep(2);
+
+            // Calculate file hash (required for upload button to be enabled)
+            try {
+              const hash = await calculateFileHash(demoFile);
+              setFileHash(hash);
+              console.log('Demo file hash calculated:', hash);
+            } catch (error) {
+              console.error('Failed to calculate demo file hash:', error);
+            }
+
+            // Trigger auto-fill
+            autoFillFromJSON(demoFile).then(() => {
+              toast.success('✨ Demo loaded! Review the auto-filled form with fraud detection.');
+            }).catch(error => {
+              console.error('Demo auto-fill error:', error);
+              toast.error('Demo loaded but auto-fill failed. Please review form.');
+            });
+          }, 1000);
+        }
+
+        // Pre-fill KYC data
+        setTimeout(() => {
+          setKycData(prev => ({
+            ...prev,
+            ...demoKYC
+          }));
+        }, 1500);
+
+        // Pre-fill Loan Information including loanType and conditional fields
+        setTimeout(() => {
+          if (demoDocuments && demoDocuments.length > 0) {
+            const firstDoc = demoDocuments[0];
+            const loanMeta: any = {
+              loanId: firstDoc.loan_id,
+              loanType: firstDoc.loan_type || 'home_loan',
+              documentType: firstDoc.document_type || 'loan_application',
+              loanAmount: firstDoc.loan_amount,
+              loanTerm: firstDoc.loan_term_months,
+              interestRate: firstDoc.interest_rate,
+              propertyAddress: firstDoc.property_address || '',
+            };
+
+            // Add conditional fields based on loan type
+            if (firstDoc.loan_type === 'home_loan' || firstDoc.loan_type === 'home_equity') {
+              if (firstDoc.property_value) loanMeta.propertyValue = firstDoc.property_value;
+              if (firstDoc.down_payment) loanMeta.downPayment = firstDoc.down_payment;
+              if (firstDoc.property_type) loanMeta.propertyType = firstDoc.property_type;
+              if (firstDoc.current_mortgage_balance) loanMeta.currentMortgageBalance = firstDoc.current_mortgage_balance;
+              if (firstDoc.equity_amount) loanMeta.equityAmount = firstDoc.equity_amount;
+            } else if (firstDoc.loan_type === 'auto_loan') {
+              if (firstDoc.vehicle_make) loanMeta.vehicleMake = firstDoc.vehicle_make;
+              if (firstDoc.vehicle_model) loanMeta.vehicleModel = firstDoc.vehicle_model;
+              if (firstDoc.vehicle_year) loanMeta.vehicleYear = firstDoc.vehicle_year;
+              if (firstDoc.vehicle_vin) loanMeta.vehicleVIN = firstDoc.vehicle_vin;
+              if (firstDoc.purchase_price) loanMeta.purchasePrice = firstDoc.purchase_price;
+            } else if (firstDoc.loan_type === 'business_loan') {
+              if (firstDoc.business_name) loanMeta.businessName = firstDoc.business_name;
+              if (firstDoc.business_type) loanMeta.businessType = firstDoc.business_type;
+              if (firstDoc.business_registration_number) loanMeta.businessRegistrationNumber = firstDoc.business_registration_number;
+              if (firstDoc.annual_revenue) loanMeta.annualRevenue = firstDoc.annual_revenue;
+            } else if (firstDoc.loan_type === 'student_loan') {
+              if (firstDoc.school_name) loanMeta.schoolName = firstDoc.school_name;
+              if (firstDoc.degree_program) loanMeta.degreeProgram = firstDoc.degree_program;
+              if (firstDoc.expected_graduation_date) loanMeta.expectedGraduationDate = firstDoc.expected_graduation_date;
+            } else if (firstDoc.loan_type === 'refinance') {
+              if (firstDoc.current_loan_number) loanMeta.currentLoanNumber = firstDoc.current_loan_number;
+              if (firstDoc.current_lender) loanMeta.currentLender = firstDoc.current_lender;
+              if (firstDoc.refinance_purpose) loanMeta.refinancePurpose = firstDoc.refinance_purpose;
+            }
+
+            // Update formData
+            setFormData(prev => ({
+              ...prev,
+              loanId: loanMeta.loanId,
+              loanType: loanMeta.loanType,
+              documentType: loanMeta.documentType,
+              loanAmount: String(loanMeta.loanAmount),
+              loanTerm: String(loanMeta.loanTerm),
+              interestRate: String(loanMeta.interestRate),
+              propertyAddress: loanMeta.propertyAddress,
+              propertyValue: String(loanMeta.propertyValue || ''),
+              downPayment: String(loanMeta.downPayment || ''),
+              propertyType: loanMeta.propertyType || '',
+              vehicleMake: loanMeta.vehicleMake || '',
+              vehicleModel: loanMeta.vehicleModel || '',
+              vehicleYear: String(loanMeta.vehicleYear || ''),
+              vehicleVIN: loanMeta.vehicleVIN || '',
+              purchasePrice: String(loanMeta.purchasePrice || ''),
+              businessName: loanMeta.businessName || '',
+              businessType: loanMeta.businessType || '',
+              businessRegistrationNumber: loanMeta.businessRegistrationNumber || '',
+              annualRevenue: String(loanMeta.annualRevenue || ''),
+              schoolName: loanMeta.schoolName || '',
+              degreeProgram: loanMeta.degreeProgram || '',
+              expectedGraduationDate: loanMeta.expectedGraduationDate || '',
+              currentLoanNumber: loanMeta.currentLoanNumber || '',
+              currentLender: loanMeta.currentLender || '',
+              refinancePurpose: loanMeta.refinancePurpose || '',
+              currentMortgageBalance: String(loanMeta.currentMortgageBalance || ''),
+              equityAmount: String(loanMeta.equityAmount || ''),
+            }));
+
+            // Update metadata
+            setMetadata(JSON.stringify(loanMeta, null, 2));
+          }
+        }, 2000);
+
+      } catch (error) {
+        console.error('Error generating demo data:', error);
+        toast.error('Failed to generate demo data');
+      }
+    }
+  }, []); // Run once on mount
 
   // Helper function to get current metadata values
   const getMetadataValue = (key: string): string => {
@@ -237,6 +432,8 @@ export default function UploadPage() {
     postalZipCode: '',
     country: 'US',
     citizenshipCountry: 'US',
+    ssnOrItinType: '',
+    ssnOrItinNumber: '',
     identificationType: '',
     identificationNumber: '',
     idIssuingCountry: 'US',
@@ -246,13 +443,41 @@ export default function UploadPage() {
     expectedNumberOfMonthlyTransactions: 0,
     isPEP: '',
     pepDetails: '',
-    governmentIdFile: null,
-    proofOfAddressFile: null,
+    // Document Uploads removed - collecting from form fields instead
   });
   const [kycErrors, setKycErrors] = useState<KYCErrors>({});
   const [isKycExpanded, setIsKycExpanded] = useState(false);
   const [isSavingKyc, setIsSavingKyc] = useState(false);
   const [kycSaved, setKycSaved] = useState(false);
+  const [loanFormErrors, setLoanFormErrors] = useState<{
+    loanId?: string;
+    loanType?: string;
+    documentType?: string;
+    loanAmount?: string;
+    loanTerm?: string;
+    interestRate?: string;
+    propertyAddress?: string;
+    propertyValue?: string;
+    downPayment?: string;
+    propertyType?: string;
+    vehicleMake?: string;
+    vehicleModel?: string;
+    vehicleYear?: string;
+    vehicleVIN?: string;
+    purchasePrice?: string;
+    businessName?: string;
+    businessType?: string;
+    businessRegistrationNumber?: string;
+    annualRevenue?: string;
+    schoolName?: string;
+    degreeProgram?: string;
+    expectedGraduationDate?: string;
+    currentLoanNumber?: string;
+    currentLender?: string;
+    refinancePurpose?: string;
+    currentMortgageBalance?: string;
+    equityAmount?: string;
+  }>({});
   const [privacyNoticeDismissed, setPrivacyNoticeDismissed] = useState(false);
   const [borrowerErrors, setBorrowerErrors] = useState<Record<string, string>>({});
 
@@ -452,11 +677,14 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       default:
         sanitizedValue = sanitizeText(value);
     }
-    
+
+    // Update formData with sanitized value for consistency
+    setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
+
     const currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
     const updatedMeta = { ...currentMeta, [field]: sanitizedValue };
     setMetadata(JSON.stringify(updatedMeta, null, 2));
-    
+
     // Validate the sanitized field
     const error = validateBorrowerField(field, sanitizedValue);
     setBorrowerErrors(prev => ({
@@ -649,32 +877,67 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
   const createComprehensiveDocument = (): any => {
     const currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
     
-    // Extract loan information
+    // Extract loan information including loanType and conditional fields
     const loanData = {
       loan_id: currentMeta.loanId || `loan-${Date.now()}`,
+      loan_type: currentMeta.loanType || '',
       document_type: currentMeta.documentType || 'unknown',
       loan_amount: currentMeta.loanAmount || 0,
       borrower_name: currentMeta.borrowerName || '',
       notes: currentMeta.notes || '',
-      etid: etid
+      etid: etid,
+      // Include conditional fields based on loan type
+      ...(currentMeta.loanType === 'home_loan' || currentMeta.loanType === 'home_equity' ? {
+        property_value: currentMeta.propertyValue,
+        down_payment: currentMeta.downPayment,
+        property_type: currentMeta.propertyType,
+        current_mortgage_balance: currentMeta.currentMortgageBalance,
+        equity_amount: currentMeta.equityAmount
+      } : {}),
+      ...(currentMeta.loanType === 'auto_loan' ? {
+        vehicle_make: currentMeta.vehicleMake,
+        vehicle_model: currentMeta.vehicleModel,
+        vehicle_year: currentMeta.vehicleYear,
+        vehicle_vin: currentMeta.vehicleVIN,
+        purchase_price: currentMeta.purchasePrice
+      } : {}),
+      ...(currentMeta.loanType === 'business_loan' ? {
+        business_name: currentMeta.businessName,
+        business_type: currentMeta.businessType,
+        business_registration_number: currentMeta.businessRegistrationNumber,
+        annual_revenue: currentMeta.annualRevenue
+      } : {}),
+      ...(currentMeta.loanType === 'student_loan' ? {
+        school_name: currentMeta.schoolName,
+        degree_program: currentMeta.degreeProgram,
+        expected_graduation_date: currentMeta.expectedGraduationDate
+      } : {}),
+      ...(currentMeta.loanType === 'refinance' ? {
+        current_loan_number: currentMeta.currentLoanNumber,
+        current_lender: currentMeta.currentLender,
+        refinance_purpose: currentMeta.refinancePurpose
+      } : {})
     };
 
-    // Extract borrower information
+    // Extract borrower information - prioritize KYC data
     const borrowerData = {
-      full_name: currentMeta.borrowerFullName || '',
-      dob: currentMeta.borrowerDateOfBirth || '',
-      email: currentMeta.borrowerEmail || '',
-      phone: currentMeta.borrowerPhone || '',
+      full_name: kycData.fullLegalName || currentMeta.borrowerFullName || '',
+      dob: kycData.dateOfBirth || currentMeta.borrowerDateOfBirth || '',
+      email: kycData.emailAddress || currentMeta.borrowerEmail || '',
+      phone: kycData.phoneNumber || currentMeta.borrowerPhone || '',
       address: {
-        street: currentMeta.borrowerStreetAddress || '',
-        city: currentMeta.borrowerCity || '',
-        state: currentMeta.borrowerState || '',
-        zip_code: currentMeta.borrowerZipCode || '',
-        country: currentMeta.borrowerCountry || 'US'
+        street: kycData.streetAddress1 || currentMeta.borrowerStreetAddress || '',
+        city: kycData.city || currentMeta.borrowerCity || '',
+        state: kycData.stateProvince || currentMeta.borrowerState || '',
+        zip_code: kycData.postalZipCode || currentMeta.borrowerZipCode || '',
+        country: kycData.country || currentMeta.borrowerCountry || 'US'
       },
-      ssn_last4: currentMeta.borrowerSSNLast4 || '',
-      id_type: currentMeta.borrowerGovernmentIdType || '',
-      id_last4: currentMeta.borrowerIdNumberLast4 || '',
+      // SSN/ITIN from KYC
+      ssn_or_itin_type: kycData.ssnOrItinType || '',
+      ssn_or_itin_number: kycData.ssnOrItinNumber || '',
+      ssn_last4: kycData.ssnOrItinNumber ? kycData.ssnOrItinNumber.slice(-4).replace(/-/g, '') : (currentMeta.borrowerSSNLast4 || ''),
+      id_type: kycData.identificationType || currentMeta.borrowerGovernmentIdType || '',
+      id_last4: kycData.identificationNumber ? kycData.identificationNumber.slice(-4) : (currentMeta.borrowerIdNumberLast4 || ''),
       employment_status: currentMeta.borrowerEmploymentStatus || '',
       annual_income: currentMeta.borrowerAnnualIncome || 0,
       co_borrower_name: currentMeta.borrowerCoBorrowerName || ''
@@ -788,9 +1051,9 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
   const sanitizeMetadataForSave = (metadata: AutoPopulateMetadata): AutoPopulateMetadata => ({
     loanId: sanitizeText(metadata.loanId),
     documentType: sanitizeDocumentType(metadata.documentType),
-    loanAmount: sanitizeNumber(metadata.loanAmount, 'loan_amount'),
-    loanTerm: sanitizeNumber(metadata.loanTerm, 'loan_term'),
-    interestRate: sanitizeNumber(metadata.interestRate, 'interest_rate'),
+    loanAmount: sanitizeNumber(metadata.loanAmount),
+    loanTerm: sanitizeNumber(metadata.loanTerm),
+    interestRate: sanitizeNumber(metadata.interestRate),
     borrowerName: sanitizeText(metadata.borrowerName),
     borrowerEmail: sanitizeEmail(metadata.borrowerEmail),
     borrowerPhone: sanitizePhone(metadata.borrowerPhone),
@@ -804,7 +1067,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     borrowerGovernmentIdType: sanitizeGovernmentIdType(metadata.borrowerGovernmentIdType || 'drivers_license'),
     borrowerIdNumberLast4: sanitizeSSNLast4(metadata.borrowerIdNumberLast4),
     borrowerEmploymentStatus: sanitizeEmploymentStatus(metadata.borrowerEmploymentStatus),
-    borrowerAnnualIncome: sanitizeNumber(metadata.borrowerAnnualIncome, 'loan_amount'),
+    borrowerAnnualIncome: sanitizeNumber(metadata.borrowerAnnualIncome),
     borrowerCoBorrowerName: sanitizeText(metadata.borrowerCoBorrowerName),
     propertyAddress: sanitizeAddress(metadata.propertyAddress),
     additionalNotes: sanitizeNotes(metadata.additionalNotes),
@@ -937,12 +1200,161 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
   const isSingleMode = uploadMode === 'single';
   const hasPrimaryFile = isSingleMode ? Boolean(file && fileHash) : selectedFiles.length > 0;
+  
+  // Check if KYC validation would pass (without setting errors)
+  const isKycValid = useMemo(() => {
+    if (!kycData.fullLegalName?.trim()) return false;
+    if (!kycData.dateOfBirth) return false;
+    if (!kycData.phoneNumber?.trim()) return false;
+    if (!kycData.emailAddress?.trim()) return false;
+    if (!kycData.streetAddress1?.trim()) return false;
+    if (!kycData.city?.trim()) return false;
+    if (!kycData.stateProvince) return false;
+    if (!kycData.postalZipCode?.trim()) return false;
+    if (!kycData.country) return false;
+    if (!kycData.citizenshipCountry) return false;
+    if (!kycData.ssnOrItinType) return false;
+    if (!kycData.ssnOrItinNumber?.trim()) return false;
+    // Only require Identification Type, Number, and ID Issuing Country when ITIN is selected
+    // SSN can serve both identification and SSN criteria, so these fields are not needed for SSN
+    if (kycData.ssnOrItinType === 'ITIN') {
+      if (!kycData.identificationType) return false;
+      if (!kycData.identificationNumber?.trim()) return false;
+      if (!kycData.idIssuingCountry) return false;
+    }
+    if (!kycData.sourceOfFunds) return false;
+    if (!kycData.purposeOfLoan?.trim() || kycData.purposeOfLoan.trim().length < 20) return false;
+    if (!kycData.expectedMonthlyTransactionVolume || kycData.expectedMonthlyTransactionVolume <= 0) return false;
+    if (!kycData.expectedNumberOfMonthlyTransactions || kycData.expectedNumberOfMonthlyTransactions <= 0) return false;
+    if (!kycData.isPEP) return false;
+    if (kycData.isPEP === 'Yes' && !kycData.pepDetails?.trim()) return false;
+    // governmentIdFile validation removed - collecting from form fields instead
+    return true;
+  }, [kycData]);
+  
+  // Helper function to get required fields for each loan type
+  const getRequiredFieldsForLoanType = (loanType: string): string[] => {
+    switch (loanType) {
+      case 'home_loan':
+        return ['propertyAddress', 'propertyValue', 'downPayment', 'propertyType'];
+      case 'personal_loan':
+        return []; // Personal loans typically don't need additional fields beyond standard ones
+      case 'auto_loan':
+        return ['vehicleMake', 'vehicleModel', 'vehicleYear', 'vehicleVIN', 'purchasePrice'];
+      case 'business_loan':
+        return ['businessName', 'businessType', 'businessRegistrationNumber', 'annualRevenue'];
+      case 'student_loan':
+        return ['schoolName', 'degreeProgram', 'expectedGraduationDate'];
+      case 'refinance':
+        return ['currentLoanNumber', 'currentLender', 'refinancePurpose'];
+      case 'home_equity':
+        return ['propertyAddress', 'propertyValue', 'currentMortgageBalance', 'equityAmount'];
+      default:
+        return [];
+    }
+  };
+
+  // Check if Loan Information fields are valid (required fields)
+  const isFormValid = useMemo(() => {
+    if (!hasPrimaryFile) return false;
+    let currentMeta = {};
+    try {
+      currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
+    } catch (e) {
+      return false; // Invalid JSON means form is invalid
+    }
+    // Required Loan Information fields (always required)
+    if (!currentMeta.loanId?.trim()) return false;
+    if (!currentMeta.loanType?.trim()) return false; // Loan Type is now required
+    if (!currentMeta.documentType?.trim()) return false;
+    if (!currentMeta.loanAmount || currentMeta.loanAmount <= 0) return false;
+    if (!currentMeta.loanTerm || currentMeta.loanTerm <= 0) return false;
+    if (!currentMeta.interestRate || currentMeta.interestRate <= 0) return false;
+    
+    // Check conditional required fields based on loan type
+    const requiredFields = getRequiredFieldsForLoanType(currentMeta.loanType || '');
+    for (const field of requiredFields) {
+      const value = currentMeta[field];
+      if (!value || (typeof value === 'string' && !value.trim()) || (typeof value === 'number' && value <= 0)) {
+        return false;
+      }
+    }
+    
+    return true;
+  }, [metadata, hasPrimaryFile]);
+
+  // Compute loan form errors
+  useEffect(() => {
+    if (!hasPrimaryFile) {
+      setLoanFormErrors({});
+      return;
+    }
+    let currentMeta = {};
+    try {
+      currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
+    } catch (e) {
+      setLoanFormErrors({});
+      return;
+    }
+    const errors: typeof loanFormErrors = {};
+    if (!currentMeta.loanId?.trim()) errors.loanId = 'Loan ID is required';
+    if (!currentMeta.loanType?.trim()) errors.loanType = 'Loan Type is required';
+    if (!currentMeta.documentType?.trim()) errors.documentType = 'Document Type is required';
+    if (!currentMeta.loanAmount || currentMeta.loanAmount <= 0) errors.loanAmount = 'Loan Amount is required and must be greater than 0';
+    if (!currentMeta.loanTerm || currentMeta.loanTerm <= 0) errors.loanTerm = 'Loan Term is required and must be greater than 0';
+    if (!currentMeta.interestRate || currentMeta.interestRate <= 0) errors.interestRate = 'Interest Rate is required and must be greater than 0';
+    
+    // Check conditional required fields based on loan type
+    const requiredFields = getRequiredFieldsForLoanType(currentMeta.loanType || '');
+    for (const field of requiredFields) {
+      const value = currentMeta[field];
+      if (!value || (typeof value === 'string' && !value.trim()) || (typeof value === 'number' && value <= 0)) {
+        const fieldLabels: Record<string, string> = {
+          propertyAddress: 'Property Address',
+          propertyValue: 'Property Value',
+          downPayment: 'Down Payment',
+          propertyType: 'Property Type',
+          vehicleMake: 'Vehicle Make',
+          vehicleModel: 'Vehicle Model',
+          vehicleYear: 'Vehicle Year',
+          vehicleVIN: 'Vehicle VIN',
+          purchasePrice: 'Purchase Price',
+          businessName: 'Business Name',
+          businessType: 'Business Type',
+          businessRegistrationNumber: 'Business Registration Number',
+          annualRevenue: 'Annual Revenue',
+          schoolName: 'School Name',
+          degreeProgram: 'Degree Program',
+          expectedGraduationDate: 'Expected Graduation Date',
+          currentLoanNumber: 'Current Loan Number',
+          currentLender: 'Current Lender',
+          refinancePurpose: 'Refinance Purpose',
+          currentMortgageBalance: 'Current Mortgage Balance',
+          equityAmount: 'Equity Amount'
+        };
+        errors[field as keyof typeof errors] = `${fieldLabels[field] || field} is required`;
+      }
+    }
+    
+    setLoanFormErrors(errors);
+  }, [metadata, hasPrimaryFile]);
+  
+  // Check if file is already sealed (blocks upload)
+  const isFileAlreadySealed = Boolean(verifyResult && verifyResult.is_valid);
+  
+  // Check required fields (marked with red stars):
+  // - File must be selected
+  // - All required KYC fields must be filled
+  // - All required Loan Information fields must be filled
+  // - File must not be already sealed
   const isUploadDisabled =
     isUploading ||
     isVerifying ||
     Boolean(uploadResult) ||
-    Boolean(verifyResult && verifyResult.is_valid) ||
-    !hasPrimaryFile;
+    isFileAlreadySealed ||
+    !hasPrimaryFile ||
+    !isKycValid ||
+    !isFormValid;
 
   const validateLoanFile = (file: File): { isValid: boolean; reason?: string } => {
     const validExtensions = ['.pdf', '.json', '.docx', '.xlsx', '.txt', '.jpg', '.jpeg', '.png'];
@@ -1020,7 +1432,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         
         if (existingVerify && existingVerify.is_valid) {
           setVerifyResult(existingVerify);
-          toast.success('Document already sealed!');
+          toast.error('⚠️ This document is already sealed! Upload is blocked to prevent duplicates.');
         }
       } catch (error) {
         toast.error('Failed to calculate file hash');
@@ -1109,7 +1521,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       const completeCount = analyses.filter(a => !a.needsReview).length;
       const incompleteCount = analyses.filter(a => a.needsReview).length;
       const avgConfidence = Math.round(
-        analyses.reduce((sum, a) => sum + a.overallConfidence, 0) / analyses.length
+        analyses.reduce((sum, a) => sum + (a.overallConfidence || 0), 0) / analyses.length
       );
 
       // Show results
@@ -1222,7 +1634,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         
         if (existingVerify && existingVerify.is_valid) {
           setVerifyResult(existingVerify);
-          toast.success('Document already sealed!');
+          toast.error('⚠️ This document is already sealed! Upload is blocked to prevent duplicates.');
         }
       } catch (error) {
         toast.error('Failed to calculate file hash');
@@ -1230,6 +1642,263 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       }
     }
   };
+
+  // Handle Demo Mode Loading - Single File
+  const handleSingleFileDemo = () => {
+    console.log('🎬 Loading single file demo mode...');
+    setIsDemoMode(true);
+    setUploadMode('single');
+
+    try {
+      // Generate demo data
+      const demoDocuments = generateDemoDocumentSet();
+      const demoKYC = generateDemoKYCData();
+
+      console.log('📄 Generated demo documents:', demoDocuments);
+      console.log('👤 Generated demo KYC:', demoKYC);
+
+      // Convert first demo document to File and auto-upload
+      if (demoDocuments && demoDocuments.length > 0) {
+        const firstDoc = demoDocuments[0];
+        const jsonContent = JSON.stringify(firstDoc, null, 2);
+        const blob = new Blob([jsonContent], { type: 'application/json' });
+        const fileName = `demo_loan_${firstDoc.security_level || 'standard'}_1.json`;
+        const demoFile = new File([blob], fileName, { type: 'application/json' });
+
+        // Simulate file drop
+        setTimeout(async () => {
+          console.log('🚀 Auto-uploading demo file...');
+          setFile(demoFile);
+          setCurrentStep(2);
+
+          // Calculate file hash (required for upload button to be enabled)
+          try {
+            const hash = await calculateFileHash(demoFile);
+            setFileHash(hash);
+            console.log('Demo file hash calculated:', hash);
+          } catch (error) {
+            console.error('Failed to calculate demo file hash:', error);
+          }
+
+          // Trigger auto-fill
+          autoFillFromJSON(demoFile).then(() => {
+            toast.success('✨ Single file demo loaded! Review the auto-filled form.');
+          }).catch(error => {
+            console.error('Demo auto-fill error:', error);
+            toast.error('Demo loaded but auto-fill failed. Please review form.');
+          });
+        }, 500);
+      }
+
+      // Pre-fill KYC data
+      setTimeout(() => {
+        setKycData(prev => ({
+          ...prev,
+          ...demoKYC
+        }));
+      }, 800);
+
+      // Pre-fill Loan Information including loanType and conditional fields
+      setTimeout(() => {
+        if (demoDocuments && demoDocuments.length > 0) {
+          const firstDoc = demoDocuments[0];
+          const loanMeta: any = {
+            loanId: firstDoc.loan_id,
+            loanType: firstDoc.loan_type || 'home_loan',
+            documentType: firstDoc.document_type || 'loan_application',
+            loanAmount: firstDoc.loan_amount,
+            loanTerm: firstDoc.loan_term_months,
+            interestRate: firstDoc.interest_rate,
+            propertyAddress: firstDoc.property_address || '',
+          };
+
+          // Add conditional fields based on loan type
+          if (firstDoc.loan_type === 'home_loan' || firstDoc.loan_type === 'home_equity') {
+            if (firstDoc.property_value) loanMeta.propertyValue = firstDoc.property_value;
+            if (firstDoc.down_payment) loanMeta.downPayment = firstDoc.down_payment;
+            if (firstDoc.property_type) loanMeta.propertyType = firstDoc.property_type;
+            if (firstDoc.current_mortgage_balance) loanMeta.currentMortgageBalance = firstDoc.current_mortgage_balance;
+            if (firstDoc.equity_amount) loanMeta.equityAmount = firstDoc.equity_amount;
+          } else if (firstDoc.loan_type === 'auto_loan') {
+            if (firstDoc.vehicle_make) loanMeta.vehicleMake = firstDoc.vehicle_make;
+            if (firstDoc.vehicle_model) loanMeta.vehicleModel = firstDoc.vehicle_model;
+            if (firstDoc.vehicle_year) loanMeta.vehicleYear = firstDoc.vehicle_year;
+            if (firstDoc.vehicle_vin) loanMeta.vehicleVIN = firstDoc.vehicle_vin;
+            if (firstDoc.purchase_price) loanMeta.purchasePrice = firstDoc.purchase_price;
+          } else if (firstDoc.loan_type === 'business_loan') {
+            if (firstDoc.business_name) loanMeta.businessName = firstDoc.business_name;
+            if (firstDoc.business_type) loanMeta.businessType = firstDoc.business_type;
+            if (firstDoc.business_registration_number) loanMeta.businessRegistrationNumber = firstDoc.business_registration_number;
+            if (firstDoc.annual_revenue) loanMeta.annualRevenue = firstDoc.annual_revenue;
+          } else if (firstDoc.loan_type === 'student_loan') {
+            if (firstDoc.school_name) loanMeta.schoolName = firstDoc.school_name;
+            if (firstDoc.degree_program) loanMeta.degreeProgram = firstDoc.degree_program;
+            if (firstDoc.expected_graduation_date) loanMeta.expectedGraduationDate = firstDoc.expected_graduation_date;
+          } else if (firstDoc.loan_type === 'refinance') {
+            if (firstDoc.current_loan_number) loanMeta.currentLoanNumber = firstDoc.current_loan_number;
+            if (firstDoc.current_lender) loanMeta.currentLender = firstDoc.current_lender;
+            if (firstDoc.refinance_purpose) loanMeta.refinancePurpose = firstDoc.refinance_purpose;
+          }
+
+          // Update formData
+          setFormData(prev => ({
+            ...prev,
+            loanId: loanMeta.loanId,
+            loanType: loanMeta.loanType,
+            documentType: loanMeta.documentType,
+            loanAmount: String(loanMeta.loanAmount),
+            loanTerm: String(loanMeta.loanTerm),
+            interestRate: String(loanMeta.interestRate),
+            propertyAddress: loanMeta.propertyAddress,
+            propertyValue: String(loanMeta.propertyValue || ''),
+            downPayment: String(loanMeta.downPayment || ''),
+            propertyType: loanMeta.propertyType || '',
+            vehicleMake: loanMeta.vehicleMake || '',
+            vehicleModel: loanMeta.vehicleModel || '',
+            vehicleYear: String(loanMeta.vehicleYear || ''),
+            vehicleVIN: loanMeta.vehicleVIN || '',
+            purchasePrice: String(loanMeta.purchasePrice || ''),
+            businessName: loanMeta.businessName || '',
+            businessType: loanMeta.businessType || '',
+            businessRegistrationNumber: loanMeta.businessRegistrationNumber || '',
+            annualRevenue: String(loanMeta.annualRevenue || ''),
+            schoolName: loanMeta.schoolName || '',
+            degreeProgram: loanMeta.degreeProgram || '',
+            expectedGraduationDate: loanMeta.expectedGraduationDate || '',
+            currentLoanNumber: loanMeta.currentLoanNumber || '',
+            currentLender: loanMeta.currentLender || '',
+            refinancePurpose: loanMeta.refinancePurpose || '',
+            currentMortgageBalance: String(loanMeta.currentMortgageBalance || ''),
+            equityAmount: String(loanMeta.equityAmount || ''),
+          }));
+
+          // Update metadata
+          setMetadata(JSON.stringify(loanMeta, null, 2));
+        }
+      }, 1000);
+
+    } catch (error) {
+      console.error('Error generating demo data:', error);
+      toast.error('Failed to load demo data');
+    }
+  };
+
+  // Handle Demo Mode Loading - Multiple Files
+  const handleMultipleFilesDemo = () => {
+    console.log('🎬 Loading multiple files demo mode...');
+    setIsDemoMode(true);
+    setUploadMode('bulk');
+
+    try {
+      // Generate multiple demo documents
+      const demoDocuments = generateDemoDocumentSet();
+
+      if (demoDocuments && demoDocuments.length > 0) {
+        // Create multiple demo files
+        const demoFiles: File[] = demoDocuments.slice(0, 3).map((doc, index) => {
+          const jsonContent = JSON.stringify(doc, null, 2);
+          const blob = new Blob([jsonContent], { type: 'application/json' });
+          const fileName = `demo_loan_${doc.security_level || 'standard'}_${index + 1}.json`;
+          return new File([blob], fileName, { type: 'application/json' });
+        });
+
+        setTimeout(() => {
+          console.log('🚀 Loading multiple demo files...');
+          setSelectedFiles(demoFiles);
+
+          // Pre-fill metadata for each file
+          const metadata: Record<string, any> = {};
+          demoFiles.forEach((file, index) => {
+            const doc = demoDocuments[index];
+            const fileMeta: any = {
+              documentType: doc.document_type || 'loan_application',
+              loanId: doc.loan_id,
+              loanType: doc.loan_type || 'home_loan',
+              borrowerName: doc.borrower?.full_name || '',
+              loanAmount: doc.loan_amount || 0,
+              loanTerm: doc.loan_term_months || 360,
+              interestRate: doc.interest_rate || 4.5,
+              propertyAddress: doc.property_address || '',
+            };
+
+            // Add conditional fields based on loan type
+            if (doc.loan_type === 'home_loan' || doc.loan_type === 'home_equity') {
+              if (doc.property_value) fileMeta.propertyValue = doc.property_value;
+              if (doc.down_payment) fileMeta.downPayment = doc.down_payment;
+              if (doc.property_type) fileMeta.propertyType = doc.property_type;
+              if (doc.current_mortgage_balance) fileMeta.currentMortgageBalance = doc.current_mortgage_balance;
+              if (doc.equity_amount) fileMeta.equityAmount = doc.equity_amount;
+            } else if (doc.loan_type === 'auto_loan') {
+              if (doc.vehicle_make) fileMeta.vehicleMake = doc.vehicle_make;
+              if (doc.vehicle_model) fileMeta.vehicleModel = doc.vehicle_model;
+              if (doc.vehicle_year) fileMeta.vehicleYear = doc.vehicle_year;
+              if (doc.vehicle_vin) fileMeta.vehicleVIN = doc.vehicle_vin;
+              if (doc.purchase_price) fileMeta.purchasePrice = doc.purchase_price;
+            } else if (doc.loan_type === 'business_loan') {
+              if (doc.business_name) fileMeta.businessName = doc.business_name;
+              if (doc.business_type) fileMeta.businessType = doc.business_type;
+              if (doc.business_registration_number) fileMeta.businessRegistrationNumber = doc.business_registration_number;
+              if (doc.annual_revenue) fileMeta.annualRevenue = doc.annual_revenue;
+            } else if (doc.loan_type === 'student_loan') {
+              if (doc.school_name) fileMeta.schoolName = doc.school_name;
+              if (doc.degree_program) fileMeta.degreeProgram = doc.degree_program;
+              if (doc.expected_graduation_date) fileMeta.expectedGraduationDate = doc.expected_graduation_date;
+            } else if (doc.loan_type === 'refinance') {
+              if (doc.current_loan_number) fileMeta.currentLoanNumber = doc.current_loan_number;
+              if (doc.current_lender) fileMeta.currentLender = doc.current_lender;
+              if (doc.refinance_purpose) fileMeta.refinancePurpose = doc.refinance_purpose;
+            }
+
+            metadata[file.name] = fileMeta;
+          });
+          setBulkFileMetadata(metadata);
+
+          toast.success(`✨ Multiple files demo loaded! ${demoFiles.length} files ready to upload.`);
+        }, 500);
+      }
+
+    } catch (error) {
+      console.error('Error generating multiple files demo:', error);
+      toast.error('Failed to load multiple files demo');
+    }
+  };
+
+  // Handle Demo Mode Loading - Directory
+  const handleDirectoryDemo = () => {
+    console.log('🎬 Loading directory demo mode...');
+    setIsDemoMode(true);
+    setUploadMode('directory');
+
+    try {
+      // Generate demo documents for directory structure
+      const demoDocuments = generateDemoDocumentSet();
+
+      if (demoDocuments && demoDocuments.length > 0) {
+        // Simulate directory structure with multiple files
+        const directoryFiles: File[] = demoDocuments.map((doc, index) => {
+          const jsonContent = JSON.stringify(doc, null, 2);
+          const blob = new Blob([jsonContent], { type: 'application/json' });
+          // Create file paths that simulate directory structure
+          const fileName = `loan_documents/demo_${doc.document_type}_${index + 1}.json`;
+          return new File([blob], fileName, { type: 'application/json' });
+        });
+
+        setTimeout(() => {
+          console.log('🚀 Loading directory demo...');
+          setSelectedFiles(directoryFiles);
+
+          toast.success(`✨ Directory demo loaded! ${directoryFiles.length} files in directory structure.`);
+        }, 500);
+      }
+
+    } catch (error) {
+      console.error('Error generating directory demo:', error);
+      toast.error('Failed to load directory demo');
+    }
+  };
+
+  // Wrapper function for backward compatibility
+  const handleDemoLoad = handleSingleFileDemo;
 
   useEffect(() => {
     if (uploadMode === 'single') {
@@ -1313,16 +1982,17 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           )}
 
           {verifyResult && verifyResult.is_valid && (
-            <Alert className="border-green-200 bg-green-50">
-              <Shield className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
+            <Alert className="border-red-200 bg-red-50">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800">
                 <div className="space-y-2">
-                  <div className="font-medium">Document Already Sealed!</div>
+                  <div className="font-medium">❌ Document Already Sealed - Upload Blocked</div>
                   <div className="text-sm">
                     This document was already sealed on{' '}
                     <span className="font-medium">
                       {new Date(verifyResult.details.created_at).toLocaleString()}
                     </span>
+                    . You cannot upload the same file again. Please use a different file.
                   </div>
                   <div className="flex gap-2 mt-3">
                     <Button asChild size="sm">
@@ -1570,10 +2240,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         </div>
                       </div>
                       <div className="flex items-center gap-2 pl-4">
-                        <Button size="xs" variant="outline" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                        <Button size="sm" variant="outline" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
                           Fix now
                         </Button>
-                        <Button size="xs" variant="ghost" onClick={() => handleRemoveInvalidFile(fileItem.name)}>
+                        <Button size="sm" variant="ghost" onClick={() => handleRemoveInvalidFile(fileItem.name)}>
                           Remove
                         </Button>
                       </div>
@@ -1587,7 +2257,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 </ul>
                 {validationResults.invalid.some(fileItem => (bulkFileMetadata[fileItem.name]?.documentType ?? '') === '') && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <Button size="xs" variant="secondary" onClick={() => handleApplyDocumentTypeToAll('loan_application')}>
+                    <Button size="sm" variant="secondary" onClick={() => handleApplyDocumentTypeToAll('loan_application')}>
                       Fill document type for missing files
                     </Button>
                   </div>
@@ -1607,7 +2277,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="xs" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                  <Button variant="ghost" size="sm" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
                     Edit
                   </Button>
                   <CheckCircle className="h-4 w-4 text-green-600" />
@@ -1707,10 +2377,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         </div>
                       </div>
                       <div className="flex items-centered gap-2 pl-4">
-                        <Button size="xs" variant="outline" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                        <Button size="sm" variant="outline" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
                           Fix now
                         </Button>
-                        <Button size="xs" variant="ghost" onClick={() => handleRemoveInvalidFile(fileItem.name)}>
+                        <Button size="sm" variant="ghost" onClick={() => handleRemoveInvalidFile(fileItem.name)}>
                           Remove
                         </Button>
                       </div>
@@ -1724,7 +2394,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 </ul>
                 {validationResults.invalid.some(fileItem => (bulkFileMetadata[fileItem.name]?.documentType ?? '') === '') && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <Button size="xs" variant="secondary" onClick={() => handleApplyDocumentTypeToAll('loan_application')}>
+                    <Button size="sm" variant="secondary" onClick={() => handleApplyDocumentTypeToAll('loan_application')}>
                       Fill document type for missing files
                     </Button>
                   </div>
@@ -1744,7 +2414,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="xs" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
+                  <Button variant="ghost" size="sm" onClick={() => handleOpenMetadataEditor(fileItem.name)}>
                     Edit
                   </Button>
                   <CheckCircle className="h-4 w-4 text-green-600" />
@@ -1781,9 +2451,15 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
   const handleUpload = async () => {
     console.log('Upload button clicked');
-    
+
     // Clear previous errors
     setUploadState(prev => ({ ...prev, error: null, validationErrors: [] }));
+    
+    // Block upload if file is already sealed
+    if (isFileAlreadySealed) {
+      toast.error('❌ Cannot upload: This document is already sealed on the blockchain. Please use a different file.');
+      return;
+    }
     
   // If potential duplicates are detected, block unless explicitly allowed
   if (duplicateCheckResult?.is_duplicate && !allowUploadDespiteDuplicates) {
@@ -1853,19 +2529,23 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           createdBy: 'user@example.com' // TODO: Get from auth context
         };
 
+        // Get borrower data from KYC section (preferred) or metadata (fallback)
         const rawBorrowerData = {
-          fullName: currentMeta.borrowerFullName || '',
-          dateOfBirth: currentMeta.borrowerDateOfBirth || '',
-          email: currentMeta.borrowerEmail || '',
-          phone: currentMeta.borrowerPhone || '',
-          streetAddress: currentMeta.borrowerStreetAddress || '',
-          city: currentMeta.borrowerCity || '',
-          state: currentMeta.borrowerState || '',
-          zipCode: currentMeta.borrowerZipCode || '',
-          country: currentMeta.borrowerCountry || 'US',
-          ssnLast4: currentMeta.borrowerSSNLast4 || '',
-          governmentIdType: currentMeta.borrowerGovernmentIdType || 'drivers_license',
-          idNumberLast4: currentMeta.borrowerIdNumberLast4 || '',
+          fullName: kycData.fullLegalName || currentMeta.borrowerFullName || '',
+          dateOfBirth: kycData.dateOfBirth || currentMeta.borrowerDateOfBirth || '',
+          email: kycData.emailAddress || currentMeta.borrowerEmail || '',
+          phone: kycData.phoneNumber || currentMeta.borrowerPhone || '',
+          streetAddress: kycData.streetAddress1 || currentMeta.borrowerStreetAddress || '',
+          city: kycData.city || currentMeta.borrowerCity || '',
+          state: kycData.stateProvince || currentMeta.borrowerState || '',
+          zipCode: kycData.postalZipCode || currentMeta.borrowerZipCode || '',
+          country: kycData.country || currentMeta.borrowerCountry || 'US',
+          // Extract last 4 digits from SSN/ITIN number
+          ssnLast4: kycData.ssnOrItinNumber ? kycData.ssnOrItinNumber.slice(-4).replace(/-/g, '') : (currentMeta.borrowerSSNLast4 || ''),
+          ssnOrItinType: kycData.ssnOrItinType || '',
+          ssnOrItinNumber: kycData.ssnOrItinNumber || '',
+          governmentIdType: kycData.identificationType || currentMeta.borrowerGovernmentIdType || 'drivers_license',
+          idNumberLast4: kycData.identificationNumber ? kycData.identificationNumber.slice(-4) : (currentMeta.borrowerIdNumberLast4 || ''),
           employmentStatus: currentMeta.borrowerEmploymentStatus || 'employed',
           annualIncome: currentMeta.borrowerAnnualIncome || 0,
           coBorrowerName: currentMeta.borrowerCoBorrowerName || ''
@@ -1875,36 +2555,78 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         const sanitizedLoanData = sanitizeFormData(rawLoanData);
         const sanitizedBorrowerData = sanitizeFormData(rawBorrowerData);
         
-        // Create final loan data object
-        const loanData: LoanData = {
+        // Convert annual income to number and then to income range string
+        const annualIncomeNumber = typeof sanitizedBorrowerData.annualIncome === 'string' 
+          ? parseFloat(sanitizedBorrowerData.annualIncome) || 0
+          : Number(sanitizedBorrowerData.annualIncome) || 0;
+        const annualIncomeRange = getIncomeRange(annualIncomeNumber);
+        
+        // Get loanType and conditional fields from metadata
+        const loanType = currentMeta.loanType || '';
+        const conditionalFields: any = {};
+        if (loanType === 'home_loan' || loanType === 'home_equity') {
+          if (currentMeta.propertyValue) conditionalFields.propertyValue = currentMeta.propertyValue;
+          if (currentMeta.downPayment) conditionalFields.downPayment = currentMeta.downPayment;
+          if (currentMeta.propertyType) conditionalFields.propertyType = currentMeta.propertyType;
+          if (currentMeta.currentMortgageBalance) conditionalFields.currentMortgageBalance = currentMeta.currentMortgageBalance;
+          if (currentMeta.equityAmount) conditionalFields.equityAmount = currentMeta.equityAmount;
+        } else if (loanType === 'auto_loan') {
+          if (currentMeta.vehicleMake) conditionalFields.vehicleMake = currentMeta.vehicleMake;
+          if (currentMeta.vehicleModel) conditionalFields.vehicleModel = currentMeta.vehicleModel;
+          if (currentMeta.vehicleYear) conditionalFields.vehicleYear = currentMeta.vehicleYear;
+          if (currentMeta.vehicleVIN) conditionalFields.vehicleVIN = currentMeta.vehicleVIN;
+          if (currentMeta.purchasePrice) conditionalFields.purchasePrice = currentMeta.purchasePrice;
+        } else if (loanType === 'business_loan') {
+          if (currentMeta.businessName) conditionalFields.businessName = currentMeta.businessName;
+          if (currentMeta.businessType) conditionalFields.businessType = currentMeta.businessType;
+          if (currentMeta.businessRegistrationNumber) conditionalFields.businessRegistrationNumber = currentMeta.businessRegistrationNumber;
+          if (currentMeta.annualRevenue) conditionalFields.annualRevenue = currentMeta.annualRevenue;
+        } else if (loanType === 'student_loan') {
+          if (currentMeta.schoolName) conditionalFields.schoolName = currentMeta.schoolName;
+          if (currentMeta.degreeProgram) conditionalFields.degreeProgram = currentMeta.degreeProgram;
+          if (currentMeta.expectedGraduationDate) conditionalFields.expectedGraduationDate = currentMeta.expectedGraduationDate;
+        } else if (loanType === 'refinance') {
+          if (currentMeta.currentLoanNumber) conditionalFields.currentLoanNumber = currentMeta.currentLoanNumber;
+          if (currentMeta.currentLender) conditionalFields.currentLender = currentMeta.currentLender;
+          if (currentMeta.refinancePurpose) conditionalFields.refinancePurpose = currentMeta.refinancePurpose;
+        }
+
+        // Create final loan data object with loanType and conditional fields
+        const loanData: any = {
           loan_id: sanitizedLoanData.loanId,
           document_type: sanitizedLoanData.documentType,
-          loan_amount: parseFloat(sanitizedLoanData.loanAmount),
           borrower_name: sanitizedLoanData.borrowerName,
-          additional_notes: sanitizedLoanData.additionalNotes
+          property_address: sanitizedLoanData.propertyAddress || '',
+          loan_amount: sanitizedLoanData.loanAmount,
+          interest_rate: sanitizedLoanData.interestRate ? parseFloat(sanitizedLoanData.interestRate) : undefined,
+          loan_term: sanitizedLoanData.loanTerm ? parseInt(sanitizedLoanData.loanTerm) : undefined,
+          additional_notes: sanitizedLoanData.additionalNotes,
+          loanType: loanType, // Include loan type
+          ...conditionalFields // Spread conditional fields
         };
 
-        // Create final borrower data object
-        const borrowerInfo: BorrowerInfo = {
-          full_name: sanitizedBorrowerData.fullName,
-          date_of_birth: sanitizedBorrowerData.dateOfBirth,
-          email: sanitizedBorrowerData.email,
-          phone: sanitizedBorrowerData.phone,
-          address_line1: sanitizedBorrowerData.streetAddress,
-          address_line2: currentMeta.borrowerStreetAddress2 || '', // Keep as is for now
-          city: sanitizedBorrowerData.city,
-          state: sanitizedBorrowerData.state,
-          zip_code: sanitizedBorrowerData.zipCode,
-          country: sanitizedBorrowerData.country,
-          ssn_last4: sanitizedBorrowerData.ssnLast4,
-          id_type: sanitizedBorrowerData.governmentIdType,
-          id_last4: sanitizedBorrowerData.idNumberLast4,
+        // Create final borrower data object - prioritize KYC data over metadata
+        const borrowerInfo: any = {
+          full_name: kycData.fullLegalName || sanitizedBorrowerData.fullName,
+          date_of_birth: kycData.dateOfBirth || sanitizedBorrowerData.dateOfBirth,
+          email: kycData.emailAddress || sanitizedBorrowerData.email,
+          phone: kycData.phoneNumber || sanitizedBorrowerData.phone,
+          address_line1: kycData.streetAddress1 || sanitizedBorrowerData.streetAddress,
+          address_line2: kycData.streetAddress2 || '',
+          city: kycData.city || sanitizedBorrowerData.city,
+          state: kycData.stateProvince || sanitizedBorrowerData.state,
+          zip_code: kycData.postalZipCode || sanitizedBorrowerData.zipCode,
+          country: kycData.country || sanitizedBorrowerData.country,
+          // Extract last 4 digits from SSN/ITIN number
+          ssn_last4: kycData.ssnOrItinNumber ? kycData.ssnOrItinNumber.slice(-4).replace(/-/g, '') : (sanitizedBorrowerData.ssnLast4 || ''),
+          id_type: kycData.identificationType || sanitizedBorrowerData.governmentIdType,
+          id_last4: kycData.identificationNumber ? kycData.identificationNumber.slice(-4) : (sanitizedBorrowerData.idNumberLast4 || ''),
           employment_status: sanitizedBorrowerData.employmentStatus,
-          annual_income_range: sanitizedBorrowerData.annualIncome,
-          co_borrower_name: sanitizedBorrowerData.coBorrowerName,
+          annual_income_range: annualIncomeRange, // Now a string like "$30,000 - $49,999"
           is_sealed: false,
-          walacor_tx_id: '',
-          seal_timestamp: ''
+          // Include SSN/ITIN fields
+          ssn_or_itin_type: kycData.ssnOrItinType || '',
+          ssn_or_itin_number: kycData.ssnOrItinNumber || ''
         };
 
         console.log('Loan data:', loanData);
@@ -1922,14 +2644,19 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         }, 200);
 
           // Use the appropriate API client based on security mode
+          console.log('🔐 Security Mode Selection:', { quantumSafeMode, maximumSecurityMode });
           let sealResponse;
           if (quantumSafeMode) {
+            console.log('🔬 Using QUANTUM-SAFE endpoint');
             sealResponse = await sealLoanDocumentQuantumSafe(loanData, borrowerInfo, [file]);
           } else if (maximumSecurityMode) {
+            console.log('🛡️ Using MAXIMUM SECURITY endpoint');
             sealResponse = await sealLoanDocumentMaximumSecurity(loanData, borrowerInfo, [file]);
           } else {
+            console.log('📄 Using STANDARD endpoint');
             sealResponse = await sealLoanDocument(loanData, borrowerInfo, [file]);
           }
+          console.log('✅ Seal Response received:', { artifact_id: sealResponse.artifact_id, security_level: sealResponse.quantum_safe_seal?.security_level || sealResponse.comprehensive_seal?.security_level || 'standard' });
         
         clearInterval(progressInterval);
         
@@ -2033,8 +2760,108 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     setBulkUploadResults([]);
 
     try {
-      const results: BulkUploadResult[] = [];
-      for (let index = 0; index < selectedFiles.length; index += 1) {
+      // Directory mode: Seal all files as a single directory container
+      if (uploadMode === 'directory') {
+        setUploadProgress(10);
+        toast.loading('Calculating file hashes...');
+
+        // Calculate hashes for all files
+        const fileInfoPromises = selectedFiles.map(async (fileItem) => {
+          const hash = await calculateFileHash(fileItem);
+          return {
+            filename: fileItem.name,
+            file_hash: hash,
+            file_size: fileItem.size
+          } as DirectoryFileInfo;
+        });
+
+        const fileInfos = await Promise.all(fileInfoPromises);
+        setUploadProgress(30);
+
+        // Generate directory hash (combining all file hashes)
+        // Note: In production, ObjectValidator would generate this
+        const combinedHash = await calculateFileHash(
+          new Blob([fileInfos.map(f => f.file_hash).join('')])
+        );
+
+        setUploadProgress(40);
+        toast.loading('Sealing directory...');
+
+        // Use metadata from first file for loan/borrower info
+        const meta = sanitizedMetadataByFile[selectedFiles[0].name];
+        const loanAmountNumber = parseFloat(meta.loanAmount || '0');
+        const annualIncomeNumber = parseFloat(meta.borrowerAnnualIncome || '0');
+
+        const loanData: LoanData = {
+          loan_id: meta.loanId || `loan-${Date.now()}`,
+          document_type: (meta.documentType || 'loan_application') as LoanData['document_type'],
+          borrower_name: meta.borrowerName || '',
+          property_address: meta.propertyAddress || '',
+          loan_amount: Number.isNaN(loanAmountNumber) ? 0 : loanAmountNumber,
+          interest_rate: meta.interestRate ? parseFloat(meta.interestRate) : undefined,
+          loan_term: meta.loanTerm ? parseInt(meta.loanTerm) : undefined,
+          additional_notes: meta.additional_notes || ''
+        };
+
+        const borrowerInfo: BorrowerInfo = {
+          full_name: meta.borrowerName || '',
+          date_of_birth: meta.borrowerDateOfBirth || '',
+          email: meta.borrowerEmail || '',
+          phone: meta.borrowerPhone || '',
+          address_line1: meta.borrowerStreetAddress || '',
+          address_line2: '',
+          city: meta.borrowerCity || '',
+          state: meta.borrowerState || '',
+          zip_code: meta.borrowerZipCode || '',
+          country: meta.borrowerCountry || 'US',
+          ssn_last4: meta.borrowerSSNLast4 || '',
+          id_type: (meta.borrowerGovernmentIdType || 'drivers_license') as BorrowerInfo['id_type'],
+          id_last4: meta.borrowerIdNumberLast4 || '',
+          employment_status: (meta.borrowerEmploymentStatus || 'employed') as BorrowerInfo['employment_status'],
+          annual_income_range: getIncomeRange(Number.isNaN(annualIncomeNumber) ? 0 : annualIncomeNumber),
+          is_sealed: false
+        };
+
+        setUploadProgress(60);
+
+        // Seal directory with all files
+        const directoryName = `loan_docs_${loanData.loan_id}`;
+        const directorySealResponse = await sealDirectory(
+          directoryName,
+          combinedHash,
+          fileInfos,
+          loanData,
+          borrowerInfo
+        );
+
+        setUploadProgress(100);
+
+        // Create result for UI display
+        const uploadResult: UploadResult = {
+          artifactId: directorySealResponse.container_id,
+          walacorTxId: directorySealResponse.walacor_tx_id,
+          sealedAt: directorySealResponse.sealed_at,
+          proofBundle: {}
+        };
+
+        setUploadResult(uploadResult);
+        setBulkUploadResults([]);
+        setCurrentStep(4);
+
+        clearSavedData();
+        setSelectedFiles([]);
+        setValidationResults({ valid: [], invalid: [], reasons: {} });
+        setBulkFileMetadata({});
+        setAllSelectedFiles({});
+        setMetadata('');
+        setShowMetadataEditor(false);
+        setShowSuccessModal(true);
+        toast.success(`Directory sealed successfully with ${fileInfos.length} files!`);
+
+      } else {
+        // Bulk mode: Seal each file individually
+        const results: BulkUploadResult[] = [];
+        for (let index = 0; index < selectedFiles.length; index += 1) {
         const fileItem = selectedFiles[index];
         const meta = sanitizedMetadataByFile[fileItem.name];
 
@@ -2043,13 +2870,16 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
         const loanData: LoanData = {
           loan_id: meta.loanId || `loan-${Date.now()}-${index}`,
-          document_type: (meta.documentType as LoanData['document_type']) || 'loan_application',
+          document_type: (meta.documentType || 'loan_application') as LoanData['document_type'],
+          borrower_name: meta.borrowerName || '',
+          property_address: meta.propertyAddress || '',
           loan_amount: Number.isNaN(loanAmountNumber) ? 0 : loanAmountNumber,
-          borrower_name: meta.borrowerName || meta.borrowerFullName || '',
-          additional_notes: meta.additionalNotes || undefined
+          interest_rate: meta.interestRate ? parseFloat(meta.interestRate) : undefined,
+          loan_term: meta.loanTerm ? parseInt(meta.loanTerm) : undefined,
+          additional_notes: meta.additionalNotes
         };
 
-        const borrowerFullName = meta.borrowerFullName || meta.borrowerName || '';
+        const borrowerFullName = meta.borrowerName || '';
         const borrowerInfo: BorrowerInfo = {
           full_name: borrowerFullName,
           date_of_birth: meta.borrowerDateOfBirth || '',
@@ -2062,14 +2892,11 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           zip_code: meta.borrowerZipCode || '',
           country: meta.borrowerCountry || 'US',
           ssn_last4: meta.borrowerSSNLast4 || '',
-          id_type: (meta.borrowerGovernmentIdType as BorrowerInfo['id_type']) || 'drivers_license',
+          id_type: (meta.borrowerGovernmentIdType || 'drivers_license') as BorrowerInfo['id_type'],
           id_last4: meta.borrowerIdNumberLast4 || '',
-          employment_status: (meta.borrowerEmploymentStatus as BorrowerInfo['employment_status']) || 'employed',
-          annual_income_range: getIncomeRange(Number.isNaN(annualIncomeNumber) ? 0 : annualIncomeNumber),
-          co_borrower_name: meta.borrowerCoBorrowerName || '',
-          is_sealed: false,
-          walacor_tx_id: '',
-          seal_timestamp: ''
+          employment_status: (meta.borrowerEmploymentStatus || 'employed') as BorrowerInfo['employment_status'],
+          annual_income_range: String(Number.isNaN(annualIncomeNumber) ? 0 : annualIncomeNumber),
+          is_sealed: false
         };
 
         const progressValue = Math.round((index / selectedFiles.length) * 100);
@@ -2088,10 +2915,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
         results.push({
           fileName: fileItem.name,
           result: {
-          artifactId: sealResponse.artifact_id,
-          walacorTxId: sealResponse.walacor_tx_id,
-          sealedAt: sealResponse.sealed_at,
-          proofBundle: sealResponse.blockchain_proof || {}
+            artifactId: sealResponse.artifact_id,
+            walacorTxId: sealResponse.walacor_tx_id,
+            sealedAt: sealResponse.sealed_at,
+            proofBundle: sealResponse.blockchain_proof || {}
           }
         });
 
@@ -2114,6 +2941,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       setShowMetadataEditor(false);
       setShowSuccessModal(true);
       toast.success(`Sealed ${results.length} document${results.length > 1 ? 's' : ''} successfully!`);
+      } // End of bulk mode else block
 
     } catch (error) {
       console.error('Bulk upload error:', error);
@@ -2156,10 +2984,18 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     return "$500,000+";
   };
 
-  // Enhanced validation function
+  // Enhanced validation function - only checks Loan Information fields
+  // KYC fields are validated separately via validateKYC()
   const validateForm = (): ValidationError[] => {
     const errors: ValidationError[] = [];
-    const currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
+    let currentMeta = {};
+    try {
+      currentMeta = metadata ? JSON.parse(metadata || '{}') : {};
+    } catch (e) {
+      // Invalid JSON means form is invalid
+      errors.push({ field: 'metadata', message: 'Invalid form data. Please refresh and try again.' });
+      return errors;
+    }
 
     // File validation
     if (isSingleMode) {
@@ -2185,64 +3021,59 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       }
     }
 
-  // Loan data validation
+    // Loan Information validation (required fields with red stars)
   if (!currentMeta.loanId?.trim()) {
     errors.push({ field: 'loanId', message: 'Loan ID is required' });
   }
+    if (!currentMeta.documentType?.trim()) {
+      errors.push({ field: 'documentType', message: 'Document Type is required' });
+    }
   if (!currentMeta.loanAmount || currentMeta.loanAmount <= 0) {
     errors.push({ field: 'loanAmount', message: 'Valid loan amount is required' });
   }
-  if (!currentMeta.borrowerFullName?.trim()) {
-    errors.push({ field: 'borrowerFullName', message: 'Borrower full name is required' });
-  }
-
-  // Borrower information validation
-  if (!currentMeta.borrowerEmail?.trim()) {
-    errors.push({ field: 'borrowerEmail', message: 'Email address is required' });
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentMeta.borrowerEmail)) {
-    errors.push({ field: 'borrowerEmail', message: 'Please enter a valid email address' });
-  }
-
-  if (!currentMeta.borrowerPhone?.trim()) {
-    errors.push({ field: 'borrowerPhone', message: 'Phone number is required' });
-  }
-
-  if (!currentMeta.borrowerDateOfBirth?.trim()) {
-    errors.push({ field: 'borrowerDateOfBirth', message: 'Date of birth is required' });
-  } else {
-    const dob = new Date(currentMeta.borrowerDateOfBirth);
-    const today = new Date();
-    const age = today.getFullYear() - dob.getFullYear();
-    if (age < 18) {
-      errors.push({ field: 'borrowerDateOfBirth', message: 'Borrower must be at least 18 years old' });
+    if (!currentMeta.loanTerm || currentMeta.loanTerm <= 0) {
+      errors.push({ field: 'loanTerm', message: 'Loan Term is required and must be greater than 0' });
     }
+    if (!currentMeta.interestRate || currentMeta.interestRate <= 0) {
+      errors.push({ field: 'interestRate', message: 'Interest Rate is required and must be greater than 0' });
   }
 
-  if (!currentMeta.borrowerStreetAddress?.trim()) {
-    errors.push({ field: 'borrowerStreetAddress', message: 'Street address is required' });
+    // Check conditional required fields based on loan type
+    const requiredFields = getRequiredFieldsForLoanType(currentMeta.loanType || '');
+    for (const field of requiredFields) {
+      const value = currentMeta[field];
+      if (!value || (typeof value === 'string' && !value.trim()) || (typeof value === 'number' && value <= 0)) {
+        const fieldLabels: Record<string, string> = {
+          propertyAddress: 'Property Address',
+          propertyValue: 'Property Value',
+          downPayment: 'Down Payment',
+          propertyType: 'Property Type',
+          vehicleMake: 'Vehicle Make',
+          vehicleModel: 'Vehicle Model',
+          vehicleYear: 'Vehicle Year',
+          vehicleVIN: 'Vehicle VIN',
+          purchasePrice: 'Purchase Price',
+          businessName: 'Business Name',
+          businessType: 'Business Type',
+          businessRegistrationNumber: 'Business Registration Number',
+          annualRevenue: 'Annual Revenue',
+          schoolName: 'School Name',
+          degreeProgram: 'Degree Program',
+          expectedGraduationDate: 'Expected Graduation Date',
+          currentLoanNumber: 'Current Loan Number',
+          currentLender: 'Current Lender',
+          refinancePurpose: 'Refinance Purpose',
+          currentMortgageBalance: 'Current Mortgage Balance',
+          equityAmount: 'Equity Amount'
+        };
+        errors.push({ 
+          field: field, 
+          message: `${fieldLabels[field] || field} is required` 
+        });
   }
+    }
 
-  if (!currentMeta.borrowerCity?.trim()) {
-    errors.push({ field: 'borrowerCity', message: 'City is required' });
-  }
-
-  if (!currentMeta.borrowerState?.trim()) {
-    errors.push({ field: 'borrowerState', message: 'State is required' });
-  }
-
-  if (!currentMeta.borrowerZipCode?.trim()) {
-    errors.push({ field: 'borrowerZipCode', message: 'ZIP code is required' });
-  }
-
-  if (!currentMeta.borrowerSSNLast4?.trim()) {
-    errors.push({ field: 'borrowerSSNLast4', message: 'SSN last 4 digits are required' });
-  } else if (!/^\d{4}$/.test(currentMeta.borrowerSSNLast4)) {
-    errors.push({ field: 'borrowerSSNLast4', message: 'SSN last 4 digits must be exactly 4 numbers' });
-  }
-
-  if (!currentMeta.borrowerAnnualIncome || currentMeta.borrowerAnnualIncome <= 0) {
-    errors.push({ field: 'borrowerAnnualIncome', message: 'Valid annual income is required' });
-  }
+    // Note: Borrower information is now in KYC section and validated via validateKYC()
 
     return errors;
   };
@@ -2356,10 +3187,32 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     if (!kycData.fullLegalName.trim()) errors.fullLegalName = 'Full legal name is required';
     if (!kycData.dateOfBirth) errors.dateOfBirth = 'Date of birth is required';
     if (kycData.dateOfBirth) {
-      const birthDate = new Date(kycData.dateOfBirth);
+      // Handle both YYYY-MM-DD (stored) and MM/DD/YYYY (user input) formats
+      let dateStr = kycData.dateOfBirth;
+      const mmddyyyyRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+      const match = dateStr.match(mmddyyyyRegex);
+      if (match) {
+        // Convert MM/DD/YYYY to YYYY-MM-DD for Date parsing
+        const [, month, day, year] = match;
+        dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+      const birthDate = new Date(dateStr);
       const today = new Date();
+      if (isNaN(birthDate.getTime())) {
+        errors.dateOfBirth = 'Please enter a valid date (MM/DD/YYYY)';
+      } else {
+        if (birthDate > today) {
+          errors.dateOfBirth = 'Date of birth cannot be in the future';
+        } else {
       const age = today.getFullYear() - birthDate.getFullYear();
-      if (age < 18) errors.dateOfBirth = 'Must be 18 years or older';
+          const monthDiff = today.getMonth() - birthDate.getMonth();
+          const dayDiff = today.getDate() - birthDate.getDate();
+          const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+          if (actualAge < 18) {
+            errors.dateOfBirth = 'Must be 18 years or older';
+          }
+        }
+      }
     }
     if (!kycData.phoneNumber.trim()) errors.phoneNumber = 'Phone number is required';
     if (kycData.phoneNumber && !/^\+1-\d{3}-\d{3}-\d{4}$/.test(kycData.phoneNumber)) {
@@ -2379,9 +3232,28 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     
     // Identification Information validation
     if (!kycData.citizenshipCountry) errors.citizenshipCountry = 'Citizenship country is required';
+    if (!kycData.ssnOrItinType) errors.ssnOrItinType = 'SSN or ITIN type is required';
+    if (!kycData.ssnOrItinNumber.trim()) {
+      errors.ssnOrItinNumber = `${kycData.ssnOrItinType || 'SSN/ITIN'} number is required`;
+    } else {
+      // Validate SSN format (XXX-XX-XXXX) or ITIN format (9XX-XX-XXXX)
+      if (kycData.ssnOrItinType === 'SSN') {
+        if (!/^\d{3}-\d{2}-\d{4}$/.test(kycData.ssnOrItinNumber)) {
+          errors.ssnOrItinNumber = 'SSN must be in format XXX-XX-XXXX';
+        }
+      } else if (kycData.ssnOrItinType === 'ITIN') {
+        if (!/^9\d{2}-\d{2}-\d{4}$/.test(kycData.ssnOrItinNumber)) {
+          errors.ssnOrItinNumber = 'ITIN must be in format 9XX-XX-XXXX (starts with 9)';
+        }
+      }
+    }
+    // Only require Identification Type, Number, and ID Issuing Country when ITIN is selected
+    // SSN can serve both identification and SSN criteria, so these fields are not needed for SSN
+    if (kycData.ssnOrItinType === 'ITIN') {
     if (!kycData.identificationType) errors.identificationType = 'Identification type is required';
     if (!kycData.identificationNumber.trim()) errors.identificationNumber = 'Identification number is required';
     if (!kycData.idIssuingCountry) errors.idIssuingCountry = 'ID issuing country is required';
+    }
     
     // Financial Information validation
     if (!kycData.sourceOfFunds) errors.sourceOfFunds = 'Source of funds is required';
@@ -2401,7 +3273,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     }
     
     // Document Upload validation
-    if (!kycData.governmentIdFile) errors.governmentIdFile = 'Government-issued ID upload is required';
+    // governmentIdFile validation removed - collecting from form fields instead
     
     setKycErrors(errors);
     return Object.keys(errors).length === 0;
@@ -2414,12 +3286,20 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
     if (typeof value === 'string') {
       switch (field) {
         case 'fullLegalName':
+          // Use sanitizeTextarea to preserve spaces in names (e.g., "John Michael Smith")
+          sanitizedValue = sanitizeTextarea(value);
+          break;
         case 'streetAddress1':
         case 'streetAddress2':
         case 'city':
+        case 'stateProvince':
+          // Use sanitizeTextarea to preserve spaces in address fields
+          sanitizedValue = sanitizeTextarea(value);
+          break;
         case 'purposeOfLoan':
         case 'pepDetails':
-          sanitizedValue = sanitizeText(value);
+          // Use sanitizeTextarea to preserve spaces in textarea fields
+          sanitizedValue = sanitizeTextarea(value);
           break;
         case 'emailAddress':
           sanitizedValue = sanitizeEmail(value);
@@ -2428,13 +3308,57 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
           sanitizedValue = sanitizePhone(value);
           break;
         case 'dateOfBirth':
-          sanitizedValue = sanitizeDate(value);
+          // Handle MM/DD/YYYY format - allow user to type it, but convert to YYYY-MM-DD for storage
+          // Allow digits and slashes only
+          let dateValue = value.replace(/[^\d/]/g, '');
+          
+          // Auto-format as user types: MM/DD/YYYY
+          // Remove extra slashes
+          dateValue = dateValue.replace(/\/+/g, '/');
+          
+          // Limit to MM/DD/YYYY format (10 chars: MM/DD/YYYY)
+          if (dateValue.length > 10) {
+            dateValue = dateValue.substring(0, 10);
+          }
+          
+          // If it's a valid MM/DD/YYYY format, convert to YYYY-MM-DD for storage
+          // Otherwise, store as-is (user is still typing)
+          const mmddyyyyRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+          const match = dateValue.match(mmddyyyyRegex);
+          if (match) {
+            const [, month, day, year] = match;
+            const monthNum = parseInt(month, 10);
+            const dayNum = parseInt(day, 10);
+            const yearNum = parseInt(year, 10);
+            
+            // Validate month and day ranges
+            if (monthNum >= 1 && monthNum <= 12 && dayNum >= 1 && dayNum <= 31 && yearNum >= 1900 && yearNum <= new Date().getFullYear()) {
+              // Convert to YYYY-MM-DD for storage
+              const paddedMonth = month.padStart(2, '0');
+              const paddedDay = day.padStart(2, '0');
+              sanitizedValue = `${year}-${paddedMonth}-${paddedDay}`;
+            } else {
+              // Invalid date, keep as-is for now (user might still be typing)
+              sanitizedValue = dateValue;
+            }
+          } else {
+            // Not complete yet, store as-is
+            sanitizedValue = dateValue;
+          }
           break;
         case 'postalZipCode':
           sanitizedValue = sanitizeZipCode(value);
           break;
         case 'identificationNumber':
           sanitizedValue = sanitizeSSNLast4(value);
+          break;
+        case 'ssnOrItinNumber':
+          // Allow digits and dashes only, format XXX-XX-XXXX
+          sanitizedValue = value.replace(/[^\d-]/g, '');
+          break;
+        case 'ssnOrItinType':
+          // No sanitization needed, it's a select value
+          sanitizedValue = value;
           break;
         case 'expectedMonthlyTransactionVolume':
         case 'expectedNumberOfMonthlyTransactions':
@@ -2510,7 +3434,117 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
   }, []);
 
   return (
-    <>
+    <DashboardLayout
+      rightSidebar={
+        <div className="p-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-6">
+            Upload Guide
+          </h2>
+
+          {/* Quick Tips */}
+          <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+            <div className="flex items-center gap-2 mb-3">
+              <Lightbulb className="h-4 w-4 text-yellow-500" />
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                Quick Tips
+              </h3>
+            </div>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-gray-700 dark:text-gray-300">
+                  <strong>AI Auto-fill:</strong> Upload a document and watch as AI extracts loan and borrower data automatically.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Sparkles className="h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-gray-700 dark:text-gray-300">
+                  <strong>Demo Mode:</strong> Try the demo to see sample data and fraud detection in action.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Shield className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-gray-700 dark:text-gray-300">
+                  <strong>Blockchain:</strong> All documents are sealed on Walacor blockchain for immutable audit trails.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              Supported Files
+            </h3>
+            <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+              <div>• PDF Documents</div>
+              <div>• Images (JPG, PNG)</div>
+              <div>• JSON Metadata</div>
+            </div>
+          </div>
+
+          <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              Security Levels
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                Standard
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                Maximum
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                Quantum-Safe
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Need help?
+            </h3>
+            <p className="text-xs text-gray-700 dark:text-gray-300 mb-3">
+              View documentation and guides
+            </p>
+            <div className="space-y-2">
+              <Link href="/docs/upload-guide" className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline block">
+                📚 Upload Guide
+              </Link>
+              <Link href="/docs/security-levels" className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline block">
+                🔒 Security Levels
+              </Link>
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Try Demo Mode:</p>
+              <div className="space-y-2">
+                <button
+                  onClick={handleSingleFileDemo}
+                  className="w-full text-xs text-left px-3 py-2 rounded bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 text-purple-700 dark:text-purple-300 transition-colors"
+                >
+                  📄 Single File Demo
+                </button>
+                <button
+                  onClick={handleMultipleFilesDemo}
+                  className="w-full text-xs text-left px-3 py-2 rounded bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 transition-colors"
+                >
+                  📚 Multiple Files Demo
+                </button>
+                <button
+                  onClick={handleDirectoryDemo}
+                  className="w-full text-xs text-left px-3 py-2 rounded bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-300 transition-colors"
+                >
+                  📁 Directory Demo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <>
       {/* Bulk Metadata Editor */}
       <Dialog open={showMetadataEditor} onOpenChange={(open) => {
         setShowMetadataEditor(open);
@@ -2751,7 +3785,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
             {duplicateCheckResult && (
               <>
                 {/* Warnings */}
-                {duplicateCheckResult.warnings.length > 0 && (
+                {duplicateCheckResult.warnings && duplicateCheckResult.warnings.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="font-medium text-yellow-700">Warnings:</h4>
                     <ul className="space-y-1">
@@ -2803,7 +3837,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 )}
 
                 {/* Recommendations */}
-                {duplicateCheckResult.recommendations.length > 0 && (
+                {duplicateCheckResult.recommendations && duplicateCheckResult.recommendations.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="font-medium text-blue-700">Recommendations:</h4>
                     <ul className="space-y-1">
@@ -2903,11 +3937,27 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm font-medium text-green-800">Artifact ID</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm font-medium text-green-800">Artifact ID</p>
+                        <InfoTooltip
+                          term={GLOSSARY.ARTIFACT_ID.term}
+                          definition={GLOSSARY.ARTIFACT_ID.definition}
+                          example={GLOSSARY.ARTIFACT_ID.example}
+                          className="text-green-600"
+                        />
+                      </div>
                       <p className="text-sm text-green-600 font-mono">{uploadResult.artifactId}</p>
                     </div>
                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm font-medium text-green-800">Transaction ID</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm font-medium text-green-800">Transaction ID</p>
+                        <InfoTooltip
+                          term={GLOSSARY.WALACOR_TX_ID.term}
+                          definition={GLOSSARY.WALACOR_TX_ID.definition}
+                          example={GLOSSARY.WALACOR_TX_ID.example}
+                          className="text-green-600"
+                        />
+                      </div>
                       <p className="text-sm text-green-600 font-mono">{uploadResult.walacorTxId}</p>
                     </div>
                   </div>
@@ -2974,7 +4024,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         </div>
                         <div className="text-xs text-blue-700">
                           <p><strong>Multi-Hash Algorithms:</strong> {uploadResult.comprehensive_seal.multi_hash_algorithms?.join(', ')}</p>
-                          <p><strong>PKI Signature:</strong> {uploadResult.comprehensive_seal.pki_signature?.algorithm} ({uploadResult.comprehensive_seal.pki_signature?.key_size} bits)</p>
+                          <p><strong>PKI Signature:</strong> {typeof uploadResult.comprehensive_seal.pki_signature === 'string' ? uploadResult.comprehensive_seal.pki_signature : `${(uploadResult.comprehensive_seal.pki_signature as any)?.algorithm} (${(uploadResult.comprehensive_seal.pki_signature as any)?.key_size} bits)`}</p>
                           <p><strong>Verification Methods:</strong> {uploadResult.comprehensive_seal.verification_methods?.join(', ')}</p>
                         </div>
                       </div>
@@ -3007,37 +4057,94 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       </Dialog>
 
       {/* Main Upload Page */}
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/20 relative overflow-hidden isolate">
-      {/* Balanced gradient background orbs */}
-      <div className="pointer-events-none absolute -z-10 top-[-220px] left-[-220px] w-[520px] h-[520px] bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full filter blur-3xl opacity-25 animate-blob" />
-      <div className="pointer-events-none absolute -z-10 top-[-200px] right-[-220px] w-[560px] h-[560px] bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-1000" />
-      <div className="pointer-events-none absolute -z-10 bottom-[-240px] left-[-220px] w-[640px] h-[640px] bg-gradient-to-br from-pink-400 to-rose-500 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
-      <div className="pointer-events-none absolute -z-10 bottom-[-220px] right-[-240px] w-[680px] h-[680px] bg-gradient-to-br from-amber-300 to-orange-500 rounded-full filter blur-3xl opacity-15 animate-blob animation-delay-3000" />
-      <div className="pointer-events-none absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-gradient-to-br from-fuchsia-400 to-sky-400 rounded-full filter blur-3xl opacity-10 animate-blob animation-delay-4000" />
-      {/* Soft radial vignette */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.15),rgba(255,255,255,0)_60%)]" />
+    <div className="min-h-screen bg-white dark:bg-black relative overflow-hidden">
+
+      {/* Demo Mode Banner */}
+      {isDemoMode && (
+        <div className="relative z-20 bg-elite-dark dark:bg-gray-900 text-white py-3 border-b border-elite-blue">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Sparkles className="h-5 w-5 animate-pulse" />
+                <div>
+                  <p className="font-semibold">✨ Interactive Demo Mode Active</p>
+                  <p className="text-xs text-purple-100">Sample loan document loaded with AI-powered auto-fill. Explore the features!</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsDemoMode(false);
+                  window.history.replaceState({}, '', '/upload');
+                }}
+                className="text-white hover:bg-white/20"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Exit Demo
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-blue-500 to-purple-600 text-white">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10"></div>
+      <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white border-b border-gray-200 dark:border-gray-800">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
         
         <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
           <div className="space-y-6">
-            <div className="flex items-center gap-4 mb-4">
-              <Link
-                href="/integrated-dashboard"
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Link>
-              <div className="space-y-3">
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-                  Upload Documents
-                </h1>
-                <p className="text-lg md:text-xl text-blue-100 max-w-3xl">
-                  Secure blockchain verification in seconds
-                </p>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/integrated-dashboard"
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Link>
+                <div className="space-y-3">
+                  <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+                    Upload Documents
+                  </h1>
+                  <p className="text-lg md:text-xl text-blue-100 max-w-3xl">
+                    Secure blockchain verification in seconds
+                  </p>
+                </div>
               </div>
+              {!isDemoMode && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs text-blue-200 text-right">Try Demo:</p>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSingleFileDemo}
+                      variant="outline"
+                      size="sm"
+                      className="bg-white/10 hover:bg-white/20 text-white border-white/30 gap-1"
+                    >
+                      <FileText className="h-3 w-3" />
+                      Single File
+                    </Button>
+                    <Button
+                      onClick={handleMultipleFilesDemo}
+                      variant="outline"
+                      size="sm"
+                      className="bg-white/10 hover:bg-white/20 text-white border-white/30 gap-1"
+                    >
+                      <Layers className="h-3 w-3" />
+                      Multiple Files
+                    </Button>
+                    <Button
+                      onClick={handleDirectoryDemo}
+                      variant="outline"
+                      size="sm"
+                      className="bg-white/10 hover:bg-white/20 text-white border-white/30 gap-1"
+                    >
+                      <Lightbulb className="h-3 w-3" />
+                      Directory
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid gap-4 md:grid-cols-3 pt-4">
@@ -3082,8 +4189,31 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 space-y-8">
+        {/* Demo Mode Banner */}
+        {isDemoMode && (
+          <div className="bg-elite-green dark:bg-elite-green/20 rounded-2xl p-4 shadow-xl border-2 border-elite-green dark:border-elite-green/40">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Sparkles className="h-6 w-6 text-white animate-pulse" />
+                <div>
+                  <h3 className="text-white font-bold text-lg">🎬 Demo Mode Active</h3>
+                  <p className="text-white/90 text-sm">You're viewing pre-filled sample data for demonstration purposes</p>
+                </div>
+              </div>
+              <Link href="/upload">
+                <Button
+                  variant="outline"
+                  className="bg-white/20 hover:bg-white/30 text-white border-white/40"
+                >
+                  Exit Demo
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Progress Indicator */}
-        <div className="flex items-center gap-4 p-4 bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl">
+        <div className="flex items-center gap-4 p-4 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-2">
             <User className="h-4 w-4" />
             <span className="text-sm font-medium">KYC:</span>
@@ -3102,9 +4232,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 pb-16">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-3 space-y-6">
+        {/* Main Content - Full width, sidebar already in DashboardLayout */}
+        <div className="space-y-6">
         {/* Upload Section */}
         <Card>
           <CardHeader>
@@ -3231,15 +4360,29 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                                 <HelpCircle className="h-3 w-3 text-gray-400" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Must be 18 years or older</p>
+                                <p>Format: MM/DD/YYYY (e.g., 01/15/1990)</p>
                               </TooltipContent>
                             </Tooltip>
                           </Label>
                           <Input
                             id="dateOfBirth"
-                            type="date"
-                            value={kycData.dateOfBirth}
+                            type="text"
+                            value={(() => {
+                              // Display as MM/DD/YYYY if stored as YYYY-MM-DD, otherwise show as-is
+                              if (kycData.dateOfBirth) {
+                                const yyyymmddRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
+                                const match = kycData.dateOfBirth.match(yyyymmddRegex);
+                                if (match) {
+                                  const [, year, month, day] = match;
+                                  return `${month}/${day}/${year}`;
+                                }
+                                // If it's already in MM/DD/YYYY format, show as-is
+                                return kycData.dateOfBirth;
+                              }
+                              return '';
+                            })()}
                             onChange={(e) => handleKycFieldChange('dateOfBirth', e.target.value)}
+                            placeholder="MM/DD/YYYY (e.g., 01/15/1990)"
                             className={kycErrors.dateOfBirth ? 'border-red-500' : ''}
                           />
                           {kycErrors.dateOfBirth && <p className="text-sm text-red-500">{kycErrors.dateOfBirth}</p>}
@@ -3406,19 +4549,102 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                         </div>
 
                         <div className="space-y-2">
+                          <Label htmlFor="ssnOrItinType" className="flex items-center gap-1">
+                            SSN or ITIN <span className="text-red-500">*</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Select whether you have a Social Security Number (SSN) or Individual Taxpayer Identification Number (ITIN)</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </Label>
+                          <Select value={kycData.ssnOrItinType} onValueChange={(value) => {
+                            handleKycFieldChange('ssnOrItinType', value);
+                            // Clear the number when type changes
+                            if (value !== kycData.ssnOrItinType) {
+                              handleKycFieldChange('ssnOrItinNumber', '');
+                            }
+                          }}>
+                            <SelectTrigger className={kycErrors.ssnOrItinType ? 'border-red-500' : ''}>
+                              <SelectValue placeholder="Select SSN or ITIN" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="SSN">SSN (Social Security Number)</SelectItem>
+                              <SelectItem value="ITIN">ITIN (Individual Taxpayer Identification Number)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {kycErrors.ssnOrItinType && <p className="text-sm text-red-500">{kycErrors.ssnOrItinType}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="ssnOrItinNumber" className="flex items-center gap-1">
+                            {kycData.ssnOrItinType ? `${kycData.ssnOrItinType} Number` : 'SSN/ITIN Number'} <span className="text-red-500">*</span>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <HelpCircle className="h-3 w-3 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  {kycData.ssnOrItinType === 'SSN' 
+                                    ? 'Enter your SSN in format XXX-XX-XXXX'
+                                    : kycData.ssnOrItinType === 'ITIN'
+                                    ? 'Enter your ITIN in format 9XX-XX-XXXX (must start with 9)'
+                                    : 'Enter your SSN or ITIN number'}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </Label>
+                          <Input
+                            id="ssnOrItinNumber"
+                            type="text"
+                            value={kycData.ssnOrItinNumber}
+                            onChange={(e) => {
+                              let value = e.target.value;
+                              // Auto-format: XXX-XX-XXXX
+                              value = value.replace(/\D/g, ''); // Remove non-digits
+                              if (value.length > 3) {
+                                value = value.slice(0, 3) + '-' + value.slice(3);
+                              }
+                              if (value.length > 6) {
+                                value = value.slice(0, 6) + '-' + value.slice(6, 10);
+                              }
+                              handleKycFieldChange('ssnOrItinNumber', value);
+                            }}
+                            placeholder={kycData.ssnOrItinType === 'SSN' ? 'XXX-XX-XXXX' : kycData.ssnOrItinType === 'ITIN' ? '9XX-XX-XXXX' : 'Enter number'}
+                            maxLength={11}
+                            disabled={!kycData.ssnOrItinType}
+                            className={kycErrors.ssnOrItinNumber ? 'border-red-500' : ''}
+                          />
+                          {kycErrors.ssnOrItinNumber && <p className="text-sm text-red-500">{kycErrors.ssnOrItinNumber}</p>}
+                          {!kycData.ssnOrItinType && (
+                            <p className="text-xs text-gray-500">Please select SSN or ITIN first</p>
+                          )}
+                        </div>
+
+                        {/* Only show Identification Type, Identification Number, and ID Issuing Country when ITIN is selected */}
+                        {kycData.ssnOrItinType === 'ITIN' && (
+                          <>
+                        <div className="space-y-2">
                           <Label htmlFor="identificationType" className="flex items-center gap-1">
                             Identification Type <span className="text-red-500">*</span>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <HelpCircle className="h-3 w-3 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Required additional identification when using ITIN</p>
+                                  </TooltipContent>
+                                </Tooltip>
                           </Label>
                           <Select value={kycData.identificationType} onValueChange={(value) => handleKycFieldChange('identificationType', value)}>
                             <SelectTrigger className={kycErrors.identificationType ? 'border-red-500' : ''}>
                               <SelectValue placeholder="Select ID type" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="SSN">SSN</SelectItem>
-                              <SelectItem value="TIN">TIN</SelectItem>
-                              <SelectItem value="Passport">Passport</SelectItem>
                               <SelectItem value="Driver's License">Driver's License</SelectItem>
-                              <SelectItem value="Alien ID">Alien ID</SelectItem>
+                                  <SelectItem value="Passport">Passport</SelectItem>
                             </SelectContent>
                           </Select>
                           {kycErrors.identificationType && <p className="text-sm text-red-500">{kycErrors.identificationType}</p>}
@@ -3463,6 +4689,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                           </Select>
                           {kycErrors.idIssuingCountry && <p className="text-sm text-red-500">{kycErrors.idIssuingCountry}</p>}
                         </div>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -3592,53 +4820,6 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                       </div>
                     </div>
 
-                    {/* Identity Document Upload */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Identity Document Upload</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="governmentIdFile" className="flex items-center gap-1">
-                            Upload Government-Issued ID <span className="text-red-500">*</span>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <HelpCircle className="h-3 w-3 text-gray-400" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Passport, driver's license, or national ID</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </Label>
-                          <Input
-                            id="governmentIdFile"
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => handleKycFieldChange('governmentIdFile', e.target.files?.[0] || null)}
-                            className={kycErrors.governmentIdFile ? 'border-red-500' : ''}
-                          />
-                          {kycErrors.governmentIdFile && <p className="text-sm text-red-500">{kycErrors.governmentIdFile}</p>}
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="proofOfAddressFile">
-                            Upload Proof of Address
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <HelpCircle className="h-3 w-3 text-gray-400" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Utility bill or bank statement (optional)</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </Label>
-                          <Input
-                            id="proofOfAddressFile"
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => handleKycFieldChange('proofOfAddressFile', e.target.files?.[0] || null)}
-                          />
-                        </div>
-                      </div>
-                    </div>
 
                     {/* Save KYC Button */}
                     <div className="flex justify-end pt-4 border-t">
@@ -3662,564 +4843,838 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
               )}
             </Card>
 
+                {/* Fraud Risk Alert */}
+                {enhancedMetadata?.extractionMetadata?.fraudDetection && (
+                  <FraudRiskBadge
+                    fraudDetection={enhancedMetadata.extractionMetadata.fraudDetection}
+                  />
+                )}
+
                 {/* Loan Information */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Loan Information</CardTitle>
                     <CardDescription>
-                      Provide loan details and document context (optional)
+                      Loan-specific transaction details (borrower information collected in KYC section above)
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`loan-info-${forceUpdate}`}>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="loanId">Loan ID</Label>
-                      {enhancedMetadata?.loanId && (
-                        <ConfidenceBadge
-                          confidence={enhancedMetadata.loanId.confidence}
-                          source={enhancedMetadata.loanId.source}
-                          extractedFrom={enhancedMetadata.loanId.extractedFrom}
-                          compact
+                    {/* Row 1: Loan ID and Loan Type */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`loan-info-${forceUpdate}`}>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="loanId">Loan ID <span className="text-red-500">*</span></Label>
+                          {enhancedMetadata?.loanId && (
+                            <ConfidenceBadge
+                              confidence={enhancedMetadata.loanId.confidence}
+                              source={enhancedMetadata.loanId.source}
+                              extractedFrom={enhancedMetadata.loanId.extractedFrom}
+                              compact
+                            />
+                          )}
+                        </div>
+                        <Input
+                          id="loanId"
+                          value={formData.loanId}
+                          onChange={(e) => {
+                            console.log('🔍 Loan ID field changed to:', e.target.value);
+                            setFormData(prev => ({ ...prev, loanId: e.target.value }));
+                            try {
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, loanId: e.target.value }, null, 2))
+                            } catch (error) {
+                              // If metadata is invalid, create new object
+                              setMetadata(JSON.stringify({ loanId: e.target.value }, null, 2))
+                            }
+                          }}
+                          placeholder="e.g., LOAN_2024_001"
+                          className={
+                            loanFormErrors.loanId
+                              ? 'border-red-500'
+                              : enhancedMetadata?.loanId && enhancedMetadata.loanId.confidence < 60 && enhancedMetadata.loanId.confidence > 0
+                              ? 'border-yellow-400 border-2'
+                              : ''
+                          }
                         />
-                      )}
-                    </div>
-                    <Input
-                      id="loanId"
-                      value={formData.loanId}
-                      onChange={(e) => {
-                        console.log('🔍 Loan ID field changed to:', e.target.value);
-                        setFormData(prev => ({ ...prev, loanId: e.target.value }));
-                        const currentMeta = JSON.parse(metadata || '{}')
-                        setMetadata(JSON.stringify({ ...currentMeta, loanId: e.target.value }, null, 2))
-                      }}
-                      placeholder="e.g., LOAN_2024_001"
-                      className={
-                        enhancedMetadata?.loanId && enhancedMetadata.loanId.confidence < 60 && enhancedMetadata.loanId.confidence > 0
-                          ? 'border-yellow-400 border-2'
-                          : ''
-                      }
-                    />
-                    {enhancedMetadata?.loanId && enhancedMetadata.loanId.confidence < 60 && enhancedMetadata.loanId.confidence > 0 && (
-                      <p className="text-xs text-yellow-600">⚠️ Low confidence - please verify this value</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Unique identifier for the loan
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="documentType">Document Type</Label>
-                      {enhancedMetadata?.documentType && (
-                        <ConfidenceBadge
-                          confidence={enhancedMetadata.documentType.confidence}
-                          source={enhancedMetadata.documentType.source}
-                          compact
-                        />
-                      )}
-                    </div>
-                    <select
-                      id="documentType"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      value={formData.documentType}
-                      onChange={(e) => {
-                        setFormData(prev => ({ ...prev, documentType: e.target.value }));
-                        const currentMeta = JSON.parse(metadata || '{}')
-                        setMetadata(JSON.stringify({ ...currentMeta, documentType: e.target.value }, null, 2))
-                      }}
-                    >
-                      <option value="">Select document type</option>
-                      <option value="loan_application">Loan Application</option>
-                      <option value="credit_report">Credit Report</option>
-                      <option value="property_appraisal">Property Appraisal</option>
-                      <option value="income_verification">Income Verification</option>
-                      <option value="bank_statements">Bank Statements</option>
-                      <option value="tax_returns">Tax Returns</option>
-                      <option value="employment_verification">Employment Verification</option>
-                      <option value="underwriting_decision">Underwriting Decision</option>
-                      <option value="closing_disclosure">Closing Disclosure</option>
-                      <option value="title_insurance">Title Insurance</option>
-                      <option value="homeowners_insurance">Homeowners Insurance</option>
-                      <option value="flood_certificate">Flood Certificate</option>
-                      <option value="compliance_document">Compliance Document</option>
-                      <option value="other">Other</option>
-                    </select>
-                    <p className="text-xs text-muted-foreground">
-                      Type of document being uploaded
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="borrowerName">Borrower Name</Label>
-                      {enhancedMetadata?.borrowerName && (
-                        <ConfidenceBadge
-                          confidence={enhancedMetadata.borrowerName.confidence}
-                          source={enhancedMetadata.borrowerName.source}
-                          compact
-                        />
-                      )}
-                    </div>
-                    <Input
-                      id="borrowerName"
-                      value={formData.borrowerName}
-                      onChange={(e) => {
-                        setFormData(prev => ({ ...prev, borrowerName: e.target.value }));
-                        const currentMeta = JSON.parse(metadata || '{}')
-                        setMetadata(JSON.stringify({ ...currentMeta, borrowerName: e.target.value }, null, 2))
-                      }}
-                      placeholder="e.g., John Smith"
-                      className={
-                        enhancedMetadata?.borrowerName && enhancedMetadata.borrowerName.confidence < 60 && enhancedMetadata.borrowerName.confidence > 0
-                          ? 'border-yellow-400 border-2'
-                          : ''
-                      }
-                    />
-                    {enhancedMetadata?.borrowerName && enhancedMetadata.borrowerName.confidence < 60 && enhancedMetadata.borrowerName.confidence > 0 && (
-                      <p className="text-xs text-yellow-600">⚠️ Low confidence - please verify this value</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Primary borrower's full name
-                    </p>
-                  </div>
-                  </div>
-
-                {/* Privacy Notice Banner */}
-                {!privacyNoticeDismissed && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 relative">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-blue-800">
-                          <span className="font-medium">ℹ️ Identity Information</span> - We collect minimal borrower identity data solely for creating an immutable audit trail. This data is cryptographically sealed in the blockchain but is not used for lending decisions or identity verification. Sensitive data (SSN, ID numbers) are collected in truncated format (last 4 digits only).
+                        {loanFormErrors.loanId && <p className="text-sm text-red-500">{loanFormErrors.loanId}</p>}
+                        {enhancedMetadata?.loanId && enhancedMetadata.loanId.confidence < 60 && enhancedMetadata.loanId.confidence > 0 && !loanFormErrors.loanId && (
+                          <p className="text-xs text-yellow-600">⚠️ Low confidence - please verify this value</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          Unique identifier for the loan
                         </p>
                       </div>
-                      <button
-                        onClick={handleDismissPrivacyNotice}
-                        className="flex-shrink-0 text-blue-400 hover:text-blue-600 transition-colors"
-                        aria-label="Dismiss privacy notice"
-                      >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                )}
 
-                {/* Borrower Information (For Audit Trail) */}
-                <div className="space-y-4 pt-4 border-t">
-                  <div>
-                    <h3 className="text-lg font-semibold">Borrower Information (For Audit Trail)</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Essential borrower identity fields that will be sealed in the blockchain
-                    </p>
-                  </div>
-
-                  {/* Basic Identity */}
-                  <div className="space-y-4">
-                    <h4 className="text-md font-medium">Basic Identity</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="borrowerFullName" className="flex items-center gap-1">
-                          Full Name <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerFullName"
-                          value={formData.borrowerFullName}
+                        <Label htmlFor="loanType">Loan Type <span className="text-red-500">*</span></Label>
+                        <select
+                          id="loanType"
+                          className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                            loanFormErrors.loanType ? 'border-red-500' : 'border-input'
+                          }`}
+                          value={formData.loanType}
                           onChange={(e) => {
-                            setFormData(prev => ({ ...prev, borrowerFullName: e.target.value }));
-                            handleBorrowerFieldChange('borrowerFullName', e.target.value);
+                            setFormData(prev => ({ ...prev, loanType: e.target.value }));
+                            try {
+                              const currentMeta = JSON.parse(metadata || '{}')
+                              setMetadata(JSON.stringify({ ...currentMeta, loanType: e.target.value }, null, 2))
+                            } catch (error) {
+                              setMetadata(JSON.stringify({ loanType: e.target.value }, null, 2))
+                            }
                           }}
-                          placeholder="Primary borrower's legal name"
-                          className={hasFieldError('borrowerFullName') ? 'border-red-500' : ''}
-                        />
-                        {getFieldError('borrowerFullName') && (
-                          <p className="text-sm text-red-500 flex items-center gap-1">
-                            <AlertCircle className="h-3 w-3" />
-                            {getFieldError('borrowerFullName')}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerDateOfBirth" className="flex items-center gap-1">
-                          Date of Birth <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerDateOfBirth"
-                          type="date"
-                          value={formData.borrowerDateOfBirth}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerDateOfBirth', e.target.value)}
-                          className={borrowerErrors.borrowerDateOfBirth ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerDateOfBirth && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerDateOfBirth}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerEmail" className="flex items-center gap-1">
-                          Email Address <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerEmail"
-                          type="email"
-                          value={formData.borrowerEmail}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerEmail', e.target.value)}
-                          placeholder="borrower@example.com"
-                          className={hasFieldError('borrowerEmail') ? 'border-red-500' : ''}
-                        />
-                        {getFieldError('borrowerEmail') && (
-                          <p className="text-sm text-red-500 flex items-center gap-1">
-                            <AlertCircle className="h-3 w-3" />
-                            {getFieldError('borrowerEmail')}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerPhone" className="flex items-center gap-1">
-                          Phone Number <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerPhone"
-                          type="tel"
-                          value={formData.borrowerPhone}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerPhone', e.target.value)}
-                          placeholder="+1-555-123-4567"
-                          className={borrowerErrors.borrowerPhone ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerPhone && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerPhone}</p>
-                        )}
+                        >
+                          <option value="">Select loan type</option>
+                          <option value="home_loan">Home Loan / Mortgage</option>
+                          <option value="personal_loan">Personal Loan</option>
+                          <option value="auto_loan">Auto Loan</option>
+                          <option value="business_loan">Business Loan</option>
+                          <option value="student_loan">Student Loan</option>
+                          <option value="refinance">Refinance Loan</option>
+                          <option value="home_equity">Home Equity Loan</option>
+                          <option value="other">Other</option>
+                        </select>
+                        {loanFormErrors.loanType && <p className="text-sm text-red-500">{loanFormErrors.loanType}</p>}
+                        <p className="text-xs text-muted-foreground">
+                          Type of loan being applied for
+                        </p>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Address */}
-                  <div className="space-y-4">
-                    <h4 className="text-md font-medium">Address</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="borrowerStreetAddress" className="flex items-center gap-1">
-                          Street Address <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerStreetAddress"
-                          value={formData.borrowerStreetAddress}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerStreetAddress', e.target.value)}
-                          placeholder="123 Main Street"
-                          className={borrowerErrors.borrowerStreetAddress ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerStreetAddress && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerStreetAddress}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerCity" className="flex items-center gap-1">
-                          City <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerCity"
-                          value={formData.borrowerCity}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerCity', e.target.value)}
-                          placeholder="Anytown"
-                          className={borrowerErrors.borrowerCity ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerCity && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerCity}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerState" className="flex items-center gap-1">
-                          State <span className="text-red-500">*</span>
-                        </Label>
-                        <Select
-                          value={formData.borrowerState}
-                          onValueChange={(value) => handleBorrowerFieldChange('borrowerState', value)}
-                        >
-                          <SelectTrigger className={borrowerErrors.borrowerState ? 'border-red-500' : ''}>
-                            <SelectValue placeholder="Select state" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="AL">Alabama</SelectItem>
-                            <SelectItem value="AK">Alaska</SelectItem>
-                            <SelectItem value="AZ">Arizona</SelectItem>
-                            <SelectItem value="AR">Arkansas</SelectItem>
-                            <SelectItem value="CA">California</SelectItem>
-                            <SelectItem value="CO">Colorado</SelectItem>
-                            <SelectItem value="CT">Connecticut</SelectItem>
-                            <SelectItem value="DE">Delaware</SelectItem>
-                            <SelectItem value="FL">Florida</SelectItem>
-                            <SelectItem value="GA">Georgia</SelectItem>
-                            <SelectItem value="HI">Hawaii</SelectItem>
-                            <SelectItem value="ID">Idaho</SelectItem>
-                            <SelectItem value="IL">Illinois</SelectItem>
-                            <SelectItem value="IN">Indiana</SelectItem>
-                            <SelectItem value="IA">Iowa</SelectItem>
-                            <SelectItem value="KS">Kansas</SelectItem>
-                            <SelectItem value="KY">Kentucky</SelectItem>
-                            <SelectItem value="LA">Louisiana</SelectItem>
-                            <SelectItem value="ME">Maine</SelectItem>
-                            <SelectItem value="MD">Maryland</SelectItem>
-                            <SelectItem value="MA">Massachusetts</SelectItem>
-                            <SelectItem value="MI">Michigan</SelectItem>
-                            <SelectItem value="MN">Minnesota</SelectItem>
-                            <SelectItem value="MS">Mississippi</SelectItem>
-                            <SelectItem value="MO">Missouri</SelectItem>
-                            <SelectItem value="MT">Montana</SelectItem>
-                            <SelectItem value="NE">Nebraska</SelectItem>
-                            <SelectItem value="NV">Nevada</SelectItem>
-                            <SelectItem value="NH">New Hampshire</SelectItem>
-                            <SelectItem value="NJ">New Jersey</SelectItem>
-                            <SelectItem value="NM">New Mexico</SelectItem>
-                            <SelectItem value="NY">New York</SelectItem>
-                            <SelectItem value="NC">North Carolina</SelectItem>
-                            <SelectItem value="ND">North Dakota</SelectItem>
-                            <SelectItem value="OH">Ohio</SelectItem>
-                            <SelectItem value="OK">Oklahoma</SelectItem>
-                            <SelectItem value="OR">Oregon</SelectItem>
-                            <SelectItem value="PA">Pennsylvania</SelectItem>
-                            <SelectItem value="RI">Rhode Island</SelectItem>
-                            <SelectItem value="SC">South Carolina</SelectItem>
-                            <SelectItem value="SD">South Dakota</SelectItem>
-                            <SelectItem value="TN">Tennessee</SelectItem>
-                            <SelectItem value="TX">Texas</SelectItem>
-                            <SelectItem value="UT">Utah</SelectItem>
-                            <SelectItem value="VT">Vermont</SelectItem>
-                            <SelectItem value="VA">Virginia</SelectItem>
-                            <SelectItem value="WA">Washington</SelectItem>
-                            <SelectItem value="WV">West Virginia</SelectItem>
-                            <SelectItem value="WI">Wisconsin</SelectItem>
-                            <SelectItem value="WY">Wyoming</SelectItem>
-                            <SelectItem value="DC">District of Columbia</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {borrowerErrors.borrowerState && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerState}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerZipCode" className="flex items-center gap-1">
-                          ZIP Code <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerZipCode"
-                          value={formData.borrowerZipCode}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerZipCode', e.target.value)}
-                          placeholder="12345"
-                          className={borrowerErrors.borrowerZipCode ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerZipCode && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerZipCode}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerCountry" className="flex items-center gap-1">
-                          Country <span className="text-red-500">*</span>
-                        </Label>
-                        <Select
-                          value={formData.borrowerCountry}
-                          onValueChange={(value) => handleBorrowerFieldChange('borrowerCountry', value)}
-                        >
-                          <SelectTrigger className={borrowerErrors.borrowerCountry ? 'border-red-500' : ''}>
-                            <SelectValue placeholder="Select country" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="US">United States</SelectItem>
-                            <SelectItem value="CA">Canada</SelectItem>
-                            <SelectItem value="MX">Mexico</SelectItem>
-                            <SelectItem value="GB">United Kingdom</SelectItem>
-                            <SelectItem value="DE">Germany</SelectItem>
-                            <SelectItem value="FR">France</SelectItem>
-                            <SelectItem value="IT">Italy</SelectItem>
-                            <SelectItem value="ES">Spain</SelectItem>
-                            <SelectItem value="AU">Australia</SelectItem>
-                            <SelectItem value="JP">Japan</SelectItem>
-                            <SelectItem value="CN">China</SelectItem>
-                            <SelectItem value="IN">India</SelectItem>
-                            <SelectItem value="BR">Brazil</SelectItem>
-                            <SelectItem value="AR">Argentina</SelectItem>
-                            <SelectItem value="OTHER">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {borrowerErrors.borrowerCountry && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerCountry}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Identity Reference */}
-                  <div className="space-y-4">
-                    <h4 className="text-md font-medium">Identity Reference</h4>
+                    {/* Row 2: Document Type */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="borrowerSSNLast4" className="flex items-center gap-1">
-                          Social Security Number (Last 4 digits only) <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="borrowerSSNLast4"
-                          type="text"
-                          maxLength={4}
-                          value={formData.borrowerSSNLast4}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerSSNLast4', e.target.value)}
-                          placeholder="1234"
-                          className={borrowerErrors.borrowerSSNLast4 ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerSSNLast4 && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerSSNLast4}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerGovernmentIdType">Government ID Type</Label>
-                        <Select
-                          value={formData.borrowerGovernmentIdType}
-                          onValueChange={(value) => {
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="documentType">Document Type <span className="text-red-500">*</span></Label>
+                          {enhancedMetadata?.documentType && (
+                            <ConfidenceBadge
+                              confidence={enhancedMetadata.documentType.confidence}
+                              source={enhancedMetadata.documentType.source}
+                              compact
+                            />
+                          )}
+                        </div>
+                        <select
+                          id="documentType"
+                          className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                            loanFormErrors.documentType ? 'border-red-500' : 'border-input'
+                          }`}
+                          value={formData.documentType}
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, documentType: e.target.value }));
+                            try {
                             const currentMeta = JSON.parse(metadata || '{}')
-                            setMetadata(JSON.stringify({ ...currentMeta, borrowerGovernmentIdType: value }, null, 2))
+                            setMetadata(JSON.stringify({ ...currentMeta, documentType: e.target.value }, null, 2))
+                            } catch (error) {
+                              // If metadata is invalid, create new object
+                              setMetadata(JSON.stringify({ documentType: e.target.value }, null, 2))
+                            }
                           }}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select ID type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="driver_license">Driver's License</SelectItem>
-                            <SelectItem value="passport">Passport</SelectItem>
-                            <SelectItem value="state_id">State ID</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerIdNumberLast4">ID Number (Last 4 digits only)</Label>
-                        <Input
-                          id="borrowerIdNumberLast4"
-                          type="text"
-                          maxLength={4}
-                          value={formData.borrowerIdNumberLast4}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerIdNumberLast4', e.target.value)}
-                          placeholder="1234"
-                          className={borrowerErrors.borrowerIdNumberLast4 ? 'border-red-500' : ''}
-                        />
-                        {borrowerErrors.borrowerIdNumberLast4 && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerIdNumberLast4}</p>
-                        )}
+                          <option value="">Select document type</option>
+                          <option value="loan_application">Loan Application</option>
+                          <option value="credit_report">Credit Report</option>
+                          <option value="property_appraisal">Property Appraisal</option>
+                          <option value="income_verification">Income Verification</option>
+                          <option value="bank_statements">Bank Statements</option>
+                          <option value="tax_returns">Tax Returns</option>
+                          <option value="employment_verification">Employment Verification</option>
+                          <option value="underwriting_decision">Underwriting Decision</option>
+                          <option value="closing_disclosure">Closing Disclosure</option>
+                          <option value="title_insurance">Title Insurance</option>
+                          <option value="homeowners_insurance">Homeowners Insurance</option>
+                          <option value="flood_certificate">Flood Certificate</option>
+                          <option value="compliance_document">Compliance Document</option>
+                          <option value="other">Other</option>
+                        </select>
+                        {loanFormErrors.documentType && <p className="text-sm text-red-500">{loanFormErrors.documentType}</p>}
+                        <p className="text-xs text-muted-foreground">
+                          Type of document being uploaded
+                        </p>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Loan-Specific */}
-                  <div className="space-y-4">
-                    <h4 className="text-md font-medium">Loan-Specific</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Row 2: Loan Amount, Term, and Interest Rate */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="borrowerEmploymentStatus" className="flex items-center gap-1">
-                          Employment Status <span className="text-red-500">*</span>
-                        </Label>
-                        <Select
-                          value={formData.borrowerEmploymentStatus}
-                          onValueChange={(value) => handleBorrowerFieldChange('borrowerEmploymentStatus', value)}
-                        >
-                          <SelectTrigger className={borrowerErrors.borrowerEmploymentStatus ? 'border-red-500' : ''}>
-                            <SelectValue placeholder="Select employment status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="employed">Employed</SelectItem>
-                            <SelectItem value="self_employed">Self-Employed</SelectItem>
-                            <SelectItem value="retired">Retired</SelectItem>
-                            <SelectItem value="unemployed">Unemployed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {borrowerErrors.borrowerEmploymentStatus && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerEmploymentStatus}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="borrowerAnnualIncome" className="flex items-center gap-1">
-                          Annual Income <span className="text-red-500">*</span>
-                        </Label>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="loanAmount">Loan Amount <span className="text-red-500">*</span></Label>
+                          {enhancedMetadata?.loanAmount && (
+                            <ConfidenceBadge
+                              confidence={enhancedMetadata.loanAmount.confidence}
+                              source={enhancedMetadata.loanAmount.source}
+                              compact
+                            />
+                          )}
+                        </div>
                         <Input
-                          id="borrowerAnnualIncome"
+                          id="loanAmount"
                           type="number"
-                          value={formData.borrowerAnnualIncome}
-                          onChange={(e) => handleBorrowerFieldChange('borrowerAnnualIncome', e.target.value)}
-                          placeholder="75000"
-                          className={borrowerErrors.borrowerAnnualIncome ? 'border-red-500' : ''}
+                          value={formData.loanAmount}
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, loanAmount: e.target.value }));
+                            try {
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, loanAmount: e.target.value }, null, 2))
+                            } catch (error) {
+                              // If metadata is invalid, create new object
+                              setMetadata(JSON.stringify({ loanAmount: e.target.value }, null, 2))
+                            }
+                          }}
+                          placeholder="e.g., 250000"
+                          className={
+                            loanFormErrors.loanAmount
+                              ? 'border-red-500'
+                              : enhancedMetadata?.loanAmount && enhancedMetadata.loanAmount.confidence < 60 && enhancedMetadata.loanAmount.confidence > 0
+                              ? 'border-yellow-400 border-2'
+                              : ''
+                          }
                         />
-                        {borrowerErrors.borrowerAnnualIncome && (
-                          <p className="text-sm text-red-500">{borrowerErrors.borrowerAnnualIncome}</p>
-                        )}
+                        {loanFormErrors.loanAmount && <p className="text-sm text-red-500">{loanFormErrors.loanAmount}</p>}
+                        <p className="text-xs text-muted-foreground">
+                          Loan amount in USD
+                        </p>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="borrowerCoBorrowerName">Co-Borrower Name</Label>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="loanTerm">Loan Term <span className="text-red-500">*</span></Label>
+                          {enhancedMetadata?.loanTerm && (
+                            <ConfidenceBadge
+                              confidence={enhancedMetadata.loanTerm.confidence}
+                              source={enhancedMetadata.loanTerm.source}
+                              compact
+                            />
+                          )}
+                        </div>
                         <Input
-                          id="borrowerCoBorrowerName"
-                          value={formData.borrowerCoBorrowerName}
+                          id="loanTerm"
+                          type="number"
+                          value={formData.loanTerm}
                           onChange={(e) => {
+                            setFormData(prev => ({ ...prev, loanTerm: e.target.value }));
+                            try {
                             const currentMeta = JSON.parse(metadata || '{}')
-                            setMetadata(JSON.stringify({ ...currentMeta, borrowerCoBorrowerName: e.target.value }, null, 2))
+                            setMetadata(JSON.stringify({ ...currentMeta, loanTerm: e.target.value }, null, 2))
+                            } catch (error) {
+                              // If metadata is invalid, create new object
+                              setMetadata(JSON.stringify({ loanTerm: e.target.value }, null, 2))
+                            }
                           }}
-                          placeholder="Jane Smith (optional)"
+                          placeholder="e.g., 360"
+                          className={
+                            loanFormErrors.loanTerm
+                              ? 'border-red-500'
+                              : enhancedMetadata?.loanTerm && enhancedMetadata.loanTerm.confidence < 60 && enhancedMetadata.loanTerm.confidence > 0
+                              ? 'border-yellow-400 border-2'
+                              : ''
+                          }
                         />
+                        {loanFormErrors.loanTerm && <p className="text-sm text-red-500">{loanFormErrors.loanTerm}</p>}
+                        <p className="text-xs text-muted-foreground">
+                          Loan term in months
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="interestRate">Interest Rate <span className="text-red-500">*</span></Label>
+                          {enhancedMetadata?.interestRate && (
+                            <ConfidenceBadge
+                              confidence={enhancedMetadata.interestRate.confidence}
+                              source={enhancedMetadata.interestRate.source}
+                              compact
+                            />
+                          )}
+                        </div>
+                        <Input
+                          id="interestRate"
+                          type="number"
+                          step="0.01"
+                          value={formData.interestRate}
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, interestRate: e.target.value }));
+                            try {
+                            const currentMeta = JSON.parse(metadata || '{}')
+                            setMetadata(JSON.stringify({ ...currentMeta, interestRate: e.target.value }, null, 2))
+                            } catch (error) {
+                              // If metadata is invalid, create new object
+                              setMetadata(JSON.stringify({ interestRate: e.target.value }, null, 2))
+                            }
+                          }}
+                          placeholder="e.g., 4.5"
+                          className={
+                            loanFormErrors.interestRate
+                              ? 'border-red-500'
+                              : enhancedMetadata?.interestRate && enhancedMetadata.interestRate.confidence < 60 && enhancedMetadata.interestRate.confidence > 0
+                              ? 'border-yellow-400 border-2'
+                              : ''
+                          }
+                        />
+                        {loanFormErrors.interestRate && <p className="text-sm text-red-500">{loanFormErrors.interestRate}</p>}
+                        <p className="text-xs text-muted-foreground">
+                          Annual interest rate (%)
+                        </p>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Row 3: Property Address (conditional - only for home_loan and home_equity) */}
+                    {(formData.loanType === 'home_loan' || formData.loanType === 'home_equity') && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                          <Label htmlFor="propertyAddress">Property Address <span className="text-red-500">*</span></Label>
+                        {enhancedMetadata?.propertyAddress && (
+                          <ConfidenceBadge
+                            confidence={enhancedMetadata.propertyAddress.confidence}
+                            source={enhancedMetadata.propertyAddress.source}
+                            compact
+                          />
+                        )}
+                      </div>
+                      <Input
+                        id="propertyAddress"
+                        value={formData.propertyAddress}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, propertyAddress: e.target.value }));
+                          try {
+                          const currentMeta = JSON.parse(metadata || '{}')
+                          setMetadata(JSON.stringify({ ...currentMeta, propertyAddress: e.target.value }, null, 2))
+                          } catch (error) {
+                            // If metadata is invalid, create new object
+                            setMetadata(JSON.stringify({ propertyAddress: e.target.value }, null, 2))
+                          }
+                        }}
+                        placeholder="e.g., 123 Main St, Anytown, CA 12345"
+                        className={
+                          loanFormErrors.propertyAddress
+                            ? 'border-red-500'
+                            : enhancedMetadata?.propertyAddress && enhancedMetadata.propertyAddress.confidence < 60 && enhancedMetadata.propertyAddress.confidence > 0
+                            ? 'border-yellow-400 border-2'
+                            : ''
+                        }
+                      />
+                      {loanFormErrors.propertyAddress && <p className="text-sm text-red-500">{loanFormErrors.propertyAddress}</p>}
+                      <p className="text-xs text-muted-foreground">
+                        Full address of the property being financed
+                      </p>
+                    </div>
+                    )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="loanAmount">Loan Amount</Label>
-                    <Input
-                      id="loanAmount"
-                      type="number"
-                      value={formData.loanAmount}
-                      onChange={(e) => {
-                        setFormData(prev => ({ ...prev, loanAmount: e.target.value }));
-                        const currentMeta = JSON.parse(metadata || '{}')
-                        setMetadata(JSON.stringify({ ...currentMeta, loanAmount: e.target.value }, null, 2))
-                      }}
-                      placeholder="e.g., 250000"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Loan amount in USD
-                    </p>
-                  </div>
-                </div>
+                    {/* Conditional Fields Based on Loan Type */}
+                    {formData.loanType === 'home_loan' && (
+                      <div className="space-y-4 border-t pt-4">
+                        <h4 className="text-md font-semibold">Home Loan Details</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="propertyValue">Property Value <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="propertyValue"
+                              type="number"
+                              value={formData.propertyValue}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, propertyValue: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, propertyValue: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ propertyValue: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 500000"
+                              className={loanFormErrors.propertyValue ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.propertyValue && <p className="text-sm text-red-500">{loanFormErrors.propertyValue}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="downPayment">Down Payment <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="downPayment"
+                              type="number"
+                              value={formData.downPayment}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, downPayment: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, downPayment: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ downPayment: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 100000"
+                              className={loanFormErrors.downPayment ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.downPayment && <p className="text-sm text-red-500">{loanFormErrors.downPayment}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="propertyType">Property Type <span className="text-red-500">*</span></Label>
+                            <select
+                              id="propertyType"
+                              className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ${loanFormErrors.propertyType ? 'border-red-500' : 'border-input'}`}
+                              value={formData.propertyType}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, propertyType: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, propertyType: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ propertyType: e.target.value }, null, 2))
+                                }
+                              }}
+                            >
+                              <option value="">Select property type</option>
+                              <option value="single_family">Single Family</option>
+                              <option value="condo">Condo</option>
+                              <option value="townhouse">Townhouse</option>
+                              <option value="multi_family">Multi-Family</option>
+                              <option value="commercial">Commercial</option>
+                            </select>
+                            {loanFormErrors.propertyType && <p className="text-sm text-red-500">{loanFormErrors.propertyType}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Additional Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.additionalNotes}
-                    onChange={(e) => {
-                      setFormData(prev => ({ ...prev, additionalNotes: e.target.value }));
-                      const currentMeta = JSON.parse(metadata || '{}')
-                      setMetadata(JSON.stringify({ ...currentMeta, notes: e.target.value }, null, 2))
-                    }}
-                    placeholder="Any additional information about this document..."
-                    rows={3}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Optional notes or comments about the document
-                  </p>
-                </div>
+                    {formData.loanType === 'auto_loan' && (
+                      <div className="space-y-4 border-t pt-4">
+                        <h4 className="text-md font-semibold">Vehicle Information</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="vehicleMake">Vehicle Make <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="vehicleMake"
+                              value={formData.vehicleMake}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, vehicleMake: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, vehicleMake: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ vehicleMake: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., Toyota"
+                              className={loanFormErrors.vehicleMake ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.vehicleMake && <p className="text-sm text-red-500">{loanFormErrors.vehicleMake}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="vehicleModel">Vehicle Model <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="vehicleModel"
+                              value={formData.vehicleModel}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, vehicleModel: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, vehicleModel: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ vehicleModel: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., Camry"
+                              className={loanFormErrors.vehicleModel ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.vehicleModel && <p className="text-sm text-red-500">{loanFormErrors.vehicleModel}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="vehicleYear">Vehicle Year <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="vehicleYear"
+                              type="number"
+                              value={formData.vehicleYear}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, vehicleYear: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, vehicleYear: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ vehicleYear: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 2024"
+                              className={loanFormErrors.vehicleYear ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.vehicleYear && <p className="text-sm text-red-500">{loanFormErrors.vehicleYear}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="vehicleVIN">Vehicle VIN <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="vehicleVIN"
+                              value={formData.vehicleVIN}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, vehicleVIN: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, vehicleVIN: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ vehicleVIN: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 1HGBH41JXMN109186"
+                              className={loanFormErrors.vehicleVIN ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.vehicleVIN && <p className="text-sm text-red-500">{loanFormErrors.vehicleVIN}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="purchasePrice">Purchase Price <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="purchasePrice"
+                              type="number"
+                              value={formData.purchasePrice}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, purchasePrice: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, purchasePrice: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ purchasePrice: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 35000"
+                              className={loanFormErrors.purchasePrice ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.purchasePrice && <p className="text-sm text-red-500">{loanFormErrors.purchasePrice}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.loanType === 'business_loan' && (
+                      <div className="space-y-4 border-t pt-4">
+                        <h4 className="text-md font-semibold">Business Information</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="businessName">Business Name <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="businessName"
+                              value={formData.businessName}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, businessName: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, businessName: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ businessName: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., ABC Corporation"
+                              className={loanFormErrors.businessName ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.businessName && <p className="text-sm text-red-500">{loanFormErrors.businessName}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="businessType">Business Type <span className="text-red-500">*</span></Label>
+                            <select
+                              id="businessType"
+                              className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ${loanFormErrors.businessType ? 'border-red-500' : 'border-input'}`}
+                              value={formData.businessType}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, businessType: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, businessType: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ businessType: e.target.value }, null, 2))
+                                }
+                              }}
+                            >
+                              <option value="">Select business type</option>
+                              <option value="llc">LLC</option>
+                              <option value="corporation">Corporation</option>
+                              <option value="partnership">Partnership</option>
+                              <option value="sole_proprietorship">Sole Proprietorship</option>
+                            </select>
+                            {loanFormErrors.businessType && <p className="text-sm text-red-500">{loanFormErrors.businessType}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="businessRegistrationNumber">Business Registration Number <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="businessRegistrationNumber"
+                              value={formData.businessRegistrationNumber}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, businessRegistrationNumber: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, businessRegistrationNumber: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ businessRegistrationNumber: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., EIN or Registration Number"
+                              className={loanFormErrors.businessRegistrationNumber ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.businessRegistrationNumber && <p className="text-sm text-red-500">{loanFormErrors.businessRegistrationNumber}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="annualRevenue">Annual Revenue <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="annualRevenue"
+                              type="number"
+                              value={formData.annualRevenue}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, annualRevenue: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, annualRevenue: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ annualRevenue: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 500000"
+                              className={loanFormErrors.annualRevenue ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.annualRevenue && <p className="text-sm text-red-500">{loanFormErrors.annualRevenue}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.loanType === 'student_loan' && (
+                      <div className="space-y-4 border-t pt-4">
+                        <h4 className="text-md font-semibold">Education Information</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="schoolName">School Name <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="schoolName"
+                              value={formData.schoolName}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, schoolName: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, schoolName: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ schoolName: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., State University"
+                              className={loanFormErrors.schoolName ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.schoolName && <p className="text-sm text-red-500">{loanFormErrors.schoolName}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="degreeProgram">Degree Program <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="degreeProgram"
+                              value={formData.degreeProgram}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, degreeProgram: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, degreeProgram: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ degreeProgram: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., Computer Science"
+                              className={loanFormErrors.degreeProgram ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.degreeProgram && <p className="text-sm text-red-500">{loanFormErrors.degreeProgram}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="expectedGraduationDate">Expected Graduation Date <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="expectedGraduationDate"
+                              type="date"
+                              value={formData.expectedGraduationDate}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, expectedGraduationDate: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, expectedGraduationDate: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ expectedGraduationDate: e.target.value }, null, 2))
+                                }
+                              }}
+                              className={loanFormErrors.expectedGraduationDate ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.expectedGraduationDate && <p className="text-sm text-red-500">{loanFormErrors.expectedGraduationDate}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.loanType === 'refinance' && (
+                      <div className="space-y-4 border-t pt-4">
+                        <h4 className="text-md font-semibold">Refinance Information</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="currentLoanNumber">Current Loan Number <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="currentLoanNumber"
+                              value={formData.currentLoanNumber}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, currentLoanNumber: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, currentLoanNumber: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ currentLoanNumber: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., LOAN_2020_001"
+                              className={loanFormErrors.currentLoanNumber ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.currentLoanNumber && <p className="text-sm text-red-500">{loanFormErrors.currentLoanNumber}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="currentLender">Current Lender <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="currentLender"
+                              value={formData.currentLender}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, currentLender: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, currentLender: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ currentLender: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., ABC Bank"
+                              className={loanFormErrors.currentLender ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.currentLender && <p className="text-sm text-red-500">{loanFormErrors.currentLender}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="refinancePurpose">Refinance Purpose <span className="text-red-500">*</span></Label>
+                            <select
+                              id="refinancePurpose"
+                              className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ${loanFormErrors.refinancePurpose ? 'border-red-500' : 'border-input'}`}
+                              value={formData.refinancePurpose}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, refinancePurpose: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, refinancePurpose: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ refinancePurpose: e.target.value }, null, 2))
+                                }
+                              }}
+                            >
+                              <option value="">Select purpose</option>
+                              <option value="lower_rate">Lower Interest Rate</option>
+                              <option value="cash_out">Cash Out</option>
+                              <option value="shorter_term">Shorter Term</option>
+                              <option value="debt_consolidation">Debt Consolidation</option>
+                            </select>
+                            {loanFormErrors.refinancePurpose && <p className="text-sm text-red-500">{loanFormErrors.refinancePurpose}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.loanType === 'home_equity' && (
+                      <div className="space-y-4 border-t pt-4">
+                        <h4 className="text-md font-semibold">Home Equity Details</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="propertyValue">Property Value <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="propertyValue"
+                              type="number"
+                              value={formData.propertyValue}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, propertyValue: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, propertyValue: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ propertyValue: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 500000"
+                              className={loanFormErrors.propertyValue ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.propertyValue && <p className="text-sm text-red-500">{loanFormErrors.propertyValue}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="currentMortgageBalance">Current Mortgage Balance <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="currentMortgageBalance"
+                              type="number"
+                              value={formData.currentMortgageBalance}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, currentMortgageBalance: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, currentMortgageBalance: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ currentMortgageBalance: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 300000"
+                              className={loanFormErrors.currentMortgageBalance ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.currentMortgageBalance && <p className="text-sm text-red-500">{loanFormErrors.currentMortgageBalance}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="equityAmount">Equity Amount <span className="text-red-500">*</span></Label>
+                            <Input
+                              id="equityAmount"
+                              type="number"
+                              value={formData.equityAmount}
+                              onChange={(e) => {
+                                setFormData(prev => ({ ...prev, equityAmount: e.target.value }));
+                                try {
+                                  const currentMeta = JSON.parse(metadata || '{}')
+                                  setMetadata(JSON.stringify({ ...currentMeta, equityAmount: e.target.value }, null, 2))
+                                } catch (error) {
+                                  setMetadata(JSON.stringify({ equityAmount: e.target.value }, null, 2))
+                                }
+                              }}
+                              placeholder="e.g., 200000"
+                              className={loanFormErrors.equityAmount ? 'border-red-500' : ''}
+                            />
+                            {loanFormErrors.equityAmount && <p className="text-sm text-red-500">{loanFormErrors.equityAmount}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Row 4: Additional Notes */}
+                    <div className="space-y-2">
+                      <Label htmlFor="additionalNotes">Additional Notes</Label>
+                      {enhancedMetadata?.additionalNotes && enhancedMetadata.additionalNotes.confidence > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+                          <span className={`px-2 py-0.5 rounded-full ${
+                            enhancedMetadata.additionalNotes.confidence >= 80
+                              ? 'bg-green-100 text-green-700'
+                              : enhancedMetadata.additionalNotes.confidence >= 60
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {enhancedMetadata.additionalNotes.confidence}% confidence
+                          </span>
+                          <span>Auto-populated from file</span>
+                        </div>
+                      )}
+                      <Textarea
+                        id="additionalNotes"
+                        value={formData.additionalNotes}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, additionalNotes: e.target.value }));
+                          try {
+                          const currentMeta = JSON.parse(metadata || '{}')
+                          setMetadata(JSON.stringify({ ...currentMeta, additionalNotes: e.target.value }, null, 2))
+                          } catch (error) {
+                            // If metadata is invalid, create new object
+                            setMetadata(JSON.stringify({ additionalNotes: e.target.value }, null, 2))
+                          }
+                        }}
+                        placeholder="Any additional information about this loan document..."
+                        rows={3}
+                        className={
+                          enhancedMetadata?.additionalNotes && enhancedMetadata.additionalNotes.confidence < 60 && enhancedMetadata.additionalNotes.confidence > 0
+                            ? 'border-yellow-400 border-2'
+                            : ''
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Optional notes or comments about the loan document
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Advanced Options (Collapsible) */}
                 <details className="group">
@@ -4228,7 +5683,15 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                   </summary>
                   <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-lg">
                     <div className="space-y-2">
-                      <Label htmlFor="etid">Entity Type ID (ETID)</Label>
+                      <div className="flex items-center gap-1">
+                        <Label htmlFor="etid">Entity Type ID (ETID)</Label>
+                        <InfoTooltip
+                          term={GLOSSARY.ETID.term}
+                          definition={GLOSSARY.ETID.definition}
+                          example={GLOSSARY.ETID.example}
+                          whenToUse={GLOSSARY.ETID.whenToUse}
+                        />
+                      </div>
                       <Input
                         id="etid"
                         value={etid}
@@ -4255,8 +5718,6 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                     </div>
                   </div>
                 </details>
-                  </CardContent>
-                </Card>
               </>
             )}
 
@@ -4272,22 +5733,54 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm font-medium">Artifact ID</Label>
+                      <div className="flex items-center gap-1">
+                        <Label className="text-sm font-medium">Artifact ID</Label>
+                        <InfoTooltip
+                          term={GLOSSARY.ARTIFACT_ID.term}
+                          definition={GLOSSARY.ARTIFACT_ID.definition}
+                          example={GLOSSARY.ARTIFACT_ID.example}
+                          whenToUse={GLOSSARY.ARTIFACT_ID.whenToUse}
+                        />
+                      </div>
                       <p className="text-sm font-mono bg-muted p-2 rounded">{uploadResult.artifactId}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium">Walacor Transaction ID</Label>
+                      <div className="flex items-center gap-1">
+                        <Label className="text-sm font-medium">Walacor Transaction ID</Label>
+                        <InfoTooltip
+                          term={GLOSSARY.WALACOR_TX_ID.term}
+                          definition={GLOSSARY.WALACOR_TX_ID.definition}
+                          example={GLOSSARY.WALACOR_TX_ID.example}
+                          whenToUse={GLOSSARY.WALACOR_TX_ID.whenToUse}
+                        />
+                      </div>
                       <p className="text-sm font-mono bg-muted p-2 rounded">{uploadResult.walacorTxId}</p>
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm font-medium">Document Hash</Label>
+                      <div className="flex items-center gap-1">
+                        <Label className="text-sm font-medium">Document Hash</Label>
+                        <InfoTooltip
+                          term={GLOSSARY.DOCUMENT_HASH.term}
+                          definition={GLOSSARY.DOCUMENT_HASH.definition}
+                          example={GLOSSARY.DOCUMENT_HASH.example}
+                          whenToUse={GLOSSARY.DOCUMENT_HASH.whenToUse}
+                        />
+                      </div>
                       <p className="text-sm font-mono bg-muted p-2 rounded break-all">{fileHash}</p>
                     </div>
                   <div>
-                    <Label className="text-sm font-medium">Sealed At</Label>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-sm font-medium">Sealed At</Label>
+                      <InfoTooltip
+                        term={GLOSSARY.BLOCKCHAIN_SEAL.term}
+                        definition={GLOSSARY.BLOCKCHAIN_SEAL.definition}
+                        example={GLOSSARY.BLOCKCHAIN_SEAL.example}
+                        whenToUse={GLOSSARY.BLOCKCHAIN_SEAL.whenToUse}
+                      />
+                    </div>
                     <p className="text-sm">{new Date(uploadResult.sealedAt).toLocaleString()}</p>
                     </div>
                   </div>
@@ -4303,10 +5796,10 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
                   <div className="flex gap-2">
                     <Button asChild>
-                      <a href={`http://localhost:8000/api/artifacts/${uploadResult.artifactId}`} target="_blank" rel="noopener noreferrer">
+                      <Link href={`/documents/${uploadResult.artifactId}`}>
                         <ExternalLink className="h-4 w-4 mr-2" />
-                        View Artifact Details
-                      </a>
+                        View Document Details
+                      </Link>
                     </Button>
                     <Button variant="outline" onClick={handleReset}>
                       Upload Another
@@ -4541,39 +6034,8 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
 
           </CardContent>
         </Card>
-
-        {/* Sidebar */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsKycExpanded(!isKycExpanded)}
-                className="w-full justify-start text-sm"
-              >
-                <UserCheck className="h-4 w-4 mr-2" />
-                {isKycExpanded ? 'Hide' : 'Show'} KYC Form
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowValidationSummary(!showValidationSummary)}
-                className="w-full justify-start text-sm"
-              >
-                <FileCheck className="h-4 w-4 mr-2" />
-                {showValidationSummary ? 'Hide' : 'Show'} Validation
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
-    </div>
-  </div>
 
   {/* Success Celebration Modal */}
   <SuccessCelebration
@@ -4603,6 +6065,7 @@ const [bulkUploadResults, setBulkUploadResults] = useState<BulkUploadResult[]>([
   />
 </div>
 </>
+    </DashboardLayout>
 );
 }
 

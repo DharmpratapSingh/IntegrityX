@@ -84,3 +84,89 @@ htmlcov/
 *.bak
 *.tmp
 .temp/
+
+# Submission cleanup (keep repo lean)
+app_streamlit_demo.py
+clear_cache_and_restart.sh
+example_loan_document.json
+fix_code_quality.sh
+fix_tabs_ui.sh
+generate_presentation.py
+generate_presentation_from_content.py
+integrityx_flow_diagrams.html
+QUICK_TEST.sh
+test_actual_file.py
+test_extraction.py
+test_full_flow.py
+test_sanitizer.py
+test_results_e2e.json
+test_run_output.log
+test_loan_document_*.json
+verify_integrityx.sh
+.github/README.md
+Diagrams_Walacor/
+test_uploads/
+tests/
+
+# Documentation & presentation artifacts
+*.md
+!README.md
+*.rst
+*.pptx
+*.key
+*.odp
+*.pdf
+*.drawio
+*.dia
+*.uxf
+*.sxi
+
+# Generated transcripts / notes / exports
+*.txt
+*.rtf
+notes/
+transcripts/
+
+# Data dumps & fixtures
+data/
+tmp/
+temp/
+*.csv
+*.tsv
+*.jsonl
+*.parquet
+*.feather
+*.pickle
+*.pkl
+
+# Test artifacts
+test_results_*/
+test_results_*.json
+test_run_output.log
+coverage.xml
+pytestdebug.log
+playwright-report/
+playwright/.cache/
+
+# Build / cache outputs
+.turbo/
+.swc/
+.sass-cache/
+.parcel-cache/
+.cache/
+.eslintcache
+coverage-final.json
+
+# IDE / tooling extras
+.idea/
+.history/
+.fleet/
+*.code-workspace
+.cursor/
+
+# OS metadata
+Icon?
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini

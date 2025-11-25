@@ -11,10 +11,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
 import { Checkbox } from '@/components/ui/checkbox'
-import { 
-  Layers, 
-  Trash2, 
-  CheckCircle, 
+import {
+  Layers,
+  Trash2,
+  CheckCircle,
   Download,
   Upload,
   AlertTriangle,
@@ -25,7 +25,8 @@ import {
   Zap,
   FileText,
   X,
-  Plus
+  Plus,
+  Clock
 } from 'lucide-react'
 
 interface BulkOperation {

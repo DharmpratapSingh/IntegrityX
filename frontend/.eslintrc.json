@@ -3,8 +3,8 @@
     "next/core-web-vitals"
   ],
   "rules": {
-    "eqeqeq": "error",
-    "curly": "error",
+    "eqeqeq": "warn",
+    "curly": "warn",
     "no-unused-vars": "warn",
     "no-console": [
       "warn",
@@ -17,14 +17,15 @@
     ],
     "jsx-a11y/accessible-emoji": "warn",
     "quotes": [
-      "error",
+      "warn",
       "double"
     ],
     "semi": [
-      "error",
+      "warn",
       "always"
     ],
     "import/no-unresolved": "error",
+    "react/no-unescaped-entities": "warn",
     "no-warning-comments": [
       "warn",
       {

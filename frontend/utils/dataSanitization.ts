@@ -5,6 +5,13 @@ export function sanitizeText(text: string): string {
   return text.trim().replace(/[<>]/g, '');
 }
 
+export function sanitizeTextarea(text: string): string {
+  if (!text) return '';
+  // For textarea fields, preserve spaces but remove only dangerous characters
+  // Don't trim during typing - only remove < and > for security
+  return text.replace(/[<>]/g, '');
+}
+
 export function sanitizeEmail(email: string): string {
   if (!email) return '';
   return email.trim().toLowerCase().replace(/[<>]/g, '');
@@ -37,17 +44,20 @@ export function sanitizeZipCode(zip: string): string {
 
 export function sanitizeAddress(address: string): string {
   if (!address) return '';
-  return address.trim().replace(/[<>]/g, '');
+  // Preserve spaces in addresses, only remove dangerous characters
+  return address.replace(/[<>]/g, '');
 }
 
 export function sanitizeCity(city: string): string {
   if (!city) return '';
-  return city.trim().replace(/[<>]/g, '');
+  // Preserve spaces in city names (e.g., "New York", "Los Angeles")
+  return city.replace(/[<>]/g, '');
 }
 
 export function sanitizeState(state: string): string {
   if (!state) return '';
-  return state.trim().replace(/[<>]/g, '');
+  // Preserve spaces in state names (e.g., "New York", "North Carolina")
+  return state.replace(/[<>]/g, '');
 }
 
 export function sanitizeCountry(country: string): string {

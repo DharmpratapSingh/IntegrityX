@@ -1,11 +1,35 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { LayoutContent } from "@/components/LayoutContent";
 import { Toaster } from "react-hot-toast";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], display: "swap" });
+
+const bloxBrk = localFont({
+  src: [
+    {
+      path: "../public/fonts/Blox2.ttf",
+      weight: "400",
+      style: "normal",
+    },
+  ],
+  variable: "--font-heading",
+  preload: true,
+  display: "swap",
+});
+
+const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+if (!clerkPublishableKey) {
+  console.error(
+    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not set. Clerk authentication UI will not load. Update frontend/.env.local with a valid publishable key."
+  );
+} else {
+  console.log("Clerk publishable key detected:", clerkPublishableKey);
+}
 
 export const metadata: Metadata = {
   title: "Walacor Financial Integrity Platform",
@@ -19,33 +43,44 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider
+      appearance={{
+        variables: {
+          colorPrimary: '#2563eb',
+          borderRadius: '0.75rem',
+        },
+      }}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
+      signInFallbackRedirectUrl="/integrated-dashboard"
+      signUpFallbackRedirectUrl="/integrated-dashboard"
       afterSignOutUrl="/sign-in"
-      afterSignInUrl="/integrated-dashboard"
-      afterSignUpUrl="/integrated-dashboard"
+      publishableKey={clerkPublishableKey}
     >
       <html lang="en">
-        <body className={inter.className}>
+        <body className={`${inter.className} ${bloxBrk.variable}`}>
           <LayoutContent>{children}</LayoutContent>
-          <Toaster 
+          <Toaster
             position="top-right"
             toastOptions={{
-              duration: 4000,
+              duration: 3000,
               style: {
-                background: '#363636',
-                color: '#fff',
+                background: '#ffffff',
+                color: '#0f172a',
+                border: '1px solid #e2e8f0',
+                fontFamily: 'Inter, system-ui, sans-serif',
               },
               success: {
-                duration: 3000,
                 style: {
-                  background: '#10b981',
+                  background: '#f0fdf4',
+                  color: '#166534',
+                  border: '1px solid #bbf7d0',
                 },
               },
               error: {
-                duration: 4000,
                 style: {
-                  background: '#ef4444',
+                  background: '#fef2f2',
+                  color: '#991b1b',
+                  border: '1px solid #fecaca',
                 },
               },
             }}

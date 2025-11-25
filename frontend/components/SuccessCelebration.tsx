@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CheckCircle, ExternalLink, Upload, X, FileText, Shield } from 'lucide-react';
+import { CheckCircle, ExternalLink, Upload, X, FileText, Shield, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 interface SuccessCelebrationProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export function SuccessCelebration({
   securityLevel = 'standard'
 }: SuccessCelebrationProps) {
   const [animate, setAnimate] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (isOpen) {
@@ -169,22 +171,40 @@ export function SuccessCelebration({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            {onViewDocument && (
-              <Button
-                onClick={onViewDocument}
-                className="flex-1"
-                size="lg"
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                View Document
-              </Button>
-            )}
+          <div className="flex flex-col gap-3">
+            {/* Primary Actions Row */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {onViewDocument && (
+                <Button
+                  onClick={onViewDocument}
+                  className="flex-1"
+                  size="lg"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  View Document
+                </Button>
+              )}
+              {artifactId && (
+                <Button
+                  onClick={() => {
+                    onClose(); // Close modal first for clean transition
+                    router.push(`/zkp-verify?artifact=${artifactId}`);
+                  }}
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                  size="lg"
+                >
+                  <Lock className="w-4 h-4 mr-2" />
+                  Generate ZKP Proof
+                </Button>
+              )}
+            </div>
+
+            {/* Secondary Action */}
             {onUploadAnother && (
               <Button
                 onClick={onUploadAnother}
                 variant="outline"
-                className="flex-1"
+                className="w-full"
                 size="lg"
               >
                 <Upload className="w-4 h-4 mr-2" />

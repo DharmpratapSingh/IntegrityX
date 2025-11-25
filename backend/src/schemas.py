@@ -66,7 +66,7 @@ class LoanSchemas:
             ETId=50,
             SV=2,
             Schema=CreateSchemaDefinition(
-                ETId=100001,
+                ETId=10000001,
                 TableName="loan_documents",
                 Family="loan_integrity",
                 Fields=[
@@ -359,6 +359,268 @@ class LoanSchemas:
         
         return wal.schema.create_schema(schema_req)
     
+    # ============================================================================
+    # SCHEMA VERSION 3 - MINIMAL FIELDS (Hash, ID, Timestamp only)
+    # ============================================================================
+    
+    @staticmethod
+    def create_loan_document_schema_v3(wal: WalacorService) -> Any:
+        """
+        Create SV=3 loan_documents schema with MINIMAL fields.
+        
+        Only stores: document_hash, loan_id, upload_timestamp
+        All other data stored locally in PostgreSQL.
+        
+        Args:
+            wal (WalacorService): Walacor service instance
+            
+        Returns:
+            Any: Result of schema creation
+        """
+        schema_req = CreateSchemaRequest(
+            ETId=50,
+            SV=1,  # Use SV=1 for schema registry; Walacor will auto-increment to next version
+            Schema=CreateSchemaDefinition(
+                ETId=10000001,
+                TableName="loan_documents",
+                Family="loan_integrity",
+                Fields=[
+                    CreateFieldRequest(
+                        FieldName="loan_id",
+                        DataType=FieldType.TEXT,
+                        Required=True
+                    ),
+                    CreateFieldRequest(
+                        FieldName="document_hash",
+                        DataType=FieldType.TEXT,
+                        Required=True
+                    ),
+                    CreateFieldRequest(
+                        FieldName="upload_timestamp",
+                        DataType=FieldType.DATETIME_EPOCH,
+                        Required=True
+                    )
+                ],
+                Indexes=[
+                    CreateIndexRequest(
+                        Fields=["loan_id"],
+                        IndexValue="idx_loan_id"
+                    ),
+                    CreateIndexRequest(
+                        Fields=["document_hash"],
+                        IndexValue="idx_document_hash"
+                    )
+                ]
+            )
+        )
+        return wal.schema.create_schema(schema_req)
+    
+    @staticmethod
+    def create_provenance_schema_v3(wal: WalacorService) -> Any:
+        """
+        Create SV=3 document_provenance schema with MINIMAL fields.
+        
+        Only stores: parent_doc_id, child_doc_id, timestamp
+        All other data stored locally in PostgreSQL.
+        
+        Args:
+            wal (WalacorService): Walacor service instance
+            
+        Returns:
+            Any: Result of schema creation
+        """
+        schema_req = CreateSchemaRequest(
+            ETId=50,
+            SV=1,  # Use SV=1 for schema registry; Walacor will auto-increment to next version
+            Schema=CreateSchemaDefinition(
+                ETId=100002,
+                TableName="document_provenance",
+                Family="loan_integrity",
+                Fields=[
+                    CreateFieldRequest(
+                        FieldName="parent_doc_id",
+                        DataType=FieldType.TEXT,
+                        Required=True
+                    ),
+                    CreateFieldRequest(
+                        FieldName="child_doc_id",
+                        DataType=FieldType.TEXT,
+                        Required=True
+                    ),
+                    CreateFieldRequest(
+                        FieldName="timestamp",
+                        DataType=FieldType.DATETIME_EPOCH,
+                        Required=True
+                    )
+                ],
+                Indexes=[
+                    CreateIndexRequest(
+                        Fields=["parent_doc_id"],
+                        IndexValue="idx_parent_doc_id"
+                    ),
+                    CreateIndexRequest(
+                        Fields=["child_doc_id"],
+                        IndexValue="idx_child_doc_id"
+                    )
+                ]
+            )
+        )
+        return wal.schema.create_schema(schema_req)
+    
+    @staticmethod
+    def create_attestation_schema_v3(wal: WalacorService) -> Any:
+        """
+        Create SV=3 attestations schema with MINIMAL fields.
+        
+        Only stores: document_id, timestamp
+        All other data stored locally in PostgreSQL.
+        
+        Args:
+            wal (WalacorService): Walacor service instance
+            
+        Returns:
+            Any: Result of schema creation
+        """
+        schema_req = CreateSchemaRequest(
+            ETId=50,
+            SV=1,  # Use SV=1 for schema registry; Walacor will auto-increment to next version
+            Schema=CreateSchemaDefinition(
+                ETId=100003,
+                TableName="attestations",
+                Family="loan_integrity",
+                Fields=[
+                    CreateFieldRequest(
+                        FieldName="document_id",
+                        DataType=FieldType.TEXT,
+                        Required=True
+                    ),
+                    CreateFieldRequest(
+                        FieldName="timestamp",
+                        DataType=FieldType.DATETIME_EPOCH,
+                        Required=True
+                    )
+                ],
+                Indexes=[
+                    CreateIndexRequest(
+                        Fields=["document_id"],
+                        IndexValue="idx_document_id"
+                    )
+                ]
+            )
+        )
+        return wal.schema.create_schema(schema_req)
+    
+    @staticmethod
+    def create_audit_log_schema_v3(wal: WalacorService) -> Any:
+        """
+        Create SV=3 audit_logs schema with MINIMAL fields.
+        
+        Only stores: document_id, event_type, timestamp
+        All other data stored locally in PostgreSQL.
+        
+        Args:
+            wal (WalacorService): Walacor service instance
+            
+        Returns:
+            Any: Result of schema creation
+        """
+        schema_req = CreateSchemaRequest(
+            ETId=50,
+            SV=1,  # Use SV=1 for schema registry; Walacor will auto-increment to next version
+            Schema=CreateSchemaDefinition(
+                ETId=100004,
+                TableName="audit_logs",
+                Family="loan_integrity",
+                Fields=[
+                    CreateFieldRequest(
+                        FieldName="document_id",
+                        DataType=FieldType.TEXT,
+                        Required=True
+                    ),
+                    CreateFieldRequest(
+                        FieldName="event_type",
+                        DataType=FieldType.TEXT,
+                        Required=True
+                    ),
+                    CreateFieldRequest(
+                        FieldName="timestamp",
+                        DataType=FieldType.DATETIME_EPOCH,
+                        Required=True
+                    )
+                ],
+                Indexes=[
+                    CreateIndexRequest(
+                        Fields=["document_id"],
+                        IndexValue="idx_document_id"
+                    ),
+                    CreateIndexRequest(
+                        Fields=["timestamp"],
+                        IndexValue="idx_timestamp"
+                    )
+                ]
+            )
+        )
+        return wal.schema.create_schema(schema_req)
+    
+    @staticmethod
+    def create_all_schemas_v3(wal: WalacorService) -> dict:
+        """
+        Create all SV=3 schemas with minimal fields (hash, ID, timestamp only).
+        
+        Args:
+            wal (WalacorService): Walacor service instance
+            
+        Returns:
+            dict: Dictionary containing results of all schema operations
+        """
+        results = {}
+        
+        print("Creating SV=3 schemas with minimal fields...")
+        print("(Only hash, ID, and timestamp - all other data stored locally)")
+        print()
+        
+        # Create loan_documents schema
+        try:
+            print("Creating loan_documents (SV=3)...")
+            result = LoanSchemas.create_loan_document_schema_v3(wal)
+            results['loan_documents'] = {"status": "created", "result": result}
+            print("✅ loan_documents (SV=3) created")
+        except Exception as e:
+            print(f"❌ Failed to create loan_documents (SV=3): {e}")
+            results['loan_documents'] = {"status": "error", "error": str(e)}
+        
+        # Create document_provenance schema
+        try:
+            print("Creating document_provenance (SV=3)...")
+            result = LoanSchemas.create_provenance_schema_v3(wal)
+            results['document_provenance'] = {"status": "created", "result": result}
+            print("✅ document_provenance (SV=3) created")
+        except Exception as e:
+            print(f"❌ Failed to create document_provenance (SV=3): {e}")
+            results['document_provenance'] = {"status": "error", "error": str(e)}
+        
+        # Create attestations schema
+        try:
+            print("Creating attestations (SV=3)...")
+            result = LoanSchemas.create_attestation_schema_v3(wal)
+            results['attestations'] = {"status": "created", "result": result}
+            print("✅ attestations (SV=3) created")
+        except Exception as e:
+            print(f"❌ Failed to create attestations (SV=3): {e}")
+            results['attestations'] = {"status": "error", "error": str(e)}
+        
+        # Create audit_logs schema
+        try:
+            print("Creating audit_logs (SV=3)...")
+            result = LoanSchemas.create_audit_log_schema_v3(wal)
+            results['audit_logs'] = {"status": "created", "result": result}
+            print("✅ audit_logs (SV=3) created")
+        except Exception as e:
+            print(f"❌ Failed to create audit_logs (SV=3): {e}")
+            results['audit_logs'] = {"status": "error", "error": str(e)}
+        
+        return results
+    
     @staticmethod
     def create_all_schemas(wal: WalacorService) -> dict:
         """
@@ -386,7 +648,7 @@ class LoanSchemas:
         
         # Define our required schemas
         required_schemas = {
-            100001: "loan_documents",
+            10000001: "loan_documents",
             100002: "document_provenance", 
             100003: "attestations",
             100004: "audit_logs"

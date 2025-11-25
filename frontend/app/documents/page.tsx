@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { json as fetchJson, fetchWithTimeout } from '@/utils/api'
 import { formatEasternTimeWithTZ, formatForFilename, getCurrentEasternTime } from '@/utils/timezone'
 import Link from 'next/link'
-import { Search, FileText, Eye, Plus, Filter, Calendar, Hash, AlertCircle, RefreshCw, Download, CheckSquare, Square, Shield, Lock, Zap, CheckCircle, TrendingUp, MoreVertical, Trash2 } from 'lucide-react'
+import { DashboardLayout } from '@/components/DashboardLayout'
+import { Search, FileText, Eye, Plus, Filter, Calendar, Hash, AlertCircle, RefreshCw, Download, CheckSquare, Square, Shield, Lock, Zap, CheckCircle, TrendingUp, MoreVertical, Trash2, ChevronRight, Copy } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -20,11 +21,24 @@ interface Document {
   loan_amount: number
   document_type: string
   upload_date: string
-  walacor_tx_id: string
+  walacor_tx_id?: string
   artifact_type: string
   created_by: string
   sealed_status: string
   security_level: string
+  artifact_container_type: string
+  parent_id?: string | null
+  directory_name?: string | null
+  file_count?: number
+}
+
+type DisplayRowType = 'directory' | 'child' | 'document'
+
+interface DisplayRow {
+  type: DisplayRowType
+  doc: Document
+  depth: number
+  parent?: Document
 }
 
 export default function DocumentsPage() {
@@ -41,6 +55,7 @@ export default function DocumentsPage() {
   const [dateTo, setDateTo] = useState('')
   const [amountMin, setAmountMin] = useState('')
   const [amountMax, setAmountMax] = useState('')
+  const [securityLevel, setSecurityLevel] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   
   // Pagination
@@ -60,6 +75,9 @@ export default function DocumentsPage() {
   // Verification functionality
   const [verificationResult, setVerificationResult] = useState<any>(null)
   const [isVerifying, setIsVerifying] = useState(false)
+
+  // Directory tree state
+  const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     fetchDocuments()
@@ -88,6 +106,7 @@ export default function DocumentsPage() {
       if (dateTo) params.append('date_to', dateTo)
       if (amountMin) params.append('amount_min', amountMin)
       if (amountMax) params.append('amount_max', amountMax)
+      if (securityLevel) params.append('security_level', securityLevel)
       
       params.append('limit', '20')
       params.append('offset', String((page - 1) * 20))
@@ -97,14 +116,52 @@ export default function DocumentsPage() {
       if (response && response.ok && response.data) {
         const data = response.data
         const artifacts = data.data?.artifacts || []
-        // Ensure all borrower names and emails are cleaned (backend should do this, but double-check)
-        const cleanedArtifacts = artifacts.map((doc: any) => ({
-          ...doc,
-          borrower_name: cleanBorrowerName(doc.borrower_name || ''),
-          borrower_email: doc.borrower_email && /^[a-zA-Z0-9+/=]{20,}$/.test(doc.borrower_email) 
-            ? '' // Don't show Base64 strings
+
+        const cleanedArtifacts: Document[] = artifacts.map((doc: any) => {
+          const uploadDate = doc.upload_date || doc.created_at || doc.timestamp || new Date().toISOString()
+          const artifactContainerType = doc.artifact_container_type || 'file'
+          const sanitizedEmail = doc.borrower_email && /^[a-zA-Z0-9+/=]{20,}$/.test(doc.borrower_email)
+            ? ''
             : (doc.borrower_email || '')
-        }))
+
+          const baseDocumentType =
+            doc.document_type ||
+            (artifactContainerType === 'directory_container' ? 'Directory Container' : doc.artifact_type || 'document')
+
+          return {
+            id: doc.id,
+            loan_id: doc.loan_id || '',
+            // For directories, don't use directory_name as borrower_name - keep it empty/Unknown
+            borrower_name: (artifactContainerType === 'directory_container') 
+              ? (doc.borrower_name || '')  // Directories: only use actual borrower_name, not directory_name
+              : (doc.borrower_name || 'Unknown'),  // Files: use borrower_name or 'Unknown'
+            borrower_email: sanitizedEmail,
+            loan_amount: doc.loan_amount ?? 0,
+            document_type: baseDocumentType,
+            upload_date: uploadDate,
+            walacor_tx_id: doc.walacor_tx_id || '',
+            artifact_type: doc.artifact_type || baseDocumentType,
+            created_by: doc.created_by || '',
+            sealed_status: doc.sealed_status || (doc.walacor_tx_id ? 'Sealed' : 'Not Sealed'),
+            security_level: (() => {
+              // Prioritize local_metadata.security_level, then doc.security_level, then default to 'standard'
+              const metadataLevel = doc.local_metadata?.security_level;
+              const apiLevel = doc.security_level;
+              // Normalize values to handle variations
+              const level = metadataLevel || apiLevel || 'standard';
+              // Ensure we return a valid security level
+              if (['standard', 'quantum_safe', 'maximum'].includes(level)) {
+                return level;
+              }
+              return 'standard';
+            })(),
+            artifact_container_type: artifactContainerType,
+            parent_id: doc.parent_id || null,
+            directory_name: doc.directory_name || null,
+            file_count: doc.file_count ?? 0
+          }
+        })
+
         setDocuments(cleanedArtifacts)
         setTotalCount(data.data?.total_count || 0)
         setHasMore(!!data.data?.has_more)
@@ -202,6 +259,7 @@ export default function DocumentsPage() {
     setDateTo('')
     setAmountMin('')
     setAmountMax('')
+    setSecurityLevel('')
     setCurrentPage(1)
     fetchDocuments(1)
   }
@@ -234,23 +292,23 @@ export default function DocumentsPage() {
     switch (securityLevel) {
       case 'quantum_safe':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-            <Zap className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200 shadow-sm">
+            <Zap className="h-3.5 w-3.5 mr-1.5" />
             Quantum Safe
           </span>
         )
       case 'maximum':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <Lock className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold bg-red-100 text-red-800 border border-red-200 shadow-sm">
+            <Lock className="h-3.5 w-3.5 mr-1.5" />
             Maximum Security
           </span>
         )
       case 'standard':
       default:
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            <Shield className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200 shadow-sm">
+            <Shield className="h-3.5 w-3.5 mr-1.5" />
             Standard
           </span>
         )
@@ -258,51 +316,16 @@ export default function DocumentsPage() {
   }
 
   const cleanBorrowerName = (name: string) => {
-    if (!name) return ''
-    
-    // Remove any newlines/carriage returns first
+    if (!name) return 'Unknown'
+
     let cleaned = name.replace(/[\n\r]/g, ' ').trim()
-    
-    // Find the position of ANY alphanumeric string that's 8+ chars (encoded data usually starts early)
-    // This catches base64, hex, and other encoded strings
-    const encodedStartMatch = cleaned.match(/[a-zA-Z0-9+/=]{8,}/)
-    
-    // If we found any encoded-like data, only take everything before it
+    const encodedStartMatch = cleaned.match(/[a-zA-Z0-9+/=]{16,}/)
+
     if (encodedStartMatch && encodedStartMatch.index !== undefined && encodedStartMatch.index > 0) {
       cleaned = cleaned.substring(0, encodedStartMatch.index).trim()
     }
-    
-    // Split by whitespace
-    const parts = cleaned.split(/\s+/)
-    
-    // ONLY keep the first 1-2 parts that are PURE alphabetical names (no numbers, no special chars except apostrophe/hyphen)
-    const nameParts: string[] = []
-    for (const part of parts) {
-      // Strict: Only letters, apostrophes, hyphens, and 1-25 chars
-      if (/^[a-zA-Z'-]+$/.test(part) && part.length >= 2 && part.length <= 25) {
-        // Make sure it has at least 2 letters (not just special chars)
-        if (part.replace(/[^a-zA-Z]/g, '').length >= 2) {
-          nameParts.push(part)
-          // Stop after getting first name + last name (2 parts)
-          if (nameParts.length >= 2) {
-            break
-          }
-        }
-      } else {
-        // If we hit something that's not a pure name, stop
-        // This ensures we don't accidentally include encoded data
-        if (nameParts.length > 0) {
-          break
-        }
-      }
-    }
-    
-    if (nameParts.length > 0) {
-      return nameParts.join(' ')
-    }
-    
-    // If nothing found, return 'Unknown'
-    return 'Unknown'
+
+    return cleaned || 'Unknown'
   }
   
   const cleanLoanId = (loanId: string) => {
@@ -321,7 +344,88 @@ export default function DocumentsPage() {
     return loanId.substring(0, 30) + '...'
   }
 
+  const flattenedRows = useMemo<DisplayRow[]>(() => {
+    if (!documents || documents.length === 0) {
+      return []
+    }
+
+    const rows: DisplayRow[] = []
+    const childrenMap = new Map<string, Document[]>()
+
+    documents.forEach((doc) => {
+      if (doc.parent_id) {
+        const existing = childrenMap.get(doc.parent_id) || []
+        existing.push(doc)
+        childrenMap.set(doc.parent_id, existing)
+      }
+    })
+
+    const sortByDateDesc = (a: Document, b: Document) =>
+      new Date(b.upload_date).getTime() - new Date(a.upload_date).getTime()
+
+    const topLevelDocs = documents.filter((doc) => !doc.parent_id)
+    topLevelDocs.sort(sortByDateDesc)
+
+    topLevelDocs.forEach((doc) => {
+      if (doc.artifact_container_type === 'directory_container') {
+        rows.push({ type: 'directory', doc, depth: 0 })
+
+        if (expandedDirectories.has(doc.id)) {
+          const childDocs = [...(childrenMap.get(doc.id) || [])].sort((a, b) =>
+            a.loan_id.localeCompare(b.loan_id)
+          )
+
+          childDocs.forEach((child) => {
+            const childClone: Document = {
+              ...child,
+              borrower_name: child.borrower_name || doc.borrower_name,
+              sealed_status: doc.walacor_tx_id ? 'Sealed (Inherited)' : 'Pending (Parent Unsealed)',
+              security_level: doc.security_level || child.security_level,
+              walacor_tx_id: doc.walacor_tx_id || child.walacor_tx_id
+            }
+            rows.push({ type: 'child', doc: childClone, depth: 1, parent: doc })
+          })
+        }
+      } else {
+        rows.push({ type: 'document', doc, depth: 0 })
+      }
+    })
+
+    return rows
+  }, [documents, expandedDirectories])
+
+  useEffect(() => {
+    setSelectedDocuments((prev) => {
+      const validIds = new Set(flattenedRows.map((row) => row.doc.id))
+      const next = new Set<string>()
+      let changed = false
+
+      prev.forEach((id) => {
+        if (validIds.has(id)) {
+          next.add(id)
+        } else {
+          changed = true
+        }
+      })
+
+      if (!changed && next.size === prev.size) {
+        return prev
+      }
+
+      return next
+    })
+  }, [flattenedRows])
+
   // Export functionality
+  const handleSelectAll = () => {
+    const allIds = flattenedRows.map((row) => row.doc.id)
+    if (selectedDocuments.size === allIds.length && allIds.length > 0) {
+      setSelectedDocuments(new Set())
+    } else {
+      setSelectedDocuments(new Set(allIds))
+    }
+  }
+
   const handleSelectDocument = (documentId: string) => {
     const newSelected = new Set(selectedDocuments)
     if (newSelected.has(documentId)) {
@@ -332,12 +436,16 @@ export default function DocumentsPage() {
     setSelectedDocuments(newSelected)
   }
 
-  const handleSelectAll = () => {
-    if (selectedDocuments.size === documents.length) {
-      setSelectedDocuments(new Set())
-    } else {
-      setSelectedDocuments(new Set(documents.map(doc => doc.id)))
-    }
+  const toggleDirectory = (directoryId: string) => {
+    setExpandedDirectories((prev) => {
+      const next = new Set(prev)
+      if (next.has(directoryId)) {
+        next.delete(directoryId)
+      } else {
+        next.add(directoryId)
+      }
+      return next
+    })
   }
 
   const generatePDFReport = async (doc: Document) => {
@@ -771,26 +879,73 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50/20 to-blue-50/20">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-purple-500 to-blue-600 text-white">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10"></div>
-        
-        <div className="relative max-w-7xl mx-auto px-6 py-16">
+    <DashboardLayout
+      rightSidebar={
+        <div className="p-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-6">
+            Document Stats
+          </h2>
+
+          {/* Total Count */}
+          <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              Total Documents
+            </h3>
+            <div className="text-3xl font-bold text-gray-900 dark:text-white">
+              {totalCount.toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              In your library
+            </div>
+          </div>
+
+          {/* Quick Filters */}
+          <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              Quick Filters
+            </h3>
+            <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+              <div>• By Date Range</div>
+              <div>• By Borrower Name</div>
+              <div>• By Loan Amount</div>
+              <div>• By Security Level</div>
+            </div>
+          </div>
+
+          {/* Bulk Actions */}
+          <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Bulk Actions
+            </h3>
+            <p className="text-xs text-gray-700 dark:text-gray-300 mb-3">
+              Select multiple documents to export
+            </p>
+            <div className="text-xs text-gray-600 hover:text-gray-700 dark:text-gray-400">
+              📥 Export Selected
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <div>
+        {/* Hero Section */}
+        <div className="relative overflow-hidden bg-elite-dark dark:bg-black text-white border-b border-gray-200 dark:border-gray-800">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="space-y-3">
                 <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
                   Document Library
                 </h1>
-                <p className="text-lg md:text-xl text-purple-100 max-w-3xl">
+                <p className="text-lg md:text-xl text-blue-100 max-w-3xl">
                   View and manage your verified documents
                 </p>
               </div>
               <Link
                 href="/upload"
-                className="inline-flex items-center px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-105"
+                className="inline-flex items-center px-6 py-3 bg-elite-blue hover:bg-[#1d4ed8] text-white rounded-xl transition-all duration-200"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Upload Document
@@ -801,19 +956,19 @@ export default function DocumentsPage() {
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-purple-100">Total Documents</p>
-                    <p className="text-3xl font-bold">{documents.length}</p>
+                    <p className="text-sm font-medium text-blue-100">Total Documents</p>
+                    <p className="text-3xl font-bold">{totalCount.toLocaleString()}</p>
                   </div>
-                  <div className="p-3 bg-purple-500/20 text-white rounded-xl">
+                  <div className="p-3 bg-blue-500/20 text-white rounded-xl">
                     <FileText className="h-6 w-6" />
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-purple-100">Sealed Today</p>
+                    <p className="text-sm font-medium text-blue-100">Sealed Today</p>
                     <p className="text-3xl font-bold">12</p>
                   </div>
                   <div className="p-3 bg-green-500/20 text-white rounded-xl">
@@ -821,11 +976,11 @@ export default function DocumentsPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-purple-100">Success Rate</p>
+                    <p className="text-sm font-medium text-blue-100">Success Rate</p>
                     <p className="text-3xl font-bold">99.2%</p>
                   </div>
                   <div className="p-3 bg-blue-500/20 text-white rounded-xl">
@@ -840,12 +995,15 @@ export default function DocumentsPage() {
 
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
       {/* Search and Filter */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Search Loans by Borrower Information</h2>
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Search Documents</h2>
+            <p className="text-sm text-gray-500">Filter by borrower information, dates, amounts, and security level</p>
+          </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
           >
             <Filter className="h-4 w-4 mr-2" />
             {showFilters ? 'Hide Filters' : 'Show Filters'}
@@ -853,97 +1011,118 @@ export default function DocumentsPage() {
         </div>
 
         {/* Basic Search */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Borrower Name</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Borrower Name</label>
               <input
                 type="text"
               placeholder="Enter borrower name..."
               value={borrowerName}
               onChange={(e) => setBorrowerName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
               />
             </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
             <input
               type="email"
               placeholder="Enter email address..."
               value={borrowerEmail}
               onChange={(e) => setBorrowerEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Loan ID</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Loan ID</label>
             <input
               type="text"
               placeholder="Enter loan ID..."
               value={loanId}
               onChange={(e) => setLoanId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
             />
           </div>
         </div>
 
         {/* Advanced Filters */}
         {showFilters && (
-          <div className="border-t pt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div className="border-t border-gray-200 pt-6 mt-6">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">Advanced Filters</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date From</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Date From</label>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date To</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Date To</label>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Min Amount</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Min Amount</label>
                 <input
                   type="number"
                   placeholder="0"
                   value={amountMin}
                   onChange={(e) => setAmountMin(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Max Amount</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Max Amount</label>
                 <input
                   type="number"
                   placeholder="1000000"
                   value={amountMax}
                   onChange={(e) => setAmountMax(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Security Level</label>
+                <select
+                  value={securityLevel}
+                  onChange={(e) => {
+                    setSecurityLevel(e.target.value)
+                    // Auto-search when filter changes
+                    setTimeout(() => {
+                      setCurrentPage(1)
+                      fetchDocuments(1)
+                    }, 100)
+                  }}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                >
+                  <option value="">All Levels</option>
+                  <option value="standard">Standard</option>
+                  <option value="quantum_safe">Quantum Safe</option>
+                  <option value="maximum">Maximum Security</option>
+                </select>
               </div>
             </div>
           </div>
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
           <button
             onClick={handleSearch}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
           >
             <Search className="h-4 w-4 mr-2" />
             Search
           </button>
           <button
             onClick={handleClearFilters}
-            className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            className="inline-flex items-center px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
           >
             Clear Filters
           </button>
@@ -952,47 +1131,49 @@ export default function DocumentsPage() {
 
       {/* Results Summary and Export Controls */}
       {totalCount > 0 && (
-        <div className="mb-4 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            Showing {documents.length} of {totalCount} loan documents
-          </div>
-          <div className="flex items-center space-x-3">
-            {selectedDocuments.size > 0 && (
-              <div className="text-sm text-gray-600">
-                {selectedDocuments.size} selected
+        <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="text-sm font-medium text-gray-700">
+                Showing <span className="font-bold text-gray-900">{flattenedRows.length}</span> of <span className="font-bold text-gray-900">{totalCount.toLocaleString()}</span> documents
               </div>
-            )}
-            <div className="flex items-center space-x-2">
+              {selectedDocuments.size > 0 && (
+                <div className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-700 rounded-lg">
+                  {selectedDocuments.size} selected
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => exportBulkDocuments('PDF')}
                 disabled={selectedDocuments.size === 0 || isExporting}
-                className="inline-flex items-center px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium bg-red-50 text-red-700 rounded-lg hover:bg-red-100 border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <Download className="h-3 w-3 mr-1" />
+                <Download className="h-4 w-4 mr-1.5" />
                 Export PDF
               </button>
               <button
                 onClick={() => exportBulkDocuments('JSON')}
                 disabled={selectedDocuments.size === 0 || isExporting}
-                className="inline-flex items-center px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <Download className="h-3 w-3 mr-1" />
+                <Download className="h-4 w-4 mr-1.5" />
                 Export JSON
               </button>
               <button
                 onClick={() => exportBulkDocuments('CSV')}
                 disabled={selectedDocuments.size === 0 || isExporting}
-                className="inline-flex items-center px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium bg-green-50 text-green-700 rounded-lg hover:bg-green-100 border border-green-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <Download className="h-3 w-3 mr-1" />
+                <Download className="h-4 w-4 mr-1.5" />
                 Export CSV
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={selectedDocuments.size === 0 || isDeleting}
-                className="inline-flex items-center px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium bg-red-50 text-red-700 rounded-lg hover:bg-red-100 border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <AlertCircle className="h-3 w-3 mr-1" />
+                <Trash2 className="h-4 w-4 mr-1.5" />
                 Delete
               </button>
             </div>
@@ -1001,47 +1182,78 @@ export default function DocumentsPage() {
       )}
 
       {/* Documents Table */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        {documents.length > 0 ? (
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        {flattenedRows.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full table-fixed">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-300">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-12">
                     <button
                       onClick={handleSelectAll}
                       className="flex items-center justify-center w-4 h-4"
                     >
-                      {selectedDocuments.size === documents.length && documents.length > 0 ? (
+                      {selectedDocuments.size === flattenedRows.length && flattenedRows.length > 0 ? (
                         <CheckSquare className="h-4 w-4 text-blue-600" />
                       ) : (
                         <Square className="h-4 w-4 text-gray-400" />
                       )}
                     </button>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32">
                     Loan ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-48">
                     Borrower Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32">
                     Upload Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32">
                     Sealed Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-32">
                     Security Level
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-20">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {documents.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-gray-50">
+              <tbody className="bg-white divide-y divide-gray-100">
+                {flattenedRows.map((row) => {
+                  const doc = row.doc
+                  const isDirectory = row.type === 'directory'
+                  const isChild = row.type === 'child'
+                  const depth = row.depth
+                  const isExpanded = expandedDirectories.has(doc.id)
+                  // For directories, show "Directory Container" if no borrower name
+                  // For children, inherit from parent if available
+                  let borrowerDisplay = ''
+                  if (isDirectory) {
+                    borrowerDisplay = cleanBorrowerName(doc.borrower_name || '')
+                    borrowerDisplay = borrowerDisplay || 'Directory Container'
+                  } else if (isChild && row.parent) {
+                    borrowerDisplay = cleanBorrowerName(doc.borrower_name || row.parent.borrower_name || '')
+                    borrowerDisplay = borrowerDisplay || 'Unknown'
+                  } else {
+                    borrowerDisplay = cleanBorrowerName(doc.borrower_name || '')
+                    borrowerDisplay = borrowerDisplay || 'Unknown'
+                  }
+                  const borrowerText = borrowerDisplay
+                  const sealedLabel = doc.sealed_status || (doc.walacor_tx_id ? 'Sealed' : 'Not Sealed')
+                  const isSealed = sealedLabel.toLowerCase().includes('sealed')
+                  const sealedBadgeClass = isSealed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                  const directorySecondary = isDirectory ? `${doc.file_count || 0} file${(doc.file_count || 0) === 1 ? '' : 's'}` : doc.document_type
+                  const loanDisplay = isDirectory
+                    ? doc.directory_name || doc.loan_id || doc.id
+                    : cleanLoanId(doc.loan_id || '')
+
+                  return (
+                    <tr
+                      key={`${row.type}-${doc.id}`}
+                      className={`${isChild ? 'bg-gray-50/50' : 'bg-white'} hover:bg-blue-50/30 transition-colors border-b border-gray-100`}
+                    >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         onClick={() => handleSelectDocument(doc.id)}
@@ -1055,39 +1267,72 @@ export default function DocumentsPage() {
                       </button>
                     </td>
                     <td className="px-6 py-4 w-32">
-                      <div className="text-sm font-medium text-gray-900 truncate" title={doc.loan_id}>
-                        {cleanLoanId(doc.loan_id)}
-                      </div>
-                      {doc.document_type && (
-                        <div className="text-xs text-gray-400 mt-0.5 truncate" title={doc.document_type}>
-                          {doc.document_type}
+                      <div className="flex items-center" style={{ marginLeft: depth * 16 }}>
+                        {isDirectory && (
+                          <button
+                            onClick={() => toggleDirectory(doc.id)}
+                            className="mr-2 inline-flex items-center justify-center w-7 h-7 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm"
+                          >
+                            <ChevronRight
+                              className={`h-4 w-4 text-gray-600 transition-transform duration-200 ${isExpanded ? 'transform rotate-90' : ''}`}
+                            />
+                          </button>
+                        )}
+                        {!isDirectory && depth > 0 && (
+                          <span className="inline-block w-4 h-4 mr-2 border-l-2 border-gray-300"></span>
+                        )}
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-gray-900 truncate" title={loanDisplay}>
+                            {loanDisplay}
+                          </div>
+                          {directorySecondary && (
+                            <div className="text-xs text-gray-500 mt-0.5 truncate" title={directorySecondary}>
+                              {directorySecondary}
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 w-48">
-                      <div className="text-sm font-medium text-gray-900 truncate" title={cleanBorrowerName(doc.borrower_name)}>
-                        {cleanBorrowerName(doc.borrower_name)}
+                      <div className="text-sm font-medium text-gray-900 truncate" title={borrowerText}>
+                        {borrowerText}
                       </div>
-                      {doc.borrower_email && (
-                        <div className="text-xs text-gray-400 mt-0.5 truncate" title={doc.borrower_email}>
-                          {doc.borrower_email.split(/\s+/)[0]} {/* Only show first part of email if it contains spaces */}
+                      {doc.borrower_email && !isDirectory && borrowerText !== 'Unknown' && borrowerText !== 'Directory Container' && (
+                        <div className="text-xs text-gray-500 mt-0.5 truncate" title={doc.borrower_email}>
+                          {doc.borrower_email.split(/\s+/)[0]}
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 w-32 text-sm text-gray-500">
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1 text-gray-400" />
-                        {formatDate(doc.upload_date)}
+                    <td className="px-6 py-4 w-32">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Calendar className="h-4 w-4 mr-1.5 text-gray-400" />
+                        <span>{formatDate(doc.upload_date)}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 w-32">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        doc.sealed_status === 'Sealed' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {doc.sealed_status}
+                      {doc.walacor_tx_id ? (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 shadow-sm">
+                            <Shield className="h-3 w-3 mr-1" />
+                            Sealed on Walacor
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigator.clipboard.writeText(doc.walacor_tx_id || '')
+                              // You can add a toast notification here if available
+                            }}
+                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                            title="Copy Transaction ID"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold ${sealedBadgeClass} shadow-sm`}>
+                        {sealedLabel}
                       </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 w-32">
                       {getSecurityLevelBadge(doc.security_level)}
@@ -1130,9 +1375,9 @@ export default function DocumentsPage() {
                             </button>
                             <Link
                               href={`/forensics?document=${doc.id}`}
-                              className="flex items-center w-full px-3 py-2 text-sm text-purple-700 rounded-md hover:bg-purple-50 transition-colors"
+                              className="flex items-center w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                             >
-                              <Search className="h-4 w-4 mr-2 text-purple-500" />
+                              <Search className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
                               Forensic Analysis
                             </Link>
                             <div className="border-t border-gray-200 my-1"></div>
@@ -1189,7 +1434,8 @@ export default function DocumentsPage() {
                       </Popover>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -1213,28 +1459,31 @@ export default function DocumentsPage() {
 
       {/* Pagination */}
       {totalCount > 20 && (
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            Showing {((currentPage - 1) * 20) + 1} to {Math.min(currentPage * 20, totalCount)} of {totalCount} results
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <span className="px-3 py-2 text-sm font-medium text-gray-700">
-              Page {currentPage} of {Math.ceil(totalCount / 20)}
-            </span>
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={!hasMore}
-              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
+        <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-600">
+              Page <span className="font-semibold text-gray-900">{currentPage}</span> of <span className="font-semibold text-gray-900">{Math.ceil(totalCount / 20)}</span> 
+              {' '}({totalCount.toLocaleString()} total documents)
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+              >
+                Previous
+              </button>
+              <div className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 rounded-lg border border-gray-200">
+                {currentPage} / {Math.ceil(totalCount / 20)}
+              </div>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={!hasMore || currentPage >= Math.ceil(totalCount / 20)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1285,6 +1534,7 @@ export default function DocumentsPage() {
         </div>
       )}
       </div>
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }

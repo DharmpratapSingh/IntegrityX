@@ -41,6 +41,7 @@ import json
 import os
 import uuid
 import logging
+import hashlib
 from datetime import datetime, timezone, timedelta
 from src.timezone_utils import get_eastern_now, get_eastern_now_iso, format_api_timestamp, format_display_timestamp
 import pytz
@@ -97,6 +98,7 @@ from src.quantum_safe_security import HybridSecurityService, quantum_safe_hashin
 from src.ai_anomaly_detector import AIAnomalyDetector
 from src.smart_contracts import SmartContractsService
 from src.predictive_analytics import PredictiveAnalyticsService
+from src.container_service import ContainerService
 from src.document_intelligence import DocumentIntelligenceService
 from src.encryption_service import get_encryption_service
 from src.secure_config import validate_production_security, get_secure_config
@@ -117,7 +119,7 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize services at startup and cleanup at shutdown."""
-    global db, doc_handler, wal_service, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service, ai_anomaly_detector, smart_contracts, predictive_analytics, document_intelligence, advanced_security, hybrid_security
+    global db, doc_handler, wal_service, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service, ai_anomaly_detector, smart_contracts, predictive_analytics, document_intelligence, advanced_security, hybrid_security, container_service
     
     try:
         mode_text = "DEMO" if DEMO_MODE else "FULL"
@@ -173,23 +175,28 @@ async def lifespan(app: FastAPI):
         _bulk_operations_analytics = BulkOperationsAnalytics(db_service=db)
         logger.info("✅ Analytics service initialized")
 
-        # Initialize optional services only in FULL mode
-        if not DEMO_MODE:
-            # Initialize Advanced Security service
-            try:
-                advanced_security = AdvancedSecurityService()
-                logger.info("✅ Advanced Security service initialized")
-            except Exception as e:
-                logger.error(f"❌ Advanced Security service initialization failed: {e}")
-                advanced_security = None
+        # Initialize container service for directory uploads
+        container_service = ContainerService(db_service=db)
+        logger.info("✅ Container service initialized")
 
-            # Initialize Quantum-Safe Security service
-            try:
-                hybrid_security = HybridSecurityService()
-                logger.info("✅ Quantum-Safe Security service initialized")
-            except Exception as e:
-                logger.error(f"❌ Quantum-Safe Security service initialization failed: {e}")
-                hybrid_security = None
+        # Initialize security services (available in both demo and full mode)
+        # These services don't require external dependencies and should always be available
+        try:
+            advanced_security = AdvancedSecurityService()
+            logger.info("✅ Advanced Security service initialized")
+        except Exception as e:
+            logger.error(f"❌ Advanced Security service initialization failed: {e}")
+            advanced_security = None
+
+        try:
+            hybrid_security = HybridSecurityService()
+            logger.info("✅ Quantum-Safe Security service initialized")
+        except Exception as e:
+            logger.error(f"❌ Quantum-Safe Security service initialization failed: {e}")
+            hybrid_security = None
+
+        # Initialize other optional services only in FULL mode
+        if not DEMO_MODE:
 
             # Initialize AI anomaly detector
             ai_anomaly_detector = AIAnomalyDetector(db_service=db)
@@ -207,9 +214,8 @@ async def lifespan(app: FastAPI):
             document_intelligence = DocumentIntelligenceService()
             logger.info("✅ Document intelligence service initialized")
         else:
-            # Set optional services to None in demo mode
-            advanced_security = None
-            hybrid_security = None
+            # Set optional services to None in demo mode (except security services which are always available)
+            # Note: advanced_security and hybrid_security are initialized above and should NOT be set to None
             ai_anomaly_detector = None
             smart_contracts = None
             predictive_analytics = None
@@ -352,6 +358,7 @@ ai_anomaly_detector = None
 smart_contracts = None
 predictive_analytics = None
 document_intelligence = None
+container_service = None
 
 # Add request tracking middleware
 @app.middleware("http")
@@ -494,6 +501,26 @@ class IngestPacketRequest(BaseModel):
     """Packet ingestion request model."""
     loan_id: str = Field(..., description="Loan ID")
     created_by: str = Field(..., description="Creator identifier")
+    document_type: Optional[str] = Field(None, description="Document type for the packet")
+    loan_amount: Optional[float] = Field(None, description="Loan amount represented by this packet")
+    property_address: Optional[str] = Field(None, description="Property address associated with this packet")
+    additional_notes: Optional[str] = Field(None, description="Additional notes from the uploader")
+
+    borrower_full_name: Optional[str] = Field(None, description="Borrower full name")
+    borrower_email: Optional[str] = Field(None, description="Borrower email")
+    borrower_phone: Optional[str] = Field(None, description="Borrower phone")
+    borrower_date_of_birth: Optional[str] = Field(None, description="Borrower date of birth (YYYY-MM-DD)")
+    borrower_address_line1: Optional[str] = Field(None, description="Borrower address line 1")
+    borrower_address_line2: Optional[str] = Field(None, description="Borrower address line 2")
+    borrower_city: Optional[str] = Field(None, description="Borrower city")
+    borrower_state: Optional[str] = Field(None, description="Borrower state")
+    borrower_zip_code: Optional[str] = Field(None, description="Borrower ZIP/postal code")
+    borrower_country: Optional[str] = Field(None, description="Borrower country")
+    borrower_ssn_last4: Optional[str] = Field(None, description="Borrower SSN last 4 digits")
+    borrower_id_type: Optional[str] = Field(None, description="Borrower government ID type")
+    borrower_id_last4: Optional[str] = Field(None, description="Borrower government ID last 4 digits")
+    borrower_employment_status: Optional[str] = Field(None, description="Borrower employment status")
+    borrower_annual_income: Optional[float] = Field(None, description="Borrower annual income")
 
 
 # New request/response models for additional endpoints
@@ -667,13 +694,13 @@ class VerificationResponse(BaseModel):
 def get_services():
     """Get initialized services."""
     # Check core services (always required)
-    core_services = [db, doc_handler, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service]
+    core_services = [db, doc_handler, json_handler, manifest_handler, attestation_repo, provenance_repo, verification_portal, analytics_service, container_service]
     if not all(core_services):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Core services not initialized"
         )
-    
+
     # Return services dictionary (optional services may be None in demo mode)
     return {
         "db": db,
@@ -691,7 +718,8 @@ def get_services():
         "predictive_analytics": predictive_analytics,
         "document_intelligence": document_intelligence,
         "advanced_security": advanced_security,
-        "hybrid_security": hybrid_security
+        "hybrid_security": hybrid_security,
+        "container_service": container_service
     }
 
 
@@ -1838,6 +1866,51 @@ async def ingest_packet(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No files provided"
             )
+
+        # Validate borrower metadata - all fields from upload UI are required
+        required_fields = {
+            "borrower_full_name": request.borrower_full_name,
+            "borrower_email": request.borrower_email,
+            "borrower_phone": request.borrower_phone,
+            "borrower_date_of_birth": request.borrower_date_of_birth,
+            "borrower_address_line1": request.borrower_address_line1,
+            "borrower_city": request.borrower_city,
+            "borrower_state": request.borrower_state,
+            "borrower_zip_code": request.borrower_zip_code,
+            "borrower_country": request.borrower_country,
+            "borrower_ssn_last4": request.borrower_ssn_last4,
+            "borrower_id_type": request.borrower_id_type,
+            "borrower_id_last4": request.borrower_id_last4,
+            "borrower_employment_status": request.borrower_employment_status,
+            "borrower_annual_income": request.borrower_annual_income,
+        }
+
+        missing_fields = [field for field, value in required_fields.items() if not value]
+        if missing_fields:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Missing borrower metadata: {', '.join(missing_fields)}"
+            )
+
+        if request.borrower_ssn_last4:
+            if len(request.borrower_ssn_last4) != 4 or not request.borrower_ssn_last4.isdigit():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="borrower_ssn_last4 must be exactly 4 digits"
+                )
+
+        if request.borrower_id_last4:
+            if len(request.borrower_id_last4) != 4:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="borrower_id_last4 must be exactly 4 characters"
+                )
+
+        if request.loan_amount is None or request.loan_amount <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Valid loan_amount is required for packet ingestion"
+            )
         
         # Process each file
         file_infos = []
@@ -1878,6 +1951,26 @@ async def ingest_packet(
         
         # HYBRID APPROACH: Store blockchain seal and local metadata for packet
         total_size = sum(file_info["size"] for file_info in file_infos)
+        borrower_info = {
+            "full_name": request.borrower_full_name,
+            "email": request.borrower_email,
+            "phone": request.borrower_phone,
+            "date_of_birth": request.borrower_date_of_birth,
+            "address": {
+                "line1": request.borrower_address_line1,
+                "line2": request.borrower_address_line2,
+                "city": request.borrower_city,
+                "state": request.borrower_state,
+                "zip_code": request.borrower_zip_code,
+                "country": request.borrower_country,
+            },
+            "ssn_last4": request.borrower_ssn_last4,
+            "id_type": request.borrower_id_type,
+            "id_last4": request.borrower_id_last4,
+            "employment_status": request.borrower_employment_status,
+            "annual_income": float(request.borrower_annual_income) if request.borrower_annual_income is not None else None,
+        }
+
         if services["wal_service"] is None:
             # Fallback if Walacor service is not available
             walacor_result = {
@@ -1889,7 +1982,11 @@ async def ingest_packet(
                     "file_size": total_size,
                     "file_path": f"data/documents/packet_{request.loan_id}",
                     "uploaded_by": request.created_by,
-                    "upload_timestamp": datetime.now().isoformat()
+                    "upload_timestamp": datetime.now().isoformat(),
+                    "borrower_info": borrower_info,
+                    "additional_notes": request.additional_notes,
+                    "loan_amount": request.loan_amount,
+                    "property_address": request.property_address
                 }
             }
         else:
@@ -1901,18 +1998,32 @@ async def ingest_packet(
                 file_path=f"data/documents/packet_{request.loan_id}",
                 uploaded_by=request.created_by
             )
+            walacor_result.setdefault("local_metadata", {})
+            walacor_result["local_metadata"].update({
+                "loan_id": request.loan_id,
+                "document_type": "loan_packet",
+                "file_size": total_size,
+                "file_path": f"data/documents/packet_{request.loan_id}",
+                "uploaded_by": request.created_by,
+                "upload_timestamp": datetime.now().isoformat(),
+                "borrower_info": borrower_info,
+                "additional_notes": request.additional_notes,
+                "loan_amount": request.loan_amount,
+                "property_address": request.property_address
+            })
         
         # Store in database with hybrid data
         artifact_id = services["db"].insert_artifact(
             loan_id=request.loan_id,
             artifact_type="loan_packet",
-            etid=100001,  # ETID for loan packets
+            etid=10010,  # ETID 10010 (documentversion) - has working table
             payload_sha256=manifest_result['hash'],
             walacor_tx_id=walacor_result.get("tx_id", "WAL_TX_PACKET_" + datetime.now().strftime("%Y%m%d%H%M%S")),
             created_by=request.created_by,
             manifest_sha256=manifest_result['hash'],
             blockchain_seal=walacor_result.get("seal_info", {}).get("integrity_seal"),
-            local_metadata=walacor_result.get("local_metadata", {})
+            local_metadata=walacor_result.get("local_metadata", {}),
+            borrower_info=borrower_info
         )
         
         # Store file information
@@ -2072,6 +2183,7 @@ async def get_artifacts(
     date_to: Optional[str] = Query(None, description="Filter to date (YYYY-MM-DD)"),
     amount_min: Optional[float] = Query(None, description="Minimum loan amount"),
     amount_max: Optional[float] = Query(None, description="Maximum loan amount"),
+    security_level: Optional[str] = Query(None, description="Filter by security level (standard, quantum_safe, maximum)"),
     limit: int = Query(50, description="Number of results to return"),
     offset: int = Query(0, description="Number of results to skip"),
     services: dict = Depends(get_services)
@@ -2079,29 +2191,70 @@ async def get_artifacts(
     """
     Get artifacts with optional search filters.
     
-    Supports searching by borrower information, loan details, and date/amount ranges.
+    Supports searching by borrower information, loan details, date/amount ranges, and security level.
     """
     try:
-        logger.info(f"Searching artifacts with filters: borrower_name={borrower_name}, borrower_email={borrower_email}, loan_id={loan_id}")
+        logger.info(f"Searching artifacts with filters: borrower_name={borrower_name}, borrower_email={borrower_email}, loan_id={loan_id}, security_level={security_level}")
         
         # Get all artifacts from database
         artifacts = services["db"].get_all_artifacts()
+        parent_cache: Dict[str, Any] = {}
         
         # Filter artifacts based on search criteria
         filtered_artifacts = []
         
         for artifact in artifacts:
+            parent_artifact = None
+            if artifact.parent_id:
+                parent_artifact = parent_cache.get(artifact.parent_id)
+                if parent_artifact is None:
+                    parent_artifact = services["db"].get_artifact_by_id(artifact.parent_id)
+                    parent_cache[artifact.parent_id] = parent_artifact
+
             # Check if artifact has borrower information (either in borrower_info field or in local_metadata)
-            borrower = None
+            borrower: Dict[str, Any] = {}
+            # Check borrower_info field - handle both None and empty dict cases
             if artifact.borrower_info:
-                borrower = artifact.borrower_info
-            elif (artifact.local_metadata and 
-                  artifact.local_metadata.get('comprehensive_document') and 
-                  artifact.local_metadata['comprehensive_document'].get('borrower')):
-                borrower = artifact.local_metadata['comprehensive_document']['borrower']
+                if isinstance(artifact.borrower_info, dict):
+                    borrower = artifact.borrower_info
+                else:
+                    # If it's not a dict, try to parse it
+                    try:
+                        if isinstance(artifact.borrower_info, str):
+                            borrower = json.loads(artifact.borrower_info) if artifact.borrower_info else {}
+                        else:
+                            borrower = artifact.borrower_info or {}
+                    except Exception:
+                        borrower = {}
             
-            if not borrower:
-                # Skip artifacts without borrower information
+            # If borrower_info is empty or missing, try local_metadata
+            if not borrower or (isinstance(borrower, dict) and len(borrower) == 0):
+                if (
+                    artifact.local_metadata
+                    and artifact.local_metadata.get('comprehensive_document')
+                    and artifact.local_metadata['comprehensive_document'].get('borrower')
+                ):
+                    borrower = artifact.local_metadata['comprehensive_document']['borrower'] or {}
+            
+            # If still empty, try parent
+            if not borrower or (isinstance(borrower, dict) and len(borrower) == 0):
+                if parent_artifact and parent_artifact.borrower_info:
+                    if isinstance(parent_artifact.borrower_info, dict):
+                        borrower = parent_artifact.borrower_info
+                    else:
+                        try:
+                            if isinstance(parent_artifact.borrower_info, str):
+                                borrower = json.loads(parent_artifact.borrower_info) if parent_artifact.borrower_info else {}
+                            else:
+                                borrower = parent_artifact.borrower_info or {}
+                        except Exception:
+                            borrower = {}
+            
+            # Check if borrower dict is actually populated (not just an empty dict)
+            has_borrower_data = borrower and isinstance(borrower, dict) and len(borrower) > 0
+            if not has_borrower_data and artifact.artifact_container_type not in ('directory_container', 'batch_container'):
+                # Skip artifacts without borrower information unless it's a container we still want to surface
+                # This ensures we only show documents that have been properly sealed with borrower data
                 continue
             
             # Apply filters
@@ -2139,48 +2292,62 @@ async def get_artifacts(
                 if amount_max is not None and loan_amount > amount_max:
                     matches = False
             
+            # Security level filter
+            if security_level:
+                # Extract security level from local_metadata
+                artifact_security_level = "standard"  # Default
+                if artifact.local_metadata:
+                    artifact_security_level = artifact.local_metadata.get('security_level', 'standard')
+                if parent_artifact and parent_artifact.local_metadata:
+                    artifact_security_level = parent_artifact.local_metadata.get('security_level', artifact_security_level)
+                
+                # Normalize security level values for comparison
+                security_level_normalized = security_level.lower().strip().replace(' ', '_').replace('-', '_')
+                artifact_security_normalized = str(artifact_security_level).lower().strip().replace(' ', '_').replace('-', '_')
+                
+                # Map common variations and check match
+                is_match = False
+                if security_level_normalized == 'maximum':
+                    is_match = artifact_security_normalized in ('maximum', 'maximum_security')
+                elif security_level_normalized == 'quantum_safe':
+                    is_match = artifact_security_normalized in ('quantum_safe', 'quantum-safe')
+                elif security_level_normalized == 'standard':
+                    is_match = artifact_security_normalized == 'standard'
+                else:
+                    is_match = security_level_normalized == artifact_security_normalized
+                
+                if not is_match:
+                    matches = False
+            
             if matches:
                 # Extract security level from local_metadata
-                security_level = "standard"  # Default to standard
+                # Use a different variable name to avoid shadowing the filter parameter
+                artifact_security_level = "standard"  # Default to standard
                 if artifact.local_metadata:
-                    security_level = artifact.local_metadata.get('security_level', 'standard')
+                    artifact_security_level = artifact.local_metadata.get('security_level', 'standard')
+                if parent_artifact and parent_artifact.local_metadata:
+                    artifact_security_level = parent_artifact.local_metadata.get('security_level', artifact_security_level)
+
+                walacor_tx_id = artifact.walacor_tx_id
+                sealed_status = "Sealed" if walacor_tx_id else "Not Sealed"
+                if parent_artifact:
+                    if parent_artifact.walacor_tx_id:
+                        walacor_tx_id = parent_artifact.walacor_tx_id
+                        sealed_status = "Sealed (Inherited)"
+                    elif not walacor_tx_id:
+                        sealed_status = "Pending (Parent Unsealed)"
                 
                 # Clean borrower name - remove encoded base64 strings but KEEP the actual name
                 def clean_borrower_name(name: str) -> str:
-                    """Remove encoded base64/hex strings from borrower name, keeping only the readable name."""
+                    """Remove encoded base64/hex strings from borrower name, preserving readable text (including digits)."""
                     if not name:
                         return ''
                     import re
-                    # Remove newlines and normalize whitespace
                     cleaned = re.sub(r'[\n\r]+', ' ', name).strip()
-                    # Find position of first Base64-like string (8+ alphanumeric chars, possibly with + / =)
-                    # Base64 strings typically start with patterns like Z0FBQUFBQnBB...
-                    match = re.search(r'[a-zA-Z0-9+/=]{10,}', cleaned)
-                    if match:
-                        # Keep only the text BEFORE the Base64 string
-                        before_base64 = cleaned[:match.start()].strip()
-                        # Extract only readable name parts (letters, spaces, apostrophes, hyphens)
-                        name_parts = []
-                        for part in before_base64.split():
-                            # Keep only parts that are actual names (pure letters, 2-25 chars)
-                            if re.match(r'^[a-zA-Z\'-]+$', part) and 2 <= len(part) <= 25:
-                                if sum(1 for c in part if c.isalpha()) >= 2:  # At least 2 letters
-                                    name_parts.append(part)
-                        if name_parts:
-                            return ' '.join(name_parts)
-                    # If no Base64 found or already cleaned, try to extract name parts
-                    parts = cleaned.split()
-                    name_parts = []
-                    for part in parts:
-                        if re.match(r'^[a-zA-Z\'-]+$', part) and 2 <= len(part) <= 25:
-                            if sum(1 for c in part if c.isalpha()) >= 2:
-                                name_parts.append(part)
-                                if len(name_parts) >= 3:  # First, middle, last name max
-                                    break
-                        elif len(part) >= 10 and re.match(r'^[a-zA-Z0-9+/=]+$', part):
-                            # This looks like Base64, stop here
-                            break
-                    return ' '.join(name_parts) if name_parts else (cleaned[:50] if len(cleaned) <= 50 else 'Unknown')
+                    match = re.search(r'[a-zA-Z0-9+/=]{16,}', cleaned)
+                    if match and match.start() > 0:
+                        cleaned = cleaned[:match.start()].strip()
+                    return cleaned
                 
                 cleaned_name = clean_borrower_name(borrower.get('full_name', ''))
                 
@@ -2212,26 +2379,52 @@ async def get_artifacts(
                         else:
                             cleaned_email = raw_email
                 
+                loan_amount_value = borrower.get('annual_income', 0)
+                if artifact.local_metadata and artifact.local_metadata.get('loan_amount') is not None:
+                    loan_amount_value = artifact.local_metadata.get('loan_amount')
+                if parent_artifact and parent_artifact.local_metadata and parent_artifact.local_metadata.get('loan_amount') is not None:
+                    loan_amount_value = parent_artifact.local_metadata.get('loan_amount')
+
                 # Create response object with borrower information
                 artifact_data = {
                     "id": artifact.id,
                     "loan_id": artifact.loan_id,
                     "borrower_name": cleaned_name,
                     "borrower_email": cleaned_email,
-                    "loan_amount": borrower.get('annual_income', 0),  # Use annual income as loan amount proxy
+                    "loan_amount": loan_amount_value,
                     "document_type": artifact.artifact_type,
                     "upload_date": artifact.created_at.isoformat(),
-                    "walacor_tx_id": artifact.walacor_tx_id,
+                    "walacor_tx_id": walacor_tx_id,
                     "artifact_type": artifact.artifact_type,
                     "created_by": artifact.created_by,
-                    "sealed_status": "Sealed" if artifact.walacor_tx_id else "Not Sealed",
-                    "security_level": security_level
+                    "sealed_status": sealed_status,
+                    "security_level": artifact_security_level,  # Use the extracted artifact security level
+                    "local_metadata": artifact.local_metadata,  # Include local_metadata so frontend can access security_level
+                    "parent_id": artifact.parent_id,
+                    "artifact_container_type": artifact.artifact_container_type or 'file',
+                    "directory_name": artifact.directory_name,
+                    "directory_hash": artifact.directory_hash,
+                    "file_count": artifact.file_count
                 }
                 filtered_artifacts.append(artifact_data)
         
-        # Apply pagination
-        total_count = len(filtered_artifacts)
-        paginated_artifacts = filtered_artifacts[offset:offset + limit]
+        # Filter to only top-level documents (no parent_id) for pagination
+        # This ensures we show the expected number of documents per page
+        top_level_artifacts = [a for a in filtered_artifacts if not a.get('parent_id')]
+        
+        # Sort by created_at descending to show newest first, but ensure we get a mix of security levels
+        # This helps ensure pagination shows a variety of documents
+        top_level_artifacts.sort(key=lambda x: (
+            x.get('upload_date') or x.get('created_at') or ''
+        ), reverse=True)
+        
+        # Apply pagination to top-level artifacts only
+        total_count = len(top_level_artifacts)
+        paginated_artifacts = top_level_artifacts[offset:offset + limit]
+        
+        # Note: We do NOT include children here. The frontend will fetch children
+        # separately when directories are expanded, or we can add a separate endpoint.
+        # This ensures each page shows exactly 'limit' number of top-level documents.
         
         response_data = {
             "artifacts": paginated_artifacts,
@@ -2413,6 +2606,198 @@ async def get_stats(services: dict = Depends(get_services)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve statistics: {str(e)}"
+        )
+
+
+@app.get("/api/verification-stats", response_model=StandardResponse)
+async def get_verification_stats(services: dict = Depends(get_services)):
+    """
+    Get verification statistics for the verification page dashboard.
+
+    Returns real-time verification statistics including:
+    - Number of verifications today
+    - Success rate
+    - Average verification time
+    - Total verifications
+    """
+    try:
+        logger.info("Retrieving verification statistics")
+
+        # Get verification statistics from database
+        stats = services["db"].get_verification_statistics()
+
+        return create_success_response(stats)
+
+    except Exception as e:
+        logger.error(f"Failed to retrieve verification statistics: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve verification statistics: {str(e)}"
+        )
+
+
+@app.post("/api/compare-document", response_model=StandardResponse)
+async def compare_uploaded_document(
+    file: UploadFile = File(...),
+    services: dict = Depends(get_services)
+):
+    """
+    Upload a document and compare it with the original in the database.
+
+    This endpoint:
+    1. Computes the SHA-256 hash of the uploaded file
+    2. Searches database by hash (exact match)
+    3. If not found by hash, extracts loan_id from file and searches by loan_id
+    4. Compares uploaded document with original and shows field-level differences
+    5. Returns tampering detection and risk assessment
+    """
+    try:
+        logger.info(f"Comparing uploaded document: {file.filename}")
+
+        # Read file content
+        file_content = await file.read()
+
+        # Compute SHA-256 hash
+        file_hash = hashlib.sha256(file_content).hexdigest()
+        logger.info(f"Computed hash: {file_hash[:16]}...")
+
+        # Try to parse as JSON
+        try:
+            uploaded_data = json.loads(file_content.decode('utf-8'))
+        except:
+            return create_error_response(
+                code="INVALID_FILE_FORMAT",
+                message="File must be a valid JSON document",
+                status_code=400
+            )
+
+        # Search by hash first
+        original_artifact = services["db"].get_artifact_by_hash(file_hash)
+
+        if original_artifact:
+            # Exact match found - document is unchanged
+            return create_success_response({
+                "match_type": "exact",
+                "matches": True,
+                "original_hash": file_hash,
+                "uploaded_hash": file_hash,
+                "document": {
+                    "id": original_artifact.id,
+                    "loan_id": original_artifact.loan_id,
+                    "created_at": original_artifact.created_at.isoformat(),
+                    "walacor_tx_id": original_artifact.walacor_tx_id
+                },
+                "message": "Document matches exactly. No tampering detected.",
+                "risk_level": "low",
+                "changes": []
+            })
+
+        # Not found by hash - try to find similar document by loan_id
+        loan_id = uploaded_data.get("loan_id") or uploaded_data.get("loanId")
+
+        if not loan_id:
+            return create_error_response(
+                code="NO_LOAN_ID",
+                message="Document not found in database and no loan_id found in uploaded file",
+                status_code=404
+            )
+
+        # Search by loan_id
+        artifacts = services["db"].get_artifact_by_loan_id(loan_id)
+
+        if not artifacts or len(artifacts) == 0:
+            return create_error_response(
+                code="DOCUMENT_NOT_FOUND",
+                message=f"No documents found for loan_id: {loan_id}",
+                status_code=404
+            )
+
+        # Get the most recent artifact for this loan
+        original_artifact = artifacts[0]
+        original_hash = original_artifact.payload_sha256
+
+        # Get original document data
+        original_data = original_artifact.local_metadata or {}
+
+        # Compare field by field
+        changes = []
+        critical_fields = ['borrower_name', 'loan_amount', 'ssn', 'account_number', 'routing_number']
+
+        def compare_fields(original, uploaded, path=""):
+            field_changes = []
+            all_keys = set(list(original.keys()) + list(uploaded.keys()))
+
+            for key in all_keys:
+                current_path = f"{path}.{key}" if path else key
+
+                if key not in original:
+                    field_changes.append({
+                        "field": current_path,
+                        "type": "added",
+                        "original_value": None,
+                        "new_value": uploaded[key],
+                        "risk": "high" if key in critical_fields else "medium"
+                    })
+                elif key not in uploaded:
+                    field_changes.append({
+                        "field": current_path,
+                        "type": "removed",
+                        "original_value": original[key],
+                        "new_value": None,
+                        "risk": "high" if key in critical_fields else "medium"
+                    })
+                elif original[key] != uploaded[key]:
+                    # Check if both are dicts
+                    if isinstance(original[key], dict) and isinstance(uploaded[key], dict):
+                        field_changes.extend(compare_fields(original[key], uploaded[key], current_path))
+                    else:
+                        field_changes.append({
+                            "field": current_path,
+                            "type": "modified",
+                            "original_value": original[key],
+                            "new_value": uploaded[key],
+                            "risk": "critical" if key in critical_fields else "medium"
+                        })
+
+            return field_changes
+
+        changes = compare_fields(original_data, uploaded_data)
+
+        # Determine overall risk level
+        risk_level = "low"
+        if any(c["risk"] == "critical" for c in changes):
+            risk_level = "critical"
+        elif any(c["risk"] == "high" for c in changes):
+            risk_level = "high"
+        elif len(changes) > 0:
+            risk_level = "medium"
+
+        return create_success_response({
+            "match_type": "loan_id",
+            "matches": False,
+            "original_hash": original_hash,
+            "uploaded_hash": file_hash,
+            "document": {
+                "id": original_artifact.id,
+                "loan_id": original_artifact.loan_id,
+                "created_at": original_artifact.created_at.isoformat(),
+                "walacor_tx_id": original_artifact.walacor_tx_id
+            },
+            "message": f"Document has been modified. {len(changes)} field(s) changed.",
+            "risk_level": risk_level,
+            "changes": changes,
+            "total_changes": len(changes)
+        })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to compare document: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to compare document: {str(e)}"
         )
 
 
@@ -3709,7 +4094,7 @@ async def verify_with_token(
             verifier_email=verifierEmail
         )
         
-        if not verification_result["is_valid"]:
+        if not verification_result.get("success") or not verification_result.get("verified"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=create_error_response(
@@ -3719,7 +4104,17 @@ async def verify_with_token(
             )
         
         # Get artifact details for verification response
-        artifact = services["db"].get_artifact_by_id(verification_result["document_id"])
+        artifact_id = verification_result.get("document_id")
+        if not artifact_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=create_error_response(
+                    code="INVALID_VERIFICATION_TOKEN",
+                    message="Verification token did not include document context"
+                ).dict()
+            )
+
+        artifact = services["db"].get_artifact_by_id(artifact_id)
         if not artifact:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -3732,11 +4127,16 @@ async def verify_with_token(
         # Get attestations if permission granted
         attestations_data = []
         if "attestations" in verification_result["permissions"]:
-            attestations = services["attestation_repo"].get_by_artifact_id(
-                session=services["db"].session,
-                artifact_id=artifact.id
-            )
-            attestations_data = [att.to_dict() for att in attestations]
+            try:
+                attestations = services["attestation_repo"].list_for_artifact(
+                    session=services["db"].session,
+                    artifact_id=artifact.id,
+                    limit=50,
+                    offset=0
+                )
+                attestations_data = [att.to_dict() for att in attestations]
+            except Exception as att_err:
+                logger.warning(f"Unable to fetch attestations for artifact {artifact.id}: {att_err}")
         
         # Log audit event
         services["db"].insert_event(
@@ -5182,6 +5582,32 @@ class LoanDocumentSealRequest(BaseModel):
     additional_notes: Optional[str] = Field(None, description="Additional notes")
     borrower: BorrowerInfo = Field(..., description="Borrower information")
     created_by: str = Field(..., description="User who created the document")
+    # New fields for loan type and conditional fields
+    loan_type: Optional[str] = Field(None, description="Type of loan (home_loan, auto_loan, etc.)")
+    loan_term: Optional[int] = Field(None, description="Loan term in months")
+    interest_rate: Optional[float] = Field(None, description="Annual interest rate (%)")
+    property_address: Optional[str] = Field(None, description="Property address")
+    # Conditional fields (optional, based on loan_type)
+    property_value: Optional[float] = Field(None, description="Property value (for home loans)")
+    down_payment: Optional[float] = Field(None, description="Down payment (for home loans)")
+    property_type: Optional[str] = Field(None, description="Property type (for home loans)")
+    vehicle_make: Optional[str] = Field(None, description="Vehicle make (for auto loans)")
+    vehicle_model: Optional[str] = Field(None, description="Vehicle model (for auto loans)")
+    vehicle_year: Optional[int] = Field(None, description="Vehicle year (for auto loans)")
+    vehicle_vin: Optional[str] = Field(None, description="Vehicle VIN (for auto loans)")
+    purchase_price: Optional[float] = Field(None, description="Purchase price (for auto loans)")
+    business_name: Optional[str] = Field(None, description="Business name (for business loans)")
+    business_type: Optional[str] = Field(None, description="Business type (for business loans)")
+    business_registration_number: Optional[str] = Field(None, description="Business registration number (for business loans)")
+    annual_revenue: Optional[float] = Field(None, description="Annual revenue (for business loans)")
+    school_name: Optional[str] = Field(None, description="School name (for student loans)")
+    degree_program: Optional[str] = Field(None, description="Degree program (for student loans)")
+    expected_graduation_date: Optional[str] = Field(None, description="Expected graduation date (for student loans)")
+    current_loan_number: Optional[str] = Field(None, description="Current loan number (for refinance)")
+    current_lender: Optional[str] = Field(None, description="Current lender (for refinance)")
+    refinance_purpose: Optional[str] = Field(None, description="Refinance purpose (for refinance)")
+    current_mortgage_balance: Optional[float] = Field(None, description="Current mortgage balance (for home equity)")
+    equity_amount: Optional[float] = Field(None, description="Equity amount (for home equity)")
 
 
 class LoanDocumentSealResponse(BaseModel):
@@ -5190,6 +5616,30 @@ class LoanDocumentSealResponse(BaseModel):
     artifact_id: str = Field(..., description="Created artifact ID")
     walacor_tx_id: str = Field(..., description=DESC_WALACOR_TX)
     hash: str = Field(..., description=DESC_DOCUMENT_HASH)
+    sealed_at: str = Field(..., description="Sealing timestamp")
+
+
+class DirectoryFileInfo(BaseModel):
+    """File information within a directory."""
+    filename: str = Field(..., description="Name of the file")
+    file_hash: str = Field(..., description="SHA-256 hash of the file")
+    file_size: Optional[int] = Field(None, description="File size in bytes")
+
+
+class DirectorySealRequest(BaseModel):
+    """Request model for sealing a directory of loan documents."""
+    directory_name: str = Field(..., description="Name of the directory")
+    directory_hash: str = Field(..., description="ObjectValidator hash of the entire directory")
+    files: List[DirectoryFileInfo] = Field(..., description="List of files in the directory")
+    loan_data: LoanDocumentSealRequest = Field(..., description="Loan and borrower information")
+
+
+class DirectorySealResponse(BaseModel):
+    """Response model for directory sealing."""
+    message: str = Field(..., description=DESC_RESPONSE_MSG)
+    container_id: str = Field(..., description="Container artifact ID")
+    walacor_tx_id: str = Field(..., description=DESC_WALACOR_TX)
+    child_ids: List[str] = Field(..., description="List of child artifact IDs")
     sealed_at: str = Field(..., description="Sealing timestamp")
 
 
@@ -5206,6 +5656,9 @@ class MaskedBorrowerInfo(BaseModel):
     employment_status: str = Field(..., description="Employment status")
     annual_income_range: str = Field(..., description="Annual income range")
     co_borrower_name: Optional[str] = Field(None, description="Co-borrower name (optional)")
+    # New SSN/ITIN fields
+    ssn_or_itin_type: Optional[str] = Field(None, description="SSN or ITIN type")
+    ssn_or_itin_number: Optional[str] = Field(None, description="Full SSN or ITIN number (encrypted, not displayed)")
 
 
 class LoanSearchRequest(BaseModel):
@@ -5531,15 +5984,67 @@ async def seal_loan_document(
         encrypted_borrower_data = encryption_service.encrypt_borrower_data(request.borrower.dict())
         
         # Create comprehensive document JSON with encrypted borrower data
+        # Include loan_type and conditional fields
         comprehensive_document = {
             "loan_id": request.loan_id,
+            "loan_type": request.loan_type,
             "document_type": request.document_type,
             "loan_amount": request.loan_amount,
+            "loan_term": request.loan_term,
+            "interest_rate": request.interest_rate,
+            "property_address": request.property_address,
             "additional_notes": request.additional_notes,
             "borrower": encrypted_borrower_data,
             "created_by": request.created_by,
             "created_at": get_eastern_now_iso()
         }
+        
+        # Add conditional fields based on loan_type
+        if request.loan_type in ['home_loan', 'home_equity']:
+            if request.property_value is not None:
+                comprehensive_document["property_value"] = request.property_value
+            if request.down_payment is not None:
+                comprehensive_document["down_payment"] = request.down_payment
+            if request.property_type:
+                comprehensive_document["property_type"] = request.property_type
+            if request.current_mortgage_balance is not None:
+                comprehensive_document["current_mortgage_balance"] = request.current_mortgage_balance
+            if request.equity_amount is not None:
+                comprehensive_document["equity_amount"] = request.equity_amount
+        elif request.loan_type == 'auto_loan':
+            if request.vehicle_make:
+                comprehensive_document["vehicle_make"] = request.vehicle_make
+            if request.vehicle_model:
+                comprehensive_document["vehicle_model"] = request.vehicle_model
+            if request.vehicle_year is not None:
+                comprehensive_document["vehicle_year"] = request.vehicle_year
+            if request.vehicle_vin:
+                comprehensive_document["vehicle_vin"] = request.vehicle_vin
+            if request.purchase_price is not None:
+                comprehensive_document["purchase_price"] = request.purchase_price
+        elif request.loan_type == 'business_loan':
+            if request.business_name:
+                comprehensive_document["business_name"] = request.business_name
+            if request.business_type:
+                comprehensive_document["business_type"] = request.business_type
+            if request.business_registration_number:
+                comprehensive_document["business_registration_number"] = request.business_registration_number
+            if request.annual_revenue is not None:
+                comprehensive_document["annual_revenue"] = request.annual_revenue
+        elif request.loan_type == 'student_loan':
+            if request.school_name:
+                comprehensive_document["school_name"] = request.school_name
+            if request.degree_program:
+                comprehensive_document["degree_program"] = request.degree_program
+            if request.expected_graduation_date:
+                comprehensive_document["expected_graduation_date"] = request.expected_graduation_date
+        elif request.loan_type == 'refinance':
+            if request.current_loan_number:
+                comprehensive_document["current_loan_number"] = request.current_loan_number
+            if request.current_lender:
+                comprehensive_document["current_lender"] = request.current_lender
+            if request.refinance_purpose:
+                comprehensive_document["refinance_purpose"] = request.refinance_purpose
         
         # Calculate SHA-256 hash of the comprehensive document
         import hashlib
@@ -5576,7 +6081,7 @@ async def seal_loan_document(
         artifact_id = services["db"].insert_artifact(
             loan_id=request.loan_id,
             artifact_type="json",
-            etid=100001,  # Use documented ETID for loan documents
+            etid=10000001,  # Use documented ETID for loan documents
             payload_sha256=walacor_result.get("document_hash", document_hash),
             walacor_tx_id=walacor_result.get("walacor_tx_id", f"TX_{int(time.time() * 1000)}_{document_hash[:8]}"),
             created_by=request.created_by,
@@ -5585,6 +6090,7 @@ async def seal_loan_document(
                 "comprehensive_document": comprehensive_document,
                 "comprehensive_hash": walacor_result.get("document_hash", document_hash),
                 "includes_borrower_info": True,
+                "security_level": "standard",  # Set security level for standard mode
                 "sealed_at": walacor_result.get("sealed_timestamp", get_eastern_now_iso()),
                 "walacor_envelope": walacor_result.get("envelope_metadata", {}),
                 "blockchain_proof": walacor_result.get("blockchain_proof", {})
@@ -5640,6 +6146,156 @@ async def seal_loan_document(
         )
 
 
+@app.post("/api/seal/directory", response_model=StandardResponse)
+async def seal_directory(
+    request: DirectorySealRequest,
+    services: dict = Depends(get_services)
+):
+    """
+    Seal a directory of loan documents using parent/child container pattern.
+
+    This endpoint creates a parent container artifact for the directory and
+    child artifacts for each file, maintaining audit trail integrity with
+    ObjectValidator directory hashing.
+
+    Architecture:
+    - Parent container stores directory hash and single Walacor TX ID
+    - Child artifacts link to parent via parent_id
+    - Children inherit blockchain seal from parent
+    """
+    try:
+        log_endpoint_start("seal_directory", request.dict())
+
+        # Extract loan data and borrower info
+        loan_data = request.loan_data
+        borrower_info = loan_data.borrower
+
+        # Encrypt sensitive borrower data
+        encryption_service = get_encryption_service()
+        encrypted_borrower_data = encryption_service.encrypt_borrower_data(borrower_info.dict())
+
+        logger.info(f"Sealing directory: {request.directory_name} with {len(request.files)} files")
+        logger.info(f"Directory hash: {request.directory_hash[:16]}...")
+
+        # Seal directory in Walacor blockchain
+        loan_metadata = {
+            "document_type": loan_data.document_type,
+            "loan_amount": loan_data.loan_amount,
+            "additional_notes": loan_data.additional_notes,
+            "created_by": loan_data.created_by
+        }
+
+        # Create comprehensive metadata for directory
+        directory_metadata = {
+            "directory_name": request.directory_name,
+            "file_count": len(request.files),
+            "files": [f.dict() for f in request.files],
+            "loan_data": loan_metadata,
+            "borrower_data": encrypted_borrower_data
+        }
+
+        # Calculate directory document hash
+        directory_json = json.dumps(directory_metadata, sort_keys=True, separators=(',', ':'))
+
+        # Seal in Walacor using directory hash
+        walacor_result = services["wal_service"].seal_loan_document(
+            loan_id=loan_data.loan_id,
+            loan_data=loan_metadata,
+            borrower_data=encrypted_borrower_data,
+            files=[{
+                "filename": f"{request.directory_name}/",
+                "file_type": "directory",
+                "file_size": len(directory_json.encode('utf-8')),
+                "upload_timestamp": get_eastern_now_iso(),
+                "content_hash": request.directory_hash
+            }]
+        )
+
+        walacor_tx_id = walacor_result.get("walacor_tx_id", f"TX_{int(time.time() * 1000)}_{request.directory_hash[:8]}")
+
+        # Create parent container using container service
+        container_id = services["container_service"].create_directory_container(
+            directory_name=request.directory_name,
+            directory_hash=request.directory_hash,
+            loan_id=loan_data.loan_id,
+            etid=10000001,  # Use documented ETID for loan documents
+            walacor_tx_id=walacor_tx_id,
+            file_count=len(request.files),
+            created_by=loan_data.created_by,
+            metadata={
+                "directory_metadata": directory_metadata,
+                "security_level": "standard",  # Default to standard, can be overridden by request
+                "sealed_at": walacor_result.get("sealed_timestamp", get_eastern_now_iso()),
+                "blockchain_proof": walacor_result.get("blockchain_proof", {})
+            },
+            borrower_info=encrypted_borrower_data
+        )
+
+        logger.info(f"✅ Created directory container: {container_id}")
+
+        # Create child artifacts for each file
+        child_ids = []
+        for file_info in request.files:
+            child_id = services["container_service"].create_child_artifact(
+                parent_id=container_id,
+                filename=file_info.filename,
+                file_hash=file_info.file_hash,
+                loan_id=loan_data.loan_id,
+                etid=10010,
+                created_by=loan_data.created_by,
+                borrower_info=encrypted_borrower_data,
+                metadata={
+                    "file_size": file_info.file_size,
+                    "sealed_at": walacor_result.get("sealed_timestamp", get_eastern_now_iso())
+                }
+            )
+            child_ids.append(child_id)
+            logger.info(f"  ✅ Created child artifact: {child_id} ({file_info.filename})")
+
+        logger.info(f"✅ Directory sealed successfully: {container_id} with {len(child_ids)} children")
+
+        # Log audit events
+        try:
+            services["db"].log_document_upload(
+                artifact_id=container_id,
+                user_id=loan_data.created_by,
+                borrower_name=borrower_info.full_name,
+                loan_id=loan_data.loan_id,
+                ip_address=None,
+                user_agent=None
+            )
+
+            services["db"].log_blockchain_seal(
+                artifact_id=container_id,
+                walacor_tx_id=walacor_tx_id,
+                data_hash=request.directory_hash,
+                sealed_by=loan_data.created_by
+            )
+
+            logger.info(f"✅ Audit logs created for directory upload")
+        except Exception as e:
+            logger.warning(f"Failed to create audit logs: {e}")
+
+        return StandardResponse(
+            ok=True,
+            data=DirectorySealResponse(
+                message=f"Directory sealed successfully: {request.directory_name} ({len(request.files)} files)",
+                container_id=container_id,
+                walacor_tx_id=walacor_tx_id,
+                child_ids=child_ids,
+                sealed_at=walacor_result.get("sealed_timestamp", get_eastern_now_iso())
+            ).dict()
+        )
+
+    except Exception as e:
+        logger.error(f"Error sealing directory: {e}")
+        logger.error(traceback.format_exc())
+        return StandardResponse(
+            ok=False,
+            data={"error": str(e)}
+        )
+
+
 @app.post("/api/loan-documents/seal-maximum-security", response_model=StandardResponse)
 async def seal_loan_document_maximum_security(
     request: LoanDocumentSealRequest,
@@ -5657,7 +6313,13 @@ async def seal_loan_document_maximum_security(
     """
     try:
         log_endpoint_start("seal_loan_document_maximum_security", request.dict())
-        
+        if not services.get("advanced_security"):
+            logger.error("❌ Advanced security service unavailable! Cannot seal with maximum security mode.")
+            logger.error("   Falling back to standard sealing workflow. This document will have security_level='standard'.")
+            logger.error("   To enable maximum security mode, ensure AdvancedSecurityService is properly initialized.")
+            # Still use standard endpoint but log the issue clearly
+            return await seal_loan_document(request, services)
+
         # Generate key pair for this document
         advanced_security = services["advanced_security"]
         private_key, public_key = advanced_security.generate_key_pair()
@@ -5667,16 +6329,68 @@ async def seal_loan_document_maximum_security(
         encrypted_borrower_data = encryption_service.encrypt_borrower_data(request.borrower.dict())
         
         # Create comprehensive document JSON with encrypted borrower data
+        # Include loan_type and conditional fields
         comprehensive_document = {
             "loan_id": request.loan_id,
+            "loan_type": request.loan_type,
             "document_type": request.document_type,
             "loan_amount": request.loan_amount,
+            "loan_term": request.loan_term,
+            "interest_rate": request.interest_rate,
+            "property_address": request.property_address,
             "additional_notes": request.additional_notes,
             "borrower": encrypted_borrower_data,
             "created_by": request.created_by,
             "created_at": get_eastern_now_iso(),
             "security_level": "maximum"
         }
+        
+        # Add conditional fields based on loan_type
+        if request.loan_type in ['home_loan', 'home_equity']:
+            if request.property_value is not None:
+                comprehensive_document["property_value"] = request.property_value
+            if request.down_payment is not None:
+                comprehensive_document["down_payment"] = request.down_payment
+            if request.property_type:
+                comprehensive_document["property_type"] = request.property_type
+            if request.current_mortgage_balance is not None:
+                comprehensive_document["current_mortgage_balance"] = request.current_mortgage_balance
+            if request.equity_amount is not None:
+                comprehensive_document["equity_amount"] = request.equity_amount
+        elif request.loan_type == 'auto_loan':
+            if request.vehicle_make:
+                comprehensive_document["vehicle_make"] = request.vehicle_make
+            if request.vehicle_model:
+                comprehensive_document["vehicle_model"] = request.vehicle_model
+            if request.vehicle_year is not None:
+                comprehensive_document["vehicle_year"] = request.vehicle_year
+            if request.vehicle_vin:
+                comprehensive_document["vehicle_vin"] = request.vehicle_vin
+            if request.purchase_price is not None:
+                comprehensive_document["purchase_price"] = request.purchase_price
+        elif request.loan_type == 'business_loan':
+            if request.business_name:
+                comprehensive_document["business_name"] = request.business_name
+            if request.business_type:
+                comprehensive_document["business_type"] = request.business_type
+            if request.business_registration_number:
+                comprehensive_document["business_registration_number"] = request.business_registration_number
+            if request.annual_revenue is not None:
+                comprehensive_document["annual_revenue"] = request.annual_revenue
+        elif request.loan_type == 'student_loan':
+            if request.school_name:
+                comprehensive_document["school_name"] = request.school_name
+            if request.degree_program:
+                comprehensive_document["degree_program"] = request.degree_program
+            if request.expected_graduation_date:
+                comprehensive_document["expected_graduation_date"] = request.expected_graduation_date
+        elif request.loan_type == 'refinance':
+            if request.current_loan_number:
+                comprehensive_document["current_loan_number"] = request.current_loan_number
+            if request.current_lender:
+                comprehensive_document["current_lender"] = request.current_lender
+            if request.refinance_purpose:
+                comprehensive_document["refinance_purpose"] = request.refinance_purpose
         
         # Create comprehensive security seal
         comprehensive_seal = advanced_security.create_comprehensive_seal(
@@ -5716,7 +6430,7 @@ async def seal_loan_document_maximum_security(
         artifact_id = services["db"].insert_artifact(
             loan_id=request.loan_id,
             artifact_type="json",
-            etid=100001,
+            etid=10010,
             payload_sha256=primary_hash,
             walacor_tx_id=walacor_result.get("walacor_tx_id", f"TX_{int(time.time() * 1000)}_{primary_hash[:8]}"),
             created_by=request.created_by,
@@ -5870,18 +6584,35 @@ async def get_borrower_info(
                 return "$150,000+"
         
         # Create masked borrower info
+        # Handle address - it might be a dict or already a BorrowerAddress
+        address_data = borrower_info.get('address', {})
+        if isinstance(address_data, dict):
+            # Ensure all required fields are present
+            address_obj = BorrowerAddress(
+                street=address_data.get('street', ''),
+                city=address_data.get('city', ''),
+                state=address_data.get('state', ''),
+                zip_code=address_data.get('zip_code', ''),
+                country=address_data.get('country', 'United States')
+            )
+        else:
+            address_obj = address_data
+        
         masked_borrower = MaskedBorrowerInfo(
             full_name=borrower_info.get('full_name', ''),
             date_of_birth=borrower_info.get('date_of_birth', ''),
             email=mask_email(borrower_info.get('email', '')),
             phone=mask_phone(borrower_info.get('phone', '')),
-            address=BorrowerAddress(**borrower_info.get('address', {})),
+            address=address_obj,
             ssn_last4=borrower_info.get('ssn_last4', ''),
             id_type=borrower_info.get('id_type', ''),
             id_last4=borrower_info.get('id_last4', ''),
             employment_status=borrower_info.get('employment_status', ''),
             annual_income_range=get_income_range(borrower_info.get('annual_income', 0)),
-            co_borrower_name=borrower_info.get('co_borrower_name')
+            co_borrower_name=borrower_info.get('co_borrower_name'),
+            # Include SSN/ITIN fields
+            ssn_or_itin_type=borrower_info.get('ssn_or_itin_type'),
+            ssn_or_itin_number=None  # Never return the full number, even encrypted
         )
         
         logger.info(f"✅ Retrieved masked borrower info for artifact: {artifact_id}")
@@ -6059,6 +6790,12 @@ async def seal_loan_document_quantum_safe(
     """
     try:
         log_endpoint_start("seal_loan_document_quantum_safe", request.dict())
+        if not services.get("hybrid_security"):
+            logger.error("❌ Hybrid quantum-safe security service unavailable! Cannot seal with quantum-safe mode.")
+            logger.error("   Falling back to standard sealing workflow. This document will have security_level='standard'.")
+            logger.error("   To enable quantum-safe mode, ensure HybridSecurityService is properly initialized.")
+            # Still use standard endpoint but log the issue clearly
+            return await seal_loan_document(request, services)
         
         # Get quantum-safe security service
         hybrid_security_service = services["hybrid_security"]
@@ -6068,16 +6805,68 @@ async def seal_loan_document_quantum_safe(
         encrypted_borrower_data = encryption_service.encrypt_borrower_data(request.borrower.dict())
         
         # Create comprehensive document JSON with encrypted borrower data
+        # Include loan_type and conditional fields
         comprehensive_document = {
             "loan_id": request.loan_id,
+            "loan_type": request.loan_type,
             "document_type": request.document_type,
             "loan_amount": request.loan_amount,
+            "loan_term": request.loan_term,
+            "interest_rate": request.interest_rate,
+            "property_address": request.property_address,
             "additional_notes": request.additional_notes,
             "borrower": encrypted_borrower_data,
             "created_by": request.created_by,
             "created_at": get_eastern_now_iso(),
             "security_level": "quantum_safe"
         }
+        
+        # Add conditional fields based on loan_type
+        if request.loan_type in ['home_loan', 'home_equity']:
+            if request.property_value is not None:
+                comprehensive_document["property_value"] = request.property_value
+            if request.down_payment is not None:
+                comprehensive_document["down_payment"] = request.down_payment
+            if request.property_type:
+                comprehensive_document["property_type"] = request.property_type
+            if request.current_mortgage_balance is not None:
+                comprehensive_document["current_mortgage_balance"] = request.current_mortgage_balance
+            if request.equity_amount is not None:
+                comprehensive_document["equity_amount"] = request.equity_amount
+        elif request.loan_type == 'auto_loan':
+            if request.vehicle_make:
+                comprehensive_document["vehicle_make"] = request.vehicle_make
+            if request.vehicle_model:
+                comprehensive_document["vehicle_model"] = request.vehicle_model
+            if request.vehicle_year is not None:
+                comprehensive_document["vehicle_year"] = request.vehicle_year
+            if request.vehicle_vin:
+                comprehensive_document["vehicle_vin"] = request.vehicle_vin
+            if request.purchase_price is not None:
+                comprehensive_document["purchase_price"] = request.purchase_price
+        elif request.loan_type == 'business_loan':
+            if request.business_name:
+                comprehensive_document["business_name"] = request.business_name
+            if request.business_type:
+                comprehensive_document["business_type"] = request.business_type
+            if request.business_registration_number:
+                comprehensive_document["business_registration_number"] = request.business_registration_number
+            if request.annual_revenue is not None:
+                comprehensive_document["annual_revenue"] = request.annual_revenue
+        elif request.loan_type == 'student_loan':
+            if request.school_name:
+                comprehensive_document["school_name"] = request.school_name
+            if request.degree_program:
+                comprehensive_document["degree_program"] = request.degree_program
+            if request.expected_graduation_date:
+                comprehensive_document["expected_graduation_date"] = request.expected_graduation_date
+        elif request.loan_type == 'refinance':
+            if request.current_loan_number:
+                comprehensive_document["current_loan_number"] = request.current_loan_number
+            if request.current_lender:
+                comprehensive_document["current_lender"] = request.current_lender
+            if request.refinance_purpose:
+                comprehensive_document["refinance_purpose"] = request.refinance_purpose
         
         # Create quantum-safe hybrid seal
         quantum_safe_seal = hybrid_security_service.create_hybrid_seal(
@@ -6117,7 +6906,7 @@ async def seal_loan_document_quantum_safe(
         artifact_id = services["db"].insert_artifact(
             loan_id=request.loan_id,
             artifact_type="json",
-            etid=100001,
+            etid=10010,
             payload_sha256=primary_hash,
             walacor_tx_id=walacor_result.get("walacor_tx_id", f"TX_{int(time.time() * 1000)}_{primary_hash[:8]}"),
             created_by=request.created_by,
@@ -6855,9 +7644,63 @@ async def verify_by_hash(
             'borrower_name': borrower_info.get('full_name', 'N/A'),
             'created_at': artifact_obj.created_at.isoformat() if artifact_obj.created_at else None,
             'walacor_tx_id': artifact_obj.walacor_tx_id,
-            'payload_sha256': artifact_obj.payload_sha256
+            'payload_sha256': artifact_obj.payload_sha256,
+            'artifact_container_type': artifact_obj.artifact_container_type,
+            'directory_name': artifact_obj.directory_name,
+            'directory_hash': artifact_obj.directory_hash,
+            'file_count': artifact_obj.file_count
         }
-        
+
+        # Collect parent/container context
+        children_artifacts = []
+        inherited_from_parent = False
+        parent_container_info: Optional[Dict[str, Any]] = None
+
+        if artifact_obj.artifact_container_type == 'directory_container':
+            # Get all child artifacts
+            children = services["db"].get_children_artifacts(artifact_obj.id)
+            children_artifacts = [
+                {
+                    'id': child.id,
+                    'filename': child.local_metadata.get('filename', 'unknown') if child.local_metadata else 'unknown',
+                    'file_hash': child.payload_sha256,
+                    'created_at': child.created_at.isoformat() if child.created_at else None
+                }
+                for child in children
+            ]
+            logger.info(f"Directory container verified: {artifact_obj.directory_name} with {len(children_artifacts)} children")
+        elif not artifact_obj.walacor_tx_id and artifact_obj.parent_id:
+            parent_artifact_obj = services["db"].get_artifact_by_id(artifact_obj.parent_id)
+            if parent_artifact_obj and parent_artifact_obj.walacor_tx_id:
+                inherited_from_parent = True
+                artifact['walacor_tx_id'] = parent_artifact_obj.walacor_tx_id
+                artifact['directory_name'] = parent_artifact_obj.directory_name
+                artifact['directory_hash'] = parent_artifact_obj.directory_hash
+                artifact['file_count'] = parent_artifact_obj.file_count
+
+                parent_container_info = {
+                    'id': parent_artifact_obj.id,
+                    'directory_name': parent_artifact_obj.directory_name,
+                    'directory_hash': parent_artifact_obj.directory_hash,
+                    'file_count': parent_artifact_obj.file_count,
+                    'walacor_tx_id': parent_artifact_obj.walacor_tx_id
+                }
+
+                children = services["db"].get_children_artifacts(parent_artifact_obj.id)
+                children_artifacts = [
+                    {
+                        'id': child.id,
+                        'filename': child.local_metadata.get('filename', 'unknown') if child.local_metadata else 'unknown',
+                        'file_hash': child.payload_sha256,
+                        'created_at': child.created_at.isoformat() if child.created_at else None
+                    }
+                    for child in children
+                ]
+                logger.info(
+                    f"File artifact {artifact_obj.id} verified via parent directory container "
+                    f"{parent_artifact_obj.id} with {len(children_artifacts)} sibling files"
+                )
+
         # Check if document is properly sealed
         if not artifact.get('walacor_tx_id'):
             return create_success_response(
@@ -6875,18 +7718,35 @@ async def verify_by_hash(
             )
             
             if verification_result.get('is_valid', False):
+                document_data = {
+                    "id": artifact['id'],
+                    "loan_id": artifact.get('loan_id', 'N/A'),
+                    "borrower_name": artifact.get('borrower_name', 'N/A'),
+                    "created_at": artifact.get('created_at', 'N/A'),
+                    "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
+                    "payload_sha256": artifact.get('payload_sha256', request.hash),
+                    "artifact_container_type": artifact.get('artifact_container_type', 'file'),
+                    "directory_name": artifact.get('directory_name'),
+                    "file_count": artifact.get('file_count')
+                }
+
+                # Add children if this is a directory container
+                if children_artifacts:
+                    document_data["children"] = children_artifacts
+                if parent_container_info:
+                    document_data["parent_container"] = parent_container_info
+
+                message_suffix = ""
+                if children_artifacts:
+                    message_suffix += f" Directory contains {len(children_artifacts)} files."
+                if inherited_from_parent and parent_container_info:
+                    message_suffix += " Verified via parent directory container."
+
                 return create_success_response(
                     data=VerificationResult(
                         status="sealed",
-                        message="Document is properly sealed and verified on the blockchain.",
-                        document={
-                            "id": artifact['id'],
-                            "loan_id": artifact.get('loan_id', 'N/A'),
-                            "borrower_name": artifact.get('borrower_name', 'N/A'),
-                            "created_at": artifact.get('created_at', 'N/A'),
-                            "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
-                            "payload_sha256": artifact.get('payload_sha256', request.hash)
-                        },
+                        message="Document is properly sealed and verified on the blockchain." + message_suffix,
+                        document=document_data,
                         verification_details={
                             "hash_match": True,
                             "blockchain_verified": True,
@@ -6896,18 +7756,35 @@ async def verify_by_hash(
                     ).dict()
                 )
             else:
+                document_data = {
+                    "id": artifact['id'],
+                    "loan_id": artifact.get('loan_id', 'N/A'),
+                    "borrower_name": artifact.get('borrower_name', 'N/A'),
+                    "created_at": artifact.get('created_at', 'N/A'),
+                    "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
+                    "payload_sha256": artifact.get('payload_sha256', request.hash),
+                    "artifact_container_type": artifact.get('artifact_container_type', 'file'),
+                    "directory_name": artifact.get('directory_name'),
+                    "file_count": artifact.get('file_count')
+                }
+
+                # Add children if this is a directory container
+                if children_artifacts:
+                    document_data["children"] = children_artifacts
+                if parent_container_info:
+                    document_data["parent_container"] = parent_container_info
+
+                tampered_message_suffix = ""
+                if children_artifacts:
+                    tampered_message_suffix += f" Directory contains {len(children_artifacts)} files."
+                if inherited_from_parent and parent_container_info:
+                    tampered_message_suffix += " Parent directory container seal detected."
+
                 return create_success_response(
                     data=VerificationResult(
                         status="tampered",
-                        message="Document hash found but verification failed. Document may have been tampered with.",
-                        document={
-                            "id": artifact['id'],
-                            "loan_id": artifact.get('loan_id', 'N/A'),
-                            "borrower_name": artifact.get('borrower_name', 'N/A'),
-                            "created_at": artifact.get('created_at', 'N/A'),
-                            "walacor_tx_id": artifact.get('walacor_tx_id', 'N/A'),
-                            "payload_sha256": artifact.get('payload_sha256', request.hash)
-                        },
+                        message="Document hash found but verification failed. Document may have been tampered with." + tampered_message_suffix,
+                        document=document_data,
                         verification_details={
                             "hash_match": True,
                             "blockchain_verified": False,
