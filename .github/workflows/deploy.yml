@@ -77,9 +77,7 @@ jobs:
           cp -r backend deploy/
           cp -r frontend/.next deploy/frontend-build
           cp -r frontend/public deploy/frontend-public
-          if [ -f verify_integrityx.sh ]; then
-            cp verify_integrityx.sh deploy/
-          fi
+          cp verify_integrityx.sh deploy/
           tar -czf integrityx-${{ steps.version.outputs.version }}.tar.gz deploy/
           echo "✅ Deployment artifact created"
 
