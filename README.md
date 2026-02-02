@@ -2,7 +2,7 @@
 
 ### 📷 Platform Highlights
 
-> All screenshots live in `Platform_SS/` (local-only folder) and can be embedded in slides or docs.
+> All screenshots  live in `Platform_SS/` (local-only folder) and can be embedded in slides or docs.
 
 <table>
   <tr>
