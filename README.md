@@ -732,12 +732,6 @@ DATABASE_URL=postgresql://integrityx_user:your_password@localhost:5432/integrity
 
 # PostgreSQL is required for all environments
 
-# Walacor Blockchain
-WALACOR_HOST=13.220.225.175
-WALACOR_PORT=80
-WALACOR_USERNAME=Admin
-WALACOR_PASSWORD=Th!51s1T@gMu
-
 # Security (Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
 SECRET_KEY=your-super-secret-key-here
 ENCRYPTION_KEY=your-32-character-encryption-key-here
